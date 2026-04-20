@@ -269,6 +269,72 @@ export default function AdminStores() {
                   onChange={(e) => setEditing({ ...editing, services: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
                 />
               </div>
+              <div className="col-span-2 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Horaires d'ouverture</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setEditing({ ...editing, hours: DEFAULT_HOURS.map((d) => ({ ...d })) })
+                    }
+                  >
+                    Réinitialiser
+                  </Button>
+                </div>
+                <div className="rounded-md border divide-y">
+                  {ensureHours(editing.hours).map((h, i) => (
+                    <div key={i} className="grid grid-cols-12 items-center gap-2 p-2">
+                      <div className="col-span-3 text-sm font-medium">{DAYS[i]}</div>
+                      <div className="col-span-2 flex items-center gap-2">
+                        <Checkbox
+                          id={`closed-${i}`}
+                          checked={!!h.closed}
+                          onCheckedChange={(v) => {
+                            const next = ensureHours(editing.hours).map((x, idx) =>
+                              idx === i
+                                ? v
+                                  ? { day: DAYS[i], closed: true }
+                                  : { day: DAYS[i], morning: "", afternoon: "", closed: false }
+                                : x,
+                            );
+                            setEditing({ ...editing, hours: next });
+                          }}
+                        />
+                        <label htmlFor={`closed-${i}`} className="text-xs">Fermé</label>
+                      </div>
+                      <Input
+                        className="col-span-3 h-8"
+                        placeholder="9h00 – 12h00"
+                        disabled={!!h.closed}
+                        value={h.morning ?? ""}
+                        onChange={(e) => {
+                          const next = ensureHours(editing.hours).map((x, idx) =>
+                            idx === i ? { ...x, day: DAYS[i], morning: e.target.value } : x,
+                          );
+                          setEditing({ ...editing, hours: next });
+                        }}
+                      />
+                      <Input
+                        className="col-span-4 h-8"
+                        placeholder="14h00 – 19h00"
+                        disabled={!!h.closed}
+                        value={h.afternoon ?? ""}
+                        onChange={(e) => {
+                          const next = ensureHours(editing.hours).map((x, idx) =>
+                            idx === i ? { ...x, day: DAYS[i], afternoon: e.target.value } : x,
+                          );
+                          setEditing({ ...editing, hours: next });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Format conseillé : « 9h00 – 12h00 » (avec tiret long « – »).
+                </p>
+              </div>
             </div>
           )}
           <DialogFooter>
