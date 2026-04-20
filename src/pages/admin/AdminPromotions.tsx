@@ -45,6 +45,37 @@ export default function AdminPromotions() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [migrating, setMigrating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: promos } = useQuery({ queryKey: ["__promos_for_export__"], queryFn: async () => null, enabled: false });
+
+  const handleExport = async () => {
+    const { data, error } = await supabase.from("promotions").select("*").order("display_order");
+    if (error || !data) return toast.error("Erreur export");
+    if (!data.length) return toast.error("Aucune promotion à exporter");
+    exportPromotionsToXlsx(data);
+    toast.success(`${data.length} promotions exportées`);
+  };
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const rows = await parsePromotionsFromFile(file);
+      const { error } = await supabase
+        .from("promotions")
+        .upsert(rows, { onConflict: "id" });
+      if (error) throw error;
+      toast.success(`${rows.length} promotions importées`);
+      qc.invalidateQueries({ queryKey: ["admin-promotions"] });
+      qc.invalidateQueries({ queryKey: ["promotions"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleMigrate = async () => {
     if (!confirm("Uploader les images locales du catalogue vers le bucket pour toutes les promos sans image ?")) return;
