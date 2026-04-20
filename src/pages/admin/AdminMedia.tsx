@@ -41,6 +41,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import AssociateAssetDialog from "@/components/admin/AssociateAssetDialog";
 
 const BUCKET_LABELS: Record<string, string> = {
   all: "Tous",
