@@ -17,6 +17,7 @@ import { exportProductsToXlsx, parseProductsFromFile } from "@/lib/productsXlsx"
 import { migrateProductImagesToBucket } from "@/lib/migrateProductImages";
 
 const empty = (): Omit<ProductRow, "id"> => ({
+  slug: null,
   ref: "",
   name: "",
   category: "",

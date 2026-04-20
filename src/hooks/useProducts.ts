@@ -4,6 +4,7 @@ import { Product } from "@/types/product";
 
 export interface ProductRow {
   id: string;
+  slug: string | null;
   ref: string | null;
   name: string;
   category: string | null;
@@ -21,6 +22,7 @@ export interface ProductRow {
 function toProduct(row: ProductRow): Product {
   return {
     id: row.id,
+    slug: row.slug ?? undefined,
     ref: row.ref ?? row.id,
     name: row.name,
     category: row.category ?? "",
@@ -50,27 +52,44 @@ export function useProducts() {
   });
 }
 
-export function useProduct(id: string | undefined) {
+/**
+ * Loads a product by its URL slug. As a fallback, tries to interpret the
+ * parameter as a UUID (for legacy URLs and for promotion-only entries which
+ * still use their UUID as URL).
+ */
+export function useProduct(slugOrId: string | undefined) {
   return useQuery({
-    queryKey: ["product", id],
-    enabled: !!id,
+    queryKey: ["product", slugOrId],
+    enabled: !!slugOrId,
     queryFn: async () => {
-      // 1) Essai dans products
-      const { data, error } = await supabase
+      const key = slugOrId!;
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
+
+      // 1) Lookup by slug first
+      let { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("id", id!)
+        .eq("slug", key)
         .maybeSingle();
       if (error) throw error;
+
+      // 2) Fallback to UUID lookup
+      if (!data && isUuid) {
+        const r = await supabase.from("products").select("*").eq("id", key).maybeSingle();
+        if (r.error) throw r.error;
+        data = r.data;
+      }
+
       if (data) {
         return { row: data as ProductRow, product: toProduct(data as ProductRow) };
       }
 
-      // 2) Fallback : c'est peut-être une promotion
+      // 3) Final fallback: maybe it's a promotion (always UUID)
+      if (!isUuid) return null;
       const { data: promo, error: promoErr } = await supabase
         .from("promotions")
         .select("*")
-        .eq("id", id!)
+        .eq("id", key)
         .maybeSingle();
       if (promoErr) throw promoErr;
       if (!promo) return null;
@@ -86,6 +105,7 @@ export function useProduct(id: string | undefined) {
       const image = promo.image ?? fallback?.image ?? "";
       const row: ProductRow = {
         id: promo.id,
+        slug: null,
         ref: promo.id.slice(0, 8),
         name: promo.title,
         category: promo.description ?? "Promotion",
