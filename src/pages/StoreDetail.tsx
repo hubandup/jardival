@@ -47,7 +47,7 @@ const StoreDetail = () => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [id]);
 
-  const canonical = typeof window !== "undefined" ? window.location.origin + `/magasins/${id}` : undefined;
+  const canonical = typeof window !== "undefined" ? window.location.origin + `/magasins/${store?.slug || id}` : undefined;
   useSeo({
     title: store ? `${store.name} — ${store.city} | Jardival` : "Magasin Jardival",
     description: store
@@ -388,7 +388,7 @@ const StoreDetail = () => {
                 {nearby.map((s) => (
                   <li key={s.id}>
                     <Link
-                      to={`/magasins/${s.id}`}
+                      to={`/magasins/${s.slug || s.id}`}
                       className="group flex items-center justify-between gap-3 rounded-lg border border-border p-3 transition hover:border-primary/40 hover:bg-secondary/40"
                     >
                       <div className="min-w-0">

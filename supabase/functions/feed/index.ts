@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     } else if (resource === "stores") {
       const { data } = await supabase
         .from("stores")
-        .select("id, name, address, postal_code, city, department, phone, latitude, longitude, services, hours, image, updated_at")
+        .select("id, slug, name, address, postal_code, city, department, phone, latitude, longitude, services, hours, image, updated_at")
         .order("name")
         .limit(500);
       payload = {
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
         count: data?.length ?? 0,
         stores: (data ?? []).map((s) => ({
           ...s,
-          url: `${SITE_URL}/magasins/${s.id}`,
+          url: `${SITE_URL}/magasins/${s.slug || s.id}`,
         })),
       };
     } else if (resource === "promotions") {

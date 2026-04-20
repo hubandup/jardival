@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const [products, promos, stores, catalogues] = await Promise.all([
       supabase.from("products").select("id, slug, updated_at").eq("active", true).limit(5000),
       supabase.from("promotions").select("id, updated_at, active, starts_at, ends_at").limit(5000),
-      supabase.from("stores").select("id, updated_at").limit(5000),
+      supabase.from("stores").select("id, slug, updated_at").limit(5000),
       supabase.from("catalogues").select("id, updated_at, active").limit(500),
     ]);
 
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
 
     // Stores
     (stores.data ?? []).forEach((s: any) => {
-      urls.push(urlEntry(`${SITE_URL}/magasins/${s.id}`, s.updated_at, "monthly", "0.6"));
+      urls.push(urlEntry(`${SITE_URL}/magasins/${s.slug || s.id}`, s.updated_at, "monthly", "0.6"));
     });
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
