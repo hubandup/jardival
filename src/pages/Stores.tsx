@@ -1,13 +1,16 @@
 import { Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { StoresMap } from "@/components/StoresMap";
 import { STORES, DEPARTMENTS, mapsUrl, Store } from "@/data/stores";
 import { MapPin, Navigation, Search, Phone, Clock } from "lucide-react";
 
 const Stores = () => {
   const [query, setQuery] = useState("");
   const [dept, setDept] = useState<string>("Tous");
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -83,6 +86,19 @@ const Stores = () => {
       {/* Stores grid */}
       <section className="py-16 md:py-20">
         <div className="container-px mx-auto max-w-7xl">
+          {/* Map */}
+          <div className="mb-12">
+            <StoresMap
+              stores={filtered}
+              activeId={activeId}
+              onSelect={(id) => {
+                setActiveId(id);
+                const el = cardRefs.current[id];
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            />
+          </div>
+
           {filtered.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-secondary/30 p-12 text-center text-muted-foreground">
               Aucun magasin ne correspond à votre recherche.
@@ -90,7 +106,16 @@ const Stores = () => {
           ) : (
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {filtered.map((s) => (
-                <StoreCard key={s.id} store={s} />
+                <div
+                  key={s.id}
+                  ref={(el) => (cardRefs.current[s.id] = el)}
+                >
+                  <StoreCard
+                    store={s}
+                    active={activeId === s.id}
+                    onHover={() => setActiveId(s.id)}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -102,8 +127,13 @@ const Stores = () => {
   );
 };
 
-const StoreCard = ({ store }: { store: Store }) => (
-  <article className="group flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-card">
+const StoreCard = ({ store, active, onHover }: { store: Store; active?: boolean; onHover?: () => void }) => (
+  <article
+    onMouseEnter={onHover}
+    className={`group flex h-full flex-col gap-4 rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-card ${
+      active ? "border-accent shadow-card ring-2 ring-accent/20" : "border-border hover:border-primary/40"
+    }`}
+  >
     <div className="flex items-start justify-between gap-3">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
