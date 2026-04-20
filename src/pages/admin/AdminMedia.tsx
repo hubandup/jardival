@@ -275,6 +275,116 @@ export default function AdminMedia() {
   );
 }
 
+function SortHeader({
+  label,
+  active,
+  asc,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  asc: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <TableHead>
+      <button
+        type="button"
+        onClick={onClick}
+        className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+      >
+        {label}
+        <ArrowUpDown className={cn("h-3 w-3", active ? "text-foreground" : "text-muted-foreground/50")} />
+        {active && <span className="text-[10px]">{asc ? "↑" : "↓"}</span>}
+      </button>
+    </TableHead>
+  );
+}
+
+function MediaListView({
+  assets,
+  onSelect,
+  sortKey,
+  sortAsc,
+  onSort,
+}: {
+  assets: MediaAsset[];
+  onSelect: (a: MediaAsset) => void;
+  sortKey: string;
+  sortAsc: boolean;
+  onSort: (key: "title" | "bucket" | "size" | "date") => void;
+}) {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12"></TableHead>
+            <SortHeader label="Titre" active={sortKey === "title"} asc={sortAsc} onClick={() => onSort("title")} />
+            <SortHeader label="Bucket" active={sortKey === "bucket"} asc={sortAsc} onClick={() => onSort("bucket")} />
+            <TableHead>Type</TableHead>
+            <TableHead>Dimensions</TableHead>
+            <SortHeader label="Taille" active={sortKey === "size"} asc={sortAsc} onClick={() => onSort("size")} />
+            <TableHead>Alt</TableHead>
+            <SortHeader label="Date" active={sortKey === "date"} asc={sortAsc} onClick={() => onSort("date")} />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {assets.map((asset) => {
+            const isImage = asset.mime_type?.startsWith("image/");
+            return (
+              <TableRow
+                key={asset.id}
+                onClick={() => onSelect(asset)}
+                className="cursor-pointer hover:bg-muted/50"
+              >
+                <TableCell>
+                  {isImage ? (
+                    <img src={asset.public_url} alt="" className="h-9 w-9 rounded object-cover" />
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded bg-muted">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="font-medium max-w-[200px] truncate">
+                  {asset.title ?? asset.path}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="text-[10px]">
+                    {BUCKET_LABELS[asset.bucket] ?? asset.bucket}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {asset.mime_type?.split("/").pop() ?? "—"}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {asset.width && asset.height ? `${asset.width}×${asset.height}` : "—"}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {asset.size_bytes ? `${(asset.size_bytes / 1024).toFixed(0)} Ko` : "—"}
+                </TableCell>
+                <TableCell>
+                  {isImage && !asset.alt ? (
+                    <Badge variant="destructive" className="text-[10px]">manquant</Badge>
+                  ) : isImage ? (
+                    <span className="text-xs text-muted-foreground max-w-[120px] truncate block">{asset.alt}</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                  {new Date(asset.created_at).toLocaleDateString("fr-FR")}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 function MediaCard({ asset, onSelect }: { asset: MediaAsset; onSelect: (a: MediaAsset) => void }) {
   const isImage = asset.mime_type?.startsWith("image/");
   const isPdf = asset.mime_type === "application/pdf";
