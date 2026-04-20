@@ -134,6 +134,13 @@ export default function AdminPromotions() {
         </Button>
       </div>
 
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={handleMigrate} disabled={migrating}>
+          {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
+          Migrer images locales → bucket
+        </Button>
+      </div>
+
       <Card>
         {isLoading ? (
           <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
