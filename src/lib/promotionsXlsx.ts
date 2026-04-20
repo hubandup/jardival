@@ -1,8 +1,13 @@
 import * as XLSX from "xlsx";
 import type { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/integrations/supabase/client";
 
 type PromoRow = Database["public"]["Tables"]["promotions"]["Row"];
 type PromoUpsert = Database["public"]["Tables"]["promotions"]["Insert"];
+
+export interface ParsedPromotion extends PromoUpsert {
+  image_filename?: string | null;
+}
 
 const COLUMNS = [
   "id",
