@@ -9,6 +9,13 @@ import Stores from "./pages/Stores.tsx";
 import StoreDetail from "./pages/StoreDetail.tsx";
 import Catalogue from "./pages/Catalogue.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import AdminLogin from "./pages/admin/AdminLogin.tsx";
+import AdminLayout from "./pages/admin/AdminLayout.tsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
+import AdminStores from "./pages/admin/AdminStores.tsx";
+import AdminPromotions from "./pages/admin/AdminPromotions.tsx";
+import AdminCatalogues from "./pages/admin/AdminCatalogues.tsx";
+import { AuthProvider } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
 
@@ -18,15 +25,24 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/produit/:id" element={<ProductDetail />} />
-          <Route path="/magasins" element={<Stores />} />
-          <Route path="/magasins/:id" element={<StoreDetail />} />
-          <Route path="/catalogue" element={<Catalogue />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/produit/:id" element={<ProductDetail />} />
+            <Route path="/magasins" element={<Stores />} />
+            <Route path="/magasins/:id" element={<StoreDetail />} />
+            <Route path="/catalogue" element={<Catalogue />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="magasins" element={<AdminStores />} />
+              <Route path="promotions" element={<AdminPromotions />} />
+              <Route path="catalogues" element={<AdminCatalogues />} />
+            </Route>
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
