@@ -81,17 +81,37 @@ export default function AdminPromotions() {
     toast.success(`${data.length} promotions exportées`);
   };
 
-  const handleImport = async (file: File) => {
+  const handleImport = async (file: File, mode: "upsert" | "replace") => {
     setImporting(true);
     try {
-      const rows = await parsePromotionsFromFile(file);
+      const parsed = await parsePromotionsFromFile(file);
+      const { matched, missing } = await autoAssociateImages(parsed);
+      const rows = stripParsedExtras(parsed);
+
+      if (mode === "replace") {
+        if (!confirm(`Remplacer TOUTES les promotions actuelles par les ${rows.length} du fichier ? Cette action est irréversible.`)) {
+          setImporting(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          return;
+        }
+        const { error: delErr } = await supabase.from("promotions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        if (delErr) throw delErr;
+      }
+
       const { error } = await supabase
         .from("promotions")
         .upsert(rows, { onConflict: "id" });
       if (error) throw error;
-      toast.success(`${rows.length} promotions importées`);
+
+      let msg = `${rows.length} promotions ${mode === "replace" ? "remplacées" : "importées"}`;
+      if (matched > 0) msg += ` — ${matched} image(s) associée(s) automatiquement`;
+      if (missing.length > 0) msg += ` — ${missing.length} image(s) introuvable(s)`;
+      toast.success(msg);
+      if (missing.length > 0) console.warn("Images manquantes:", missing);
+
       qc.invalidateQueries({ queryKey: ["admin-promotions"] });
       qc.invalidateQueries({ queryKey: ["promotions"] });
+      qc.invalidateQueries({ queryKey: ["hero_promos"] });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
