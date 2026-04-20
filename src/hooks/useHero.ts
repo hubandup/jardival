@@ -75,17 +75,17 @@ export function useHeroPromos() {
       }
       const selected = pool.slice(0, 4);
 
-      // Fallback : si la promo n'a pas d'image, chercher le produit par ref
-      // (la ref est extraite de la description, ex. "Barbecue — Réf. 199370")
-      const refs = selected
+      // Fallback : pour TOUTES les promos actives, on tente de résoudre une image
+      // (priorité : promo.image, puis produit par ref extraite de la description)
+      const allRefs = pool
         .map((p) => extractRef(p.description))
         .filter((r): r is string => !!r);
       let imageByRef = new Map<string, string | null>();
-      if (refs.length > 0) {
+      if (allRefs.length > 0) {
         const { data: products } = await supabase
           .from("products")
           .select("ref, image")
-          .in("ref", refs);
+          .in("ref", allRefs);
         imageByRef = new Map(
           (products ?? []).map((p) => [
             p.ref as string,
@@ -94,18 +94,24 @@ export function useHeroPromos() {
         );
       }
 
-      const promos: HeroPromo[] = selected.map((p) => {
+      const resolveImage = (p: PromotionRow): string | null => {
+        if (p.image) return p.image;
         const ref = extractRef(p.description);
-        const fallback = ref ? imageByRef.get(ref) ?? null : null;
-        return {
-          id: p.id,
-          title: p.title,
-          image: p.image || fallback,
-          price: p.price,
-          original_price: p.original_price,
-          discount: computeDiscount(p),
-        };
-      });
+        return ref ? imageByRef.get(ref) ?? null : null;
+      };
+
+      // On garde uniquement celles qui ont une image résoluble, et on prend les 4 premières
+      const withImage = pool.filter((p) => !!resolveImage(p)).slice(0, 4);
+      const finalSelection = withImage.length >= 4 ? withImage : [...withImage, ...pool.filter((p) => !withImage.includes(p))].slice(0, 4);
+
+      const promos: HeroPromo[] = finalSelection.map((p) => ({
+        id: p.id,
+        title: p.title,
+        image: resolveImage(p),
+        price: p.price,
+        original_price: p.original_price,
+        discount: computeDiscount(p),
+      }));
       return { promos, activeCount: all.length };
     },
     staleTime: 30 * 1000,
