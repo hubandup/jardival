@@ -23,17 +23,20 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
-  getStore,
-  nearbyStores,
   DEPARTMENTS,
   mapsUrl,
+  distanceKm,
 } from "@/data/stores";
-import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
+import { useStore, useStores } from "@/hooks/useStores";
+import { usePromotions } from "@/hooks/usePromotions";
+import { promotionToProduct } from "@/lib/promotion";
 import storeHero from "@/assets/store-placeholder.jpg";
 
 const StoreDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const store = useMemo(() => getStore(id), [id]);
+  const { data: store, isLoading } = useStore(id);
+  const { data: allStores = [] } = useStores();
+  const { data: allPromos = [] } = usePromotions();
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
 
@@ -92,6 +95,17 @@ const StoreDetail = () => {
   }, [store]);
 
   if (!id) return <Navigate to="/magasins" replace />;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <div className="container-px mx-auto max-w-3xl py-32 text-center text-muted-foreground">
+          Chargement…
+        </div>
+        <SiteFooter />
+      </div>
+    );
+  }
   if (!store) {
     return (
       <div className="min-h-screen bg-background">
@@ -118,8 +132,15 @@ const StoreDetail = () => {
   const today = new Date().getDay(); // 0 = dim, 1 = lun…
   const todayIndex = today === 0 ? 6 : today - 1;
   const todayHours = store.hours?.[todayIndex];
-  const promos = CATALOGUE_PROMOS.filter((p) => p.discount > 0).slice(0, 4);
-  const nearby = nearbyStores(store, 3);
+  const promos = allPromos
+    .filter((p) => !p.store_ids || p.store_ids.length === 0 || p.store_ids.includes(store.id))
+    .slice(0, 4)
+    .map(promotionToProduct);
+  const nearby = allStores
+    .filter((s) => s.id !== store.id)
+    .map((s) => ({ ...s, distance: distanceKm(store.coords, s.coords) }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background">

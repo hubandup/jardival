@@ -63,16 +63,20 @@ FlipPage.displayName = "FlipPage";
 
 const CataloguePage = () => {
   const isMobile = useIsMobile();
+  const { data: catalogues } = useCatalogues();
+  const activeCatalogue = catalogues?.[0];
+  const pdfUrl = activeCatalogue?.pdf_url ?? FALLBACK_PDF_URL;
+  const title = activeCatalogue?.title ?? "Jardinales";
+
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 500, h: 700 });
   const bookRef = useRef<any>(null);
 
   useEffect(() => {
-    document.title = "Catalogue Jardinales — Feuilleter en ligne | Jardival";
+    document.title = `Catalogue ${title} — Feuilleter en ligne | Jardival`;
     const meta = document.querySelector('meta[name="description"]');
-    const desc =
-      "Feuilletez en ligne le catalogue Jardinales Jardival : 8 pages de promotions valables jusqu'au 16 mai 2026.";
+    const desc = `Feuilletez en ligne le catalogue ${title} Jardival.`;
     if (meta) meta.setAttribute("content", desc);
 
     const update = () => {
