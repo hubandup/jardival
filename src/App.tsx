@@ -15,6 +15,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminStores from "./pages/admin/AdminStores.tsx";
 import AdminPromotions from "./pages/admin/AdminPromotions.tsx";
 import AdminCatalogues from "./pages/admin/AdminCatalogues.tsx";
+import AdminProducts from "./pages/admin/AdminProducts.tsx";
 import { AuthProvider } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="magasins" element={<AdminStores />} />
               <Route path="promotions" element={<AdminPromotions />} />
               <Route path="catalogues" element={<AdminCatalogues />} />
+              <Route path="produits" element={<AdminProducts />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

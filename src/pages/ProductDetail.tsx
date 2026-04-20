@@ -1,13 +1,10 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
-import productsData from "@/data/products.json";
-import { Product } from "@/types/product";
-import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
+import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ProductCard } from "@/components/ProductCard";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MapPin, Truck, ShieldCheck, Leaf } from "lucide-react";
+import { ArrowLeft, MapPin, Truck, ShieldCheck, Leaf, Loader2 } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -16,8 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-
-const products = [...CATALOGUE_PROMOS, ...(productsData as Product[])];
+import { useProduct, useProducts } from "@/hooks/useProducts";
 
 const DESCRIPTIONS = [
   "Conçu pour durer, ce produit Jardival allie robustesse et design soigné pour sublimer votre extérieur saison après saison.",
@@ -35,13 +31,28 @@ function descriptionFor(id: string) {
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const product = useMemo(() => products.find((p) => p.id === id), [id]);
+  const { data: result, isLoading } = useProduct(id);
+  const { data: allProducts = [] } = useProducts();
+  const product = result?.product;
+  const description = result?.row.description || (id ? descriptionFor(id) : "");
   const [activeImg, setActiveImg] = useState(0);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
     setActiveImg(0);
   }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <div className="container-px mx-auto max-w-3xl py-32 text-center">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+        </div>
+        <SiteFooter />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -59,11 +70,9 @@ const ProductDetail = () => {
     );
   }
 
-  const related = products
+  const related = allProducts
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
-
-  const description = descriptionFor(product.id);
 
   return (
     <div className="min-h-screen bg-background">
