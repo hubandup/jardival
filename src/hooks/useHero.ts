@@ -108,8 +108,10 @@ export function useHeroPromos() {
 
       const resolveHref = (p: PromotionRow): string => {
         const ref = extractRef(p.description);
-        const slug = ref ? slugByRef.get(ref) : null;
-        return slug ? `/produit/${slug}` : "/catalogue";
+        const productSlug = ref ? slugByRef.get(ref) : null;
+        if (productSlug) return `/produit/${productSlug}`;
+        // Fallback : route vers la fiche détail de la promotion (gère slug ou UUID)
+        return `/produit/${p.slug ?? p.id}`;
       };
 
       // On garde uniquement celles qui ont une image résoluble, et on prend les 4 premières
