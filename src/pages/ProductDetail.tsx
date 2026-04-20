@@ -76,9 +76,6 @@ const ProductDetail = () => {
     .slice(0, 4);
 
   return (
-    <>
-      <ProductSeo product={product} description={description} />
-)
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
