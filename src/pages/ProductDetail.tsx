@@ -8,6 +8,14 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { ProductCard } from "@/components/ProductCard";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MapPin, Truck, ShieldCheck, Leaf } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 const products = [...CATALOGUE_PROMOS, ...(productsData as Product[])];
 
