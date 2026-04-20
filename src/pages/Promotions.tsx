@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ProductCard } from "@/components/ProductCard";
-import { Tag, Loader2, X } from "lucide-react";
+import { Tag, Loader2, X, Search } from "lucide-react";
 import { usePromotions, useCatalogues, type PromotionRow } from "@/hooks/usePromotions";
 import { useStores } from "@/hooks/useStores";
 import { promotionToProduct } from "@/lib/promotion";
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const SITE_URL = "https://jardival.lovable.app";
 const ALL = "__all__";
@@ -27,6 +28,7 @@ const Promotions = () => {
 
   const [category, setCategory] = useState<string>(ALL);
   const [storeId, setStoreId] = useState<string>(ALL);
+  const [query, setQuery] = useState<string>("");
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -36,19 +38,24 @@ const Promotions = () => {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "fr"));
   }, [dbPromos]);
 
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
   const filtered = useMemo(() => {
+    const q = normalize(query.trim());
     return dbPromos.filter((p) => {
       if (category !== ALL && (p.description ?? "").trim() !== category) return false;
       if (storeId !== ALL) {
         if (!p.store_ids || p.store_ids.length === 0) return false;
         if (!p.store_ids.includes(storeId)) return false;
       }
+      if (q && !normalize(p.title).includes(q)) return false;
       return true;
     });
-  }, [dbPromos, category, storeId]);
+  }, [dbPromos, category, storeId, query]);
 
   const promos = filtered.map(promotionToProduct);
-  const hasFilters = category !== ALL || storeId !== ALL;
+  const hasFilters = category !== ALL || storeId !== ALL || query.trim() !== "";
 
   const validityLabel = activeCatalogue?.ends_at
     ? `jusqu'au ${new Date(activeCatalogue.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
@@ -80,7 +87,22 @@ const Promotions = () => {
             </p>
           </div>
 
-          <div className="mb-10 flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-card/50 p-4">
+          <div className="mb-10 flex flex-wrap items-end gap-3 rounded-2xl border border-border/60 bg-card/50 p-4">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Recherche
+              </label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher un produit…"
+                  className="pl-9"
+                />
+              </div>
+            </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Catégorie
@@ -126,6 +148,7 @@ const Promotions = () => {
                 onClick={() => {
                   setCategory(ALL);
                   setStoreId(ALL);
+                  setQuery("");
                 }}
                 className="self-end"
               >
