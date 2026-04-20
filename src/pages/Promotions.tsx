@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ProductCard } from "@/components/ProductCard";
-import { Tag, Loader2, X } from "lucide-react";
+import { Tag, Loader2, X, Search } from "lucide-react";
 import { usePromotions, useCatalogues, type PromotionRow } from "@/hooks/usePromotions";
 import { useStores } from "@/hooks/useStores";
 import { promotionToProduct } from "@/lib/promotion";
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const SITE_URL = "https://jardival.lovable.app";
 const ALL = "__all__";
