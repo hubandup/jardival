@@ -17,12 +17,19 @@ export function formatStoreHours(h: StoreHours | undefined | null): string {
 
 export interface Store {
   id: string;
+  slug?: string;
   name: string;
   address: string;
   postalCode?: string;
   city: string;
   department: string;
   coords: [number, number];
+  phone?: string;
+  hours?: StoreHours[];
+  services?: string[];
+  /** Image de couverture importée via `import` ou URL publique. */
+  image?: string;
+}
   phone?: string;
   hours?: StoreHours[];
   services?: string[];
