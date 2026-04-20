@@ -14,16 +14,205 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      catalogues: {
+        Row: {
+          active: boolean
+          cover_image: string | null
+          created_at: string
+          display_order: number
+          ends_at: string | null
+          id: string
+          pdf_url: string | null
+          starts_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          cover_image?: string | null
+          created_at?: string
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          pdf_url?: string | null
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          cover_image?: string | null
+          created_at?: string
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          pdf_url?: string | null
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      promotions: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          ends_at: string | null
+          id: string
+          image: string | null
+          original_price: number | null
+          price: number | null
+          starts_at: string | null
+          store_ids: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          image?: string | null
+          original_price?: number | null
+          price?: number | null
+          starts_at?: string | null
+          store_ids?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          ends_at?: string | null
+          id?: string
+          image?: string | null
+          original_price?: number | null
+          price?: number | null
+          starts_at?: string | null
+          store_ids?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stores: {
+        Row: {
+          address: string
+          city: string
+          created_at: string
+          department: string
+          hours: Json | null
+          id: string
+          image: string | null
+          latitude: number
+          longitude: number
+          name: string
+          phone: string | null
+          postal_code: string | null
+          services: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          city: string
+          created_at?: string
+          department: string
+          hours?: Json | null
+          id: string
+          image?: string | null
+          latitude: number
+          longitude: number
+          name: string
+          phone?: string | null
+          postal_code?: string | null
+          services?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string
+          department?: string
+          hours?: Json | null
+          id?: string
+          image?: string | null
+          latitude?: number
+          longitude?: number
+          name?: string
+          phone?: string | null
+          postal_code?: string | null
+          services?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +339,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "admin"],
+    },
   },
 } as const
