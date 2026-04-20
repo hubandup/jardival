@@ -1,6 +1,7 @@
 import productsData from "@/data/products.json";
 import { Product } from "@/types/product";
 import { SiteHeader } from "@/components/SiteHeader";
+import { CatalogueBanner } from "@/components/CatalogueBanner";
 import { Hero } from "@/components/Hero";
 import { PromoSection } from "@/components/PromoSection";
 import { Catalogue } from "@/components/Catalogue";
@@ -13,6 +14,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
+      <CatalogueBanner />
       <main>
         <Hero products={products} />
         <PromoSection products={products} />
