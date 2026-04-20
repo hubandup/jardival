@@ -121,6 +121,19 @@ export function useUploadMedia() {
         .slice(0, 80);
       const path = `${Date.now()}-${slug || "file"}.${ext}`;
 
+      // Calculate image dimensions if applicable
+      let width: number | null = null;
+      let height: number | null = null;
+      if (file.type.startsWith("image/")) {
+        try {
+          const dims = await getImageDimensions(file);
+          width = dims.width;
+          height = dims.height;
+        } catch {
+          // Non-blocking: dimensions remain null
+        }
+      }
+
       const { error: upErr } = await supabase.storage
         .from("media")
         .upload(path, file, { contentType: file.type, upsert: false });
@@ -137,6 +150,8 @@ export function useUploadMedia() {
           mime_type: file.type || null,
           size_bytes: file.size,
           title: file.name.replace(/\.[^.]+$/, ""),
+          width,
+          height,
         })
         .select()
         .single();
