@@ -1,14 +1,14 @@
 import { Product } from "@/types/product";
+import { useHeroPromos } from "@/hooks/useHero";
 
 interface Props {
   products: Product[];
 }
 
 export const Hero = ({ products }: Props) => {
-  const promoCount = products.filter((p) => p.discount > 0).length;
-  const heroImages = products
-    .filter((p) => p.discount >= 25)
-    .slice(0, 4);
+  const { data } = useHeroPromos();
+  const promos = data?.promos ?? [];
+  const activeCount = data?.activeCount ?? 0;
 
   return (
     <section id="top" className="relative overflow-hidden bg-gradient-hero">
@@ -16,7 +16,7 @@ export const Hero = ({ products }: Props) => {
         <div className="space-y-7">
           <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-accent">
             <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-            {promoCount} promotions actives
+            {activeCount} promotions actives
           </span>
 
           <h1 className="font-display text-5xl font-semibold leading-[1.05] text-foreground md:text-6xl lg:text-7xl">
@@ -45,14 +45,14 @@ export const Hero = ({ products }: Props) => {
 
           <div className="flex gap-8 pt-4">
             <Stat value={`${products.length}+`} label="Produits" />
-            <Stat value={`${promoCount}`} label="En promo" />
+            <Stat value={`${activeCount}`} label="En promo" />
             <Stat value="-50%" label="Jusqu'à" />
           </div>
         </div>
 
         <div className="relative">
           <div className="grid grid-cols-2 gap-4">
-            {heroImages.map((p, i) => (
+            {promos.map((p, i) => (
               <div
                 key={p.id}
                 className={`overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-transform ${
@@ -60,15 +60,21 @@ export const Hero = ({ products }: Props) => {
                 }`}
               >
                 <div className="relative aspect-square">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    loading="eager"
-                    className="h-full w-full object-contain p-3"
-                  />
-                  <span className="absolute left-2 top-2 rounded-full bg-gradient-promo px-2.5 py-1 text-[10px] font-bold text-accent-foreground">
-                    -{p.discount}%
-                  </span>
+                  {p.image ? (
+                    <img
+                      src={p.image}
+                      alt={p.title}
+                      loading="eager"
+                      className="h-full w-full object-contain p-3"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-muted" />
+                  )}
+                  {p.discount && (
+                    <span className="absolute left-2 top-2 rounded-full bg-gradient-promo px-2.5 py-1 text-[10px] font-bold text-accent-foreground">
+                      -{p.discount}%
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
