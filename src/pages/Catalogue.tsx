@@ -14,6 +14,7 @@ import {
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCatalogues } from "@/hooks/usePromotions";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -26,7 +27,7 @@ import {
 // Worker hosted on the same package CDN — version must match pdfjs-dist
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-const PDF_URL = "/catalogue-jardival-jardinales.pdf";
+const FALLBACK_PDF_URL = "/catalogue-jardival-jardinales.pdf";
 
 // Each page must be a forwardRef component for react-pageflip to attach refs
 type FlipPageProps = {
