@@ -1,7 +1,7 @@
 import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, Store, Tag, BookOpen, LayoutDashboard, Package, User, Users } from "lucide-react";
+import { Loader2, LogOut, Store, Tag, BookOpen, LayoutDashboard, Package, User, Users, Image } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { to: "/admin/produits", label: "Produits", icon: Package },
   { to: "/admin/promotions", label: "Promotions", icon: Tag },
   { to: "/admin/catalogues", label: "Catalogues", icon: BookOpen },
+  { to: "/admin/medias", label: "Médiathèque", icon: Image },
   { to: "/admin/utilisateurs", label: "Utilisateurs", icon: Users, superAdminOnly: true },
   { to: "/admin/profil", label: "Mon profil", icon: User },
 ];
