@@ -1,19 +1,54 @@
+import { useMemo, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ProductCard } from "@/components/ProductCard";
-import { Tag, Loader2 } from "lucide-react";
-import { usePromotions, useCatalogues } from "@/hooks/usePromotions";
+import { Tag, Loader2, X } from "lucide-react";
+import { usePromotions, useCatalogues, type PromotionRow } from "@/hooks/usePromotions";
+import { useStores } from "@/hooks/useStores";
 import { promotionToProduct } from "@/lib/promotion";
 import { useSeo } from "@/hooks/useSeo";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 const SITE_URL = "https://jardival.lovable.app";
+const ALL = "__all__";
 
 const Promotions = () => {
   const { data: dbPromos = [], isLoading } = usePromotions();
   const { data: catalogues } = useCatalogues();
+  const { data: stores = [] } = useStores();
   const activeCatalogue = catalogues?.[0];
 
-  const promos = dbPromos.map(promotionToProduct);
+  const [category, setCategory] = useState<string>(ALL);
+  const [storeId, setStoreId] = useState<string>(ALL);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    dbPromos.forEach((p: PromotionRow) => {
+      if (p.description && p.description.trim()) set.add(p.description.trim());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "fr"));
+  }, [dbPromos]);
+
+  const filtered = useMemo(() => {
+    return dbPromos.filter((p) => {
+      if (category !== ALL && (p.description ?? "").trim() !== category) return false;
+      if (storeId !== ALL) {
+        if (!p.store_ids || p.store_ids.length === 0) return false;
+        if (!p.store_ids.includes(storeId)) return false;
+      }
+      return true;
+    });
+  }, [dbPromos, category, storeId]);
+
+  const promos = filtered.map(promotionToProduct);
+  const hasFilters = category !== ALL || storeId !== ALL;
 
   const validityLabel = activeCatalogue?.ends_at
     ? `jusqu'au ${new Date(activeCatalogue.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
@@ -31,7 +66,7 @@ const Promotions = () => {
       <SiteHeader />
       <main className="py-20 md:py-28">
         <div className="container-px mx-auto max-w-7xl">
-          <div className="mb-12 max-w-2xl">
+          <div className="mb-10 max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-accent">
               <Tag className="h-3.5 w-3.5" />
               {validityLabel}
@@ -40,8 +75,64 @@ const Promotions = () => {
               Toutes les promotions
             </h1>
             <p className="mt-4 text-muted-foreground">
-              {promos.length} offres à retrouver dans votre magasin Jardival.
+              {promos.length} offre{promos.length > 1 ? "s" : ""}
+              {hasFilters ? " correspondant à vos filtres" : ""} à retrouver dans votre magasin Jardival.
             </p>
+          </div>
+
+          <div className="mb-10 flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-card/50 p-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Catégorie
+              </label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Toutes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Toutes les catégories</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Magasin
+              </label>
+              <Select value={storeId} onValueChange={setStoreId}>
+                <SelectTrigger className="w-[260px]">
+                  <SelectValue placeholder="Tous" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Tous les magasins</SelectItem>
+                  {stores.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} — {s.city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {hasFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCategory(ALL);
+                  setStoreId(ALL);
+                }}
+                className="self-end"
+              >
+                <X className="h-4 w-4" />
+                Réinitialiser
+              </Button>
+            )}
           </div>
 
           {isLoading ? (
@@ -50,7 +141,7 @@ const Promotions = () => {
             </div>
           ) : promos.length === 0 ? (
             <p className="py-16 text-center text-muted-foreground">
-              Aucune promotion en cours pour le moment.
+              Aucune promotion ne correspond à ces filtres.
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">

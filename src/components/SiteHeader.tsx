@@ -24,6 +24,7 @@ export const SiteHeader = () => {
               <Link to="/#catalogue" className="text-foreground/70 transition-colors hover:text-primary">Catalogue</Link>
             </>
           )}
+          <Link to="/promotions" className="text-foreground/70 transition-colors hover:text-accent">Toutes les promos</Link>
           <Link to="/magasins" className="text-foreground/70 transition-colors hover:text-primary">Magasins</Link>
         </nav>
         <Link
