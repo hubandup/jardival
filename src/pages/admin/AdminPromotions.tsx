@@ -43,6 +43,25 @@ export default function AdminPromotions() {
   const [editing, setEditing] = useState<(Partial<PromoRow> & { isNew?: boolean }) | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+
+  const handleMigrate = async () => {
+    if (!confirm("Uploader les images locales du catalogue vers le bucket pour toutes les promos sans image ?")) return;
+    setMigrating(true);
+    try {
+      const r = await migratePromoImagesToBucket();
+      toast.success(
+        `Migration terminée : ${r.updated}/${r.total} promos mises à jour (${r.skipped} ignorées)` +
+          (r.errors.length ? ` — ${r.errors.length} erreur(s)` : "")
+      );
+      if (r.errors.length) console.warn("Erreurs migration:", r.errors);
+      qc.invalidateQueries({ queryKey: ["admin-promotions"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   const { data: promos, isLoading } = useQuery({
     queryKey: ["admin-promotions"],
