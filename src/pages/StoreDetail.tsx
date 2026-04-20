@@ -253,9 +253,7 @@ const StoreDetail = () => {
                 Aujourd'hui
               </p>
               <p className="mt-1 font-semibold text-foreground">
-                {todayHours?.closed
-                  ? "Fermé"
-                  : `${todayHours?.morning} · ${todayHours?.afternoon}`}
+                {formatStoreHours(todayHours)}
               </p>
             </div>
           </div>
