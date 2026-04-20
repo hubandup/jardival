@@ -1,7 +1,7 @@
 import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, Store, Tag, BookOpen, LayoutDashboard, Package } from "lucide-react";
+import { Loader2, LogOut, Store, Tag, BookOpen, LayoutDashboard, Package, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -10,10 +10,12 @@ const navItems = [
   { to: "/admin/produits", label: "Produits", icon: Package },
   { to: "/admin/promotions", label: "Promotions", icon: Tag },
   { to: "/admin/catalogues", label: "Catalogues", icon: BookOpen },
+  { to: "/admin/utilisateurs", label: "Utilisateurs", icon: Users, superAdminOnly: true },
+  { to: "/admin/profil", label: "Mon profil", icon: User },
 ];
 
 export default function AdminLayout() {
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { user, isAdmin, isSuperAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
   if (loading) {
@@ -50,7 +52,9 @@ export default function AdminLayout() {
           <p className="text-xs text-muted-foreground truncate mt-1">{user.email}</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => (
+          {navItems
+            .filter((item) => !item.superAdminOnly || isSuperAdmin)
+            .map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
