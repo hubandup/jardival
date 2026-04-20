@@ -10,10 +10,11 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon, LayoutGrid, List } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon, LayoutGrid, List, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
-import { exportPromotionsToXlsx, parsePromotionsFromFile } from "@/lib/promotionsXlsx";
+import { exportPromotionsToXlsx, parsePromotionsFromFile, autoAssociateImages, stripParsedExtras } from "@/lib/promotionsXlsx";
 import { findCatalogueFallback } from "@/lib/promotion";
 import { useHeroMode, useSetHeroMode } from "@/hooks/useHero";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -81,17 +82,37 @@ export default function AdminPromotions() {
     toast.success(`${data.length} promotions exportées`);
   };
 
-  const handleImport = async (file: File) => {
+  const handleImport = async (file: File, mode: "upsert" | "replace") => {
     setImporting(true);
     try {
-      const rows = await parsePromotionsFromFile(file);
+      const parsed = await parsePromotionsFromFile(file);
+      const { matched, missing } = await autoAssociateImages(parsed);
+      const rows = stripParsedExtras(parsed);
+
+      if (mode === "replace") {
+        if (!confirm(`Remplacer TOUTES les promotions actuelles par les ${rows.length} du fichier ? Cette action est irréversible.`)) {
+          setImporting(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          return;
+        }
+        const { error: delErr } = await supabase.from("promotions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        if (delErr) throw delErr;
+      }
+
       const { error } = await supabase
         .from("promotions")
         .upsert(rows, { onConflict: "id" });
       if (error) throw error;
-      toast.success(`${rows.length} promotions importées`);
+
+      let msg = `${rows.length} promotions ${mode === "replace" ? "remplacées" : "importées"}`;
+      if (matched > 0) msg += ` — ${matched} image(s) associée(s) automatiquement`;
+      if (missing.length > 0) msg += ` — ${missing.length} image(s) introuvable(s)`;
+      toast.success(msg);
+      if (missing.length > 0) console.warn("Images manquantes:", missing);
+
       qc.invalidateQueries({ queryKey: ["admin-promotions"] });
       qc.invalidateQueries({ queryKey: ["promotions"] });
+      qc.invalidateQueries({ queryKey: ["hero_promos"] });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -211,17 +232,58 @@ export default function AdminPromotions() {
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4" /> Exporter Excel
           </Button>
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
-            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Importer Excel
-          </Button>
           <input
             ref={fileInputRef}
             type="file"
             accept=".xlsx,.xls"
             className="hidden"
-            onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
+            data-import-mode="upsert"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const mode = (fileInputRef.current?.dataset.importMode as "upsert" | "replace") || "upsert";
+              handleImport(file, mode);
+            }}
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={importing}>
+                {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Importer Excel
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuItem
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.dataset.importMode = "upsert";
+                    fileInputRef.current.click();
+                  }
+                }}
+              >
+                <div>
+                  <div className="font-medium">Fusionner</div>
+                  <div className="text-xs text-muted-foreground">Ajoute / met à jour les promotions du fichier sans supprimer les autres.</div>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.dataset.importMode = "replace";
+                    fileInputRef.current.click();
+                  }
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <div>
+                  <div className="font-medium">Remplacer tout</div>
+                  <div className="text-xs text-muted-foreground">Supprime les promotions existantes puis importe celles du fichier.</div>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" onClick={handleMigrate} disabled={migrating}>
             {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
             Migrer images
