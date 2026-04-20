@@ -248,6 +248,62 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Eye className="h-4 w-4" /> Visites
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalViews}</div>
+            <p className="text-xs text-muted-foreground mt-1">sur {days} jours</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Users className="h-4 w-4" /> Visiteurs uniques
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{Number(stats?.unique_sessions ?? 0)}</div>
+            <p className="text-xs text-muted-foreground mt-1">{uniqueRate}% du trafic</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Monitor className="h-4 w-4" /> Desktop
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pct(Number(stats?.desktop_views ?? 0))}%</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {Number(stats?.desktop_views ?? 0)} visite{Number(stats?.desktop_views ?? 0) > 1 ? "s" : ""}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Smartphone className="h-4 w-4" /> Mobile
+              {Number(stats?.tablet_views ?? 0) > 0 && (
+                <Tablet className="h-3 w-3 opacity-50" />
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {pct(Number(stats?.mobile_views ?? 0) + Number(stats?.tablet_views ?? 0))}%
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {Number(stats?.mobile_views ?? 0)} mobile · {Number(stats?.tablet_views ?? 0)} tablette
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
