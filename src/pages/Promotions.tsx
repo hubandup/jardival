@@ -87,7 +87,22 @@ const Promotions = () => {
             </p>
           </div>
 
-          <div className="mb-10 flex flex-wrap items-center gap-3 rounded-2xl border border-border/60 bg-card/50 p-4">
+          <div className="mb-10 flex flex-wrap items-end gap-3 rounded-2xl border border-border/60 bg-card/50 p-4">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Recherche
+              </label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher un produit…"
+                  className="pl-9"
+                />
+              </div>
+            </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Catégorie
