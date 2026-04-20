@@ -88,9 +88,34 @@ export default function AdminStores() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Magasins</h1>
-        <p className="text-muted-foreground mt-1">Gérez les informations de vos {stores?.length ?? 0} magasins</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Magasins</h1>
+          <p className="text-muted-foreground mt-1">
+            Gérez les informations de vos {stores?.length ?? 0} magasins
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+          >
+            {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileUp className="h-4 w-4 mr-2" />}
+            Importer Excel
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Exporter Excel
+          </Button>
+        </div>
       </div>
 
       <Card>
