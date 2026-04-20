@@ -289,9 +289,24 @@ export default function AdminPromotions() {
               </div>
               <div className="col-span-2 space-y-2">
                 <Label>Image</Label>
-                {editing.image && <img src={editing.image} alt="" className="h-32 rounded-md object-cover" />}
+                {(() => {
+                  const preview = editing.image ?? findCatalogueFallback(editing.title ?? "")?.image;
+                  return preview ? (
+                    <div className="space-y-1">
+                      <img src={preview} alt="" className="h-32 rounded-md object-cover" />
+                      {!editing.image && (
+                        <p className="text-xs text-muted-foreground">Image issue du catalogue (non sauvegardée). Cliquez "Migrer images" ou uploadez ci-dessous.</p>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
                 <Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} disabled={uploading} />
                 {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                <Input
+                  placeholder="Ou collez une URL"
+                  value={editing.image ?? ""}
+                  onChange={(e) => setEditing({ ...editing, image: e.target.value || null })}
+                />
               </div>
             </div>
           )}
