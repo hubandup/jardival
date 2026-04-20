@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.sitemap]
 verify_jwt = false
+
+[functions.llms]
+verify_jwt = false
+
+[functions.feed]
+verify_jwt = false
+
+[functions.ask]
+verify_jwt = false

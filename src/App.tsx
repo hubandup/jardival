@@ -19,6 +19,7 @@ import AdminProducts from "./pages/admin/AdminProducts.tsx";
 import AdminProfile from "./pages/admin/AdminProfile.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminMedia from "./pages/admin/AdminMedia.tsx";
+import AdminSeoLlm from "./pages/admin/AdminSeoLlm.tsx";
 import { AuthProvider } from "./hooks/useAuth";
 import { usePageTracking } from "./hooks/usePageTracking";
 
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="catalogues" element={<AdminCatalogues />} />
               <Route path="produits" element={<AdminProducts />} />
               <Route path="medias" element={<AdminMedia />} />
+              <Route path="seo-llm" element={<AdminSeoLlm />} />
               <Route path="profil" element={<AdminProfile />} />
               <Route path="utilisateurs" element={<AdminUsers />} />
             </Route>
