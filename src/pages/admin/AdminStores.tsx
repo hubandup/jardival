@@ -88,6 +88,7 @@ export default function AdminStores() {
       .from("stores")
       .update({
         name: editing.name,
+        slug: editing.slug?.trim() ? editing.slug.trim() : null,
         address: editing.address,
         postal_code: editing.postal_code,
         city: editing.city,
