@@ -19,8 +19,14 @@ import AdminProducts from "./pages/admin/AdminProducts.tsx";
 import AdminProfile from "./pages/admin/AdminProfile.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import { AuthProvider } from "./hooks/useAuth";
+import { usePageTracking } from "./hooks/usePageTracking";
 
 const queryClient = new QueryClient();
+
+function PageTracker() {
+  usePageTracking();
+  return null;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -29,6 +35,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <PageTracker />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/produit/:id" element={<ProductDetail />} />
