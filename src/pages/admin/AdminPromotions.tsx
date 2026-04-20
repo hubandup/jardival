@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
-import { exportPromotionsToXlsx, parsePromotionsFromFile } from "@/lib/promotionsXlsx";
+import { exportPromotionsToXlsx, parsePromotionsFromFile, autoAssociateImages, stripParsedExtras } from "@/lib/promotionsXlsx";
 import { findCatalogueFallback } from "@/lib/promotion";
 import { useHeroMode, useSetHeroMode } from "@/hooks/useHero";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
