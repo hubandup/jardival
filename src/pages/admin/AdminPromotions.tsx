@@ -238,9 +238,10 @@ export default function AdminPromotions() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
               {promos?.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
