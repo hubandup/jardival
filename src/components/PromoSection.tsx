@@ -25,8 +25,8 @@ export const PromoSection = () => {
 
   const activeCatalogue = catalogues?.[0];
   const validityLabel = activeCatalogue?.ends_at
-    ? `${activeCatalogue.title} · jusqu'au ${new Date(activeCatalogue.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
-    : "Catalogue Jardinales · jusqu'au 16 mai 2026";
+    ? `jusqu'au ${new Date(activeCatalogue.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
+    : "jusqu'au 16 mai 2026";
 
   return (
     <section id="promos" className="relative py-20 md:py-28">
