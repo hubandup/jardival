@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Store, Tag, BookOpen, ArrowRight, Package, AlertCircle, Eye, TrendingUp,
+  Users, Smartphone, Monitor, Tablet,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -80,7 +81,49 @@ export default function AdminDashboard() {
     },
   });
 
-  const totalViews = (daily ?? []).reduce((s, d) => s + d.views, 0);
+  const { data: stats } = useQuery({
+    queryKey: ["pageviews-stats", days],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("pageviews_stats", { _days: days });
+      if (error) throw error;
+      return (data?.[0] ?? null) as {
+        total_views: number;
+        unique_sessions: number;
+        mobile_views: number;
+        tablet_views: number;
+        desktop_views: number;
+      } | null;
+    },
+  });
+
+  const { data: topStores } = useQuery({
+    queryKey: ["pageviews-top-stores", days],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("pageviews_top_stores", { _days: days, _limit: 10 });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: topProducts } = useQuery({
+    queryKey: ["pageviews-top-products", days],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("pageviews_top_products", { _days: days, _limit: 10 });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const totalViews = Number(stats?.total_views ?? 0);
+  const uniqueRate =
+    stats && Number(stats.total_views) > 0
+      ? Math.round((Number(stats.unique_sessions) / Number(stats.total_views)) * 100)
+      : 0;
+  const deviceTotal =
+    Number(stats?.mobile_views ?? 0) +
+    Number(stats?.tablet_views ?? 0) +
+    Number(stats?.desktop_views ?? 0);
+  const pct = (n: number) => (deviceTotal > 0 ? Math.round((n / deviceTotal) * 100) : 0);
 
   const cards = [
     { to: "/admin/magasins", label: "Magasins", icon: Store, count: counts?.stores },
@@ -205,6 +248,62 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Eye className="h-4 w-4" /> Visites
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalViews}</div>
+            <p className="text-xs text-muted-foreground mt-1">sur {days} jours</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Users className="h-4 w-4" /> Visiteurs uniques
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{Number(stats?.unique_sessions ?? 0)}</div>
+            <p className="text-xs text-muted-foreground mt-1">{uniqueRate}% du trafic</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Monitor className="h-4 w-4" /> Desktop
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pct(Number(stats?.desktop_views ?? 0))}%</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {Number(stats?.desktop_views ?? 0)} visite{Number(stats?.desktop_views ?? 0) > 1 ? "s" : ""}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Smartphone className="h-4 w-4" /> Mobile
+              {Number(stats?.tablet_views ?? 0) > 0 && (
+                <Tablet className="h-3 w-3 opacity-50" />
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {pct(Number(stats?.mobile_views ?? 0) + Number(stats?.tablet_views ?? 0))}%
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {Number(stats?.mobile_views ?? 0)} mobile · {Number(stats?.tablet_views ?? 0)} tablette
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -233,6 +332,60 @@ export default function AdminDashboard() {
           )}
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Store className="h-4 w-4" /> Top magasins consultés
+            </CardTitle>
+            <CardDescription>Sur les {days} derniers jours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(topStores ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">Aucune consultation</p>
+            ) : (
+              <ul className="space-y-1">
+                {(topStores ?? []).map((s: any) => (
+                  <li
+                    key={s.store_id}
+                    className="flex justify-between items-center text-sm py-2 border-b last:border-0"
+                  >
+                    <span className="truncate">{s.store_name ?? s.store_id}</span>
+                    <span className="font-semibold">{Number(s.views)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="h-4 w-4" /> Top produits vus
+            </CardTitle>
+            <CardDescription>Sur les {days} derniers jours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(topProducts ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">Aucune consultation</p>
+            ) : (
+              <ul className="space-y-1">
+                {(topProducts ?? []).map((p: any) => (
+                  <li
+                    key={p.product_id}
+                    className="flex justify-between items-center text-sm py-2 border-b last:border-0"
+                  >
+                    <span className="truncate">{p.product_name ?? p.product_id}</span>
+                    <span className="font-semibold">{Number(p.views)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
