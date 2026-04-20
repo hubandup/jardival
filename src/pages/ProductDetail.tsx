@@ -43,6 +43,42 @@ const ProductDetail = () => {
     setActiveImg(0);
   }, [id]);
 
+  const seoTitle = product ? `${product.name} | Jardival` : "Produit | Jardival";
+  const seoDesc = product
+    ? `${description.slice(0, 140)} Disponible chez Jardival, votre jardinerie de proximité.`
+    : "Découvrez la sélection Jardival pour votre jardin et votre extérieur.";
+  const seoImage = product?.image || undefined;
+  const canonical = typeof window !== "undefined" ? window.location.href.split("?")[0] : undefined;
+
+  useSeo({
+    title: seoTitle,
+    description: seoDesc,
+    canonical,
+    image: seoImage,
+    type: "product",
+    jsonLd: product
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: product.name,
+          description,
+          image: product.images?.length ? product.images : product.image,
+          sku: product.ref,
+          category: product.category,
+          brand: { "@type": "Brand", name: "Jardival" },
+          offers: product.price > 0
+            ? {
+                "@type": "Offer",
+                price: product.price,
+                priceCurrency: "EUR",
+                availability: "https://schema.org/InStock",
+                url: canonical,
+              }
+            : undefined,
+        }
+      : undefined,
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
