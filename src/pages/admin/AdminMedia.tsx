@@ -63,6 +63,7 @@ export default function AdminMedia() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [sortKey, setSortKey] = useState<"title" | "bucket" | "size" | "date">("date");
   const [sortAsc, setSortAsc] = useState(false);
+  const [associateAsset, setAssociateAsset] = useState<MediaAsset | null>(null);
 
   const { data: rawAssets = [], isLoading } = useMediaAssets({ bucket, type, q });
 
