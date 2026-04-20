@@ -39,6 +39,7 @@ export function promotionToProduct(p: PromotionRow): Product {
 
   return {
     id: p.id,
+    slug: p.slug ?? undefined,
     ref: p.id.slice(0, 8),
     name: p.title,
     category: p.description ?? fallback?.category ?? "Promotion",
