@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface StoreRow {
   id: string;
+  slug: string | null;
   name: string;
   address: string;
   postal_code: string | null;
@@ -87,6 +88,7 @@ export default function AdminStores() {
       .from("stores")
       .update({
         name: editing.name,
+        slug: editing.slug?.trim() ? editing.slug.trim() : null,
         address: editing.address,
         postal_code: editing.postal_code,
         city: editing.city,
@@ -209,6 +211,28 @@ export default function AdminStores() {
               <div className="col-span-2 space-y-2">
                 <Label>Nom</Label>
                 <Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Slug d'URL</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">/magasins/</span>
+                  <Input
+                    value={editing.slug ?? ""}
+                    placeholder="genere-automatiquement-depuis-la-ville"
+                    onChange={(e) =>
+                      setEditing({
+                        ...editing,
+                        slug: e.target.value
+                          .toLowerCase()
+                          .replace(/\s+/g, "-")
+                          .replace(/[^a-z0-9-]/g, ""),
+                      })
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Laissez vide pour régénérer automatiquement à partir de la ville à l'enregistrement.
+                </p>
               </div>
               <div className="col-span-2 space-y-2">
                 <Label>Adresse</Label>

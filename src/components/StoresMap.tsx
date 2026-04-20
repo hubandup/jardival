@@ -75,7 +75,7 @@ export const StoresMap = ({ stores, activeId, onSelect }: Props) => {
         <div style="font-family:Inter,sans-serif;min-width:220px">
           <div style="font-weight:600;font-size:14px;color:hsl(150,20%,12%)">${s.name}</div>
           <div style="color:hsl(150,8%,42%);font-size:12px;margin-top:4px">${s.address}<br/>${s.postalCode ? s.postalCode + " " : ""}${s.city}</div>
-          <a href="/magasins/${s.id}" style="display:inline-block;margin-top:10px;padding:6px 12px;background:hsl(142,65%,28%);color:white;border-radius:999px;font-size:12px;font-weight:600;text-decoration:none">Voir le magasin →</a>
+          <a href="/magasins/${s.slug || s.id}" style="display:inline-block;margin-top:10px;padding:6px 12px;background:hsl(142,65%,28%);color:white;border-radius:999px;font-size:12px;font-weight:600;text-decoration:none">Voir le magasin →</a>
           <div style="margin-top:10px;font-size:10px;color:hsl(150,8%,42%);text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Itinéraire — ouvrir avec</div>
           <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
             <a href="${directionsUrlFor(s, "google")}" target="_blank" rel="noopener" style="${linkStyle}">Google Maps</a>

@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
 
     const [products, stores, promos] = await Promise.all([
       supabase.from("products").select("id, ref, name, category, price, old_price").eq("active", true).limit(2000),
-      supabase.from("stores").select("id, name, address, postal_code, city, phone, hours, services").limit(500),
+      supabase.from("stores").select("id, slug, name, address, postal_code, city, phone, hours, services").limit(500),
       supabase.from("promotions").select("id, title, description, price, original_price, active, starts_at, ends_at").limit(500),
     ]);
 
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     const context = `# Jardival — données du site (${new Date().toISOString().slice(0, 10)})
 
 ## Magasins (${stores.data?.length ?? 0})
-${(stores.data ?? []).map((s) => `- ${s.name} — ${s.address}, ${s.postal_code ?? ""} ${s.city}${s.phone ? ` — ${s.phone}` : ""}${s.services?.length ? ` — services: ${s.services.join(", ")}` : ""}${Array.isArray(s.hours) ? ` — horaires: ${(s.hours as Array<{ day: string; morning?: string; afternoon?: string; closed?: boolean }>).map((h) => `${h.day}: ${h.closed ? "fermé" : `${h.morning ?? ""} ${h.afternoon ?? ""}`}`).join(" | ")}` : ""} — ${SITE_URL}/magasins/${s.id}`).join("\n")}
+${(stores.data ?? []).map((s) => `- ${s.name} — ${s.address}, ${s.postal_code ?? ""} ${s.city}${s.phone ? ` — ${s.phone}` : ""}${s.services?.length ? ` — services: ${s.services.join(", ")}` : ""}${Array.isArray(s.hours) ? ` — horaires: ${(s.hours as Array<{ day: string; morning?: string; afternoon?: string; closed?: boolean }>).map((h) => `${h.day}: ${h.closed ? "fermé" : `${h.morning ?? ""} ${h.afternoon ?? ""}`}`).join(" | ")}` : ""} — ${SITE_URL}/magasins/${(s as any).slug || s.id}`).join("\n")}
 
 ## Promotions actives (${activePromos.length})
 ${activePromos.map((p) => `- ${p.title}${p.price != null ? ` — ${p.price} €${p.original_price ? ` (était ${p.original_price} €)` : ""}` : ""}${p.ends_at ? ` — jusqu'au ${p.ends_at}` : ""}`).join("\n")}

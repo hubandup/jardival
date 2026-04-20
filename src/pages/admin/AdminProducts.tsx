@@ -82,6 +82,7 @@ export default function AdminProducts() {
     const payload = {
       ref: editing.ref ?? null,
       name: editing.name,
+      slug: editing.slug?.trim() ? editing.slug.trim() : null,
       category: editing.category ?? null,
       description: editing.description ?? null,
       image: editing.image ?? null,
@@ -335,6 +336,28 @@ export default function AdminProducts() {
                   value={editing.category ?? ""}
                   onChange={(e) => setEditing({ ...editing, category: e.target.value })}
                 />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Slug d'URL</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">/produit/</span>
+                  <Input
+                    value={editing.slug ?? ""}
+                    placeholder="généré-automatiquement-depuis-le-nom"
+                    onChange={(e) =>
+                      setEditing({
+                        ...editing,
+                        slug: e.target.value
+                          .toLowerCase()
+                          .replace(/\s+/g, "-")
+                          .replace(/[^a-z0-9-]/g, ""),
+                      })
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Laissez vide pour régénérer automatiquement à partir du nom à l'enregistrement.
+                </p>
               </div>
               <div className="col-span-2 space-y-2">
                 <Label>Description</Label>

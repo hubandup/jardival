@@ -17,6 +17,7 @@ export function formatStoreHours(h: StoreHours | undefined | null): string {
 
 export interface Store {
   id: string;
+  slug?: string;
   name: string;
   address: string;
   postalCode?: string;

@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
         .limit(500),
       supabase
         .from("stores")
-        .select("id, name, address, postal_code, city, phone, latitude, longitude, services, hours")
+        .select("id, slug, name, address, postal_code, city, phone, latitude, longitude, services, hours")
         .order("name")
         .limit(500),
     ]);
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
             md += `  - ${h.day} : ${h.closed ? "Fermé" : `${h.morning ?? ""} · ${h.afternoon ?? ""}`}\n`;
           }
         }
-        md += `- URL : ${SITE_URL}/magasins/${s.id}\n\n`;
+        md += `- URL : ${SITE_URL}/magasins/${s.slug || s.id}\n\n`;
       }
 
       md += `## Promotions actives\n\n`;
