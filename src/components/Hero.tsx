@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Product } from "@/types/product";
 import { useHeroPromos } from "@/hooks/useHero";
 
@@ -53,9 +54,11 @@ export const Hero = ({ products }: Props) => {
         <div className="relative">
           <div className="grid grid-cols-2 gap-4">
             {promos.map((p, i) => (
-              <div
+              <Link
                 key={p.id}
-                className={`overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-transform ${
+                to={p.href}
+                aria-label={`Voir ${p.title}`}
+                className={`group block overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all hover:shadow-glow hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                   i % 2 === 0 ? "translate-y-0" : "translate-y-8"
                 }`}
               >
@@ -65,7 +68,7 @@ export const Hero = ({ products }: Props) => {
                       src={p.image}
                       alt={p.title}
                       loading="eager"
-                      className="h-full w-full object-contain p-3"
+                      className="h-full w-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
                     <div className="h-full w-full bg-muted" />
@@ -76,7 +79,7 @@ export const Hero = ({ products }: Props) => {
                     </span>
                   )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
           <div className="absolute -inset-x-10 -bottom-10 -z-10 h-40 rounded-full bg-primary/15 blur-3xl" />
