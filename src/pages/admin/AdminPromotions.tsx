@@ -48,7 +48,7 @@ export default function AdminPromotions() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: promos } = useQuery({ queryKey: ["__promos_for_export__"], queryFn: async () => null, enabled: false });
+  
 
   const handleExport = async () => {
     const { data, error } = await supabase.from("promotions").select("*").order("display_order");
