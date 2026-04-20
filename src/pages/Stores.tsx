@@ -127,7 +127,7 @@ const Stores = () => {
       </section>
 
       {/* Stores grid */}
-      <section className="py-10 md:py-12">
+      <section className="pt-2 pb-10 md:pt-4 md:pb-12">
         <div className="container-px mx-auto max-w-7xl">
           {/* Map */}
           <div className="mb-12">
