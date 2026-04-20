@@ -159,11 +159,7 @@ const Promotions = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setCategory(ALL);
-                  setStoreId(ALL);
-                  setQuery("");
-                }}
+                onClick={resetAll}
                 className="self-end"
               >
                 <X className="h-4 w-4" />
