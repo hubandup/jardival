@@ -27,7 +27,7 @@ function toCell(value: unknown): string | number | boolean | null {
   return value as string | number | boolean;
 }
 
-export function exportProductsToXlsx(products: ProductRow[]): void {
+export function exportProductsToXlsx(products: Partial<ProductRow>[]): void {
   const rows = products.map((p) => {
     const row: Record<string, unknown> = {};
     for (const key of COLUMNS) row[key] = toCell((p as any)[key]);
