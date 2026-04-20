@@ -132,7 +132,7 @@ export default function AdminSeoLlm() {
             </div>
             <div className="flex gap-2 shrink-0">
               <Button variant="outline" size="sm" onClick={() => copy(e.url)}>
-                {copied === e.url ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                {copied === e.url ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                 Copier
               </Button>
               {!e.contentType.includes("POST") && (
