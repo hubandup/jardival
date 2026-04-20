@@ -5,6 +5,7 @@ export interface Store {
   postalCode?: string;
   city: string;
   department: string;
+  coords: [number, number];
 }
 
 export const STORES: Store[] = [
