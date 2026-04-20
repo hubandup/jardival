@@ -1,0 +1,103 @@
+openapi: 3.1.0
+info:
+  title: Jardival API
+  description: |
+    API publique du réseau de jardineries Jardival.
+    Permet d'interroger en langage naturel les magasins, promotions et catalogue,
+    ou de récupérer les données brutes via des flux JSON.
+  version: "1.0.0"
+  contact:
+    name: Jardival
+    url: https://jardival.lovable.app
+servers:
+  - url: https://nwqhzsjajjluvwrbaemw.supabase.co/functions/v1
+    description: Production (Lovable Cloud)
+paths:
+  /ask:
+    post:
+      operationId: ask
+      summary: Poser une question en langage naturel
+      description: |
+        Répond en français à toute question concernant Jardival :
+        magasins, horaires, services, promotions actives, produits du catalogue.
+        Les réponses sont générées à partir des données officielles du site.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question:
+                  type: string
+                  maxLength: 1000
+                  description: Question en langage naturel.
+                  example: Quels sont les horaires du magasin d'Arbois ?
+      responses:
+        "200":
+          description: Réponse générée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  question:
+                    type: string
+                  answer:
+                    type: string
+                  sources:
+                    type: object
+        "400":
+          description: Requête invalide
+        "429":
+          description: Trop de requêtes
+    get:
+      operationId: askInfo
+      summary: Description de l'endpoint ask
+      responses:
+        "200":
+          description: Métadonnées de l'endpoint
+          content:
+            application/json:
+              schema:
+                type: object
+  /feed/products.json:
+    get:
+      operationId: listProducts
+      summary: Liste complète des produits actifs du catalogue
+      responses:
+        "200":
+          description: Tableau JSON de produits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /feed/stores.json:
+    get:
+      operationId: listStores
+      summary: Liste des magasins Jardival (adresses, horaires, services)
+      responses:
+        "200":
+          description: Tableau JSON de magasins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /feed/promotions.json:
+    get:
+      operationId: listPromotions
+      summary: Promotions actives en cours
+      responses:
+        "200":
+          description: Tableau JSON de promotions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
