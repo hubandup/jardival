@@ -371,9 +371,7 @@ const StoreDetail = () => {
                     >
                       <span>{h.day}</span>
                       <span className="tabular-nums">
-                        {h.closed
-                          ? "Fermé"
-                          : `${h.morning} · ${h.afternoon}`}
+                        {formatStoreHours(h)}
                       </span>
                     </li>
                   );
