@@ -15,6 +15,14 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
 import { ProductCard } from "@/components/ProductCard";
 import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
   getStore,
   nearbyStores,
   DEPARTMENTS,
