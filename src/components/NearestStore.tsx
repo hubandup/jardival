@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Navigation, Loader2, Compass } from "lucide-react";
-import { STORES, mapsUrl, DEPARTMENTS } from "@/data/stores";
+import { STORES, mapsUrl, directionsUrl, DEPARTMENTS } from "@/data/stores";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { nearestStore } from "@/lib/geo";
 
@@ -116,7 +116,7 @@ export const NearestStore = ({ onLocate }: Props) => {
 
         <div className="flex flex-wrap gap-2 md:flex-nowrap">
           <a
-            href={mapsUrl(store)}
+            href={directionsUrl(store)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:shadow-glow"
