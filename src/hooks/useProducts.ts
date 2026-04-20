@@ -84,14 +84,20 @@ export function useProduct(slugOrId: string | undefined) {
         return { row: data as ProductRow, product: toProduct(data as ProductRow) };
       }
 
-      // 3) Final fallback: maybe it's a promotion (always UUID)
-      if (!isUuid) return null;
-      const { data: promo, error: promoErr } = await supabase
+      // 3) Final fallback: maybe it's a promotion (by slug or UUID)
+      let promo: any = null;
+      const bySlug = await supabase
         .from("promotions")
         .select("*")
-        .eq("id", key)
+        .eq("slug", key)
         .maybeSingle();
-      if (promoErr) throw promoErr;
+      if (bySlug.error) throw bySlug.error;
+      promo = bySlug.data;
+      if (!promo && isUuid) {
+        const r = await supabase.from("promotions").select("*").eq("id", key).maybeSingle();
+        if (r.error) throw r.error;
+        promo = r.data;
+      }
       if (!promo) return null;
 
       const price = promo.price ?? 0;
@@ -105,7 +111,7 @@ export function useProduct(slugOrId: string | undefined) {
       const image = promo.image ?? fallback?.image ?? "";
       const row: ProductRow = {
         id: promo.id,
-        slug: null,
+        slug: promo.slug ?? null,
         ref: promo.id.slice(0, 8),
         name: promo.title,
         category: promo.description ?? "Promotion",

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface PromotionRow {
   id: string;
+  slug: string | null;
   title: string;
   description: string | null;
   price: number | null;

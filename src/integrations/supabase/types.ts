@@ -236,6 +236,7 @@ export type Database = {
           image: string | null
           original_price: number | null
           price: number | null
+          slug: string | null
           starts_at: string | null
           store_ids: string[] | null
           title: string
@@ -252,6 +253,7 @@ export type Database = {
           image?: string | null
           original_price?: number | null
           price?: number | null
+          slug?: string | null
           starts_at?: string | null
           store_ids?: string[] | null
           title: string
@@ -268,6 +270,7 @@ export type Database = {
           image?: string | null
           original_price?: number | null
           price?: number | null
+          slug?: string | null
           starts_at?: string | null
           store_ids?: string[] | null
           title?: string
