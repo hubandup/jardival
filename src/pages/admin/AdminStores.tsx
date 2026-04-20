@@ -213,6 +213,28 @@ export default function AdminStores() {
                 <Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
               </div>
               <div className="col-span-2 space-y-2">
+                <Label>Slug d'URL</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">/magasins/</span>
+                  <Input
+                    value={editing.slug ?? ""}
+                    placeholder="genere-automatiquement-depuis-la-ville"
+                    onChange={(e) =>
+                      setEditing({
+                        ...editing,
+                        slug: e.target.value
+                          .toLowerCase()
+                          .replace(/\s+/g, "-")
+                          .replace(/[^a-z0-9-]/g, ""),
+                      })
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Laissez vide pour régénérer automatiquement à partir de la ville à l'enregistrement.
+                </p>
+              </div>
+              <div className="col-span-2 space-y-2">
                 <Label>Adresse</Label>
                 <Input value={editing.address} onChange={(e) => setEditing({ ...editing, address: e.target.value })} />
               </div>
