@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const today = new Date().toISOString().slice(0, 10);
 
     const [products, promos, stores, catalogues] = await Promise.all([
-      supabase.from("products").select("id, updated_at").eq("active", true).limit(5000),
+      supabase.from("products").select("id, slug, updated_at").eq("active", true).limit(5000),
       supabase.from("promotions").select("id, updated_at, active, starts_at, ends_at").limit(5000),
       supabase.from("stores").select("id, updated_at").limit(5000),
       supabase.from("catalogues").select("id, updated_at, active").limit(500),
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
     // Products
     (products.data ?? []).forEach((p: any) => {
-      urls.push(urlEntry(`${SITE_URL}/produit/${p.id}`, p.updated_at, "weekly", "0.7"));
+      urls.push(urlEntry(`${SITE_URL}/produit/${p.slug || p.id}`, p.updated_at, "weekly", "0.7"));
     });
 
     // Active promos (also routed through /produit/:id)
