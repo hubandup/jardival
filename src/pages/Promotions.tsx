@@ -28,6 +28,7 @@ const Promotions = () => {
 
   const [category, setCategory] = useState<string>(ALL);
   const [storeId, setStoreId] = useState<string>(ALL);
+  const [query, setQuery] = useState<string>("");
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -37,16 +38,21 @@ const Promotions = () => {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "fr"));
   }, [dbPromos]);
 
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
   const filtered = useMemo(() => {
+    const q = normalize(query.trim());
     return dbPromos.filter((p) => {
       if (category !== ALL && (p.description ?? "").trim() !== category) return false;
       if (storeId !== ALL) {
         if (!p.store_ids || p.store_ids.length === 0) return false;
         if (!p.store_ids.includes(storeId)) return false;
       }
+      if (q && !normalize(p.title).includes(q)) return false;
       return true;
     });
-  }, [dbPromos, category, storeId]);
+  }, [dbPromos, category, storeId, query]);
 
   const promos = filtered.map(promotionToProduct);
   const hasFilters = category !== ALL || storeId !== ALL;
