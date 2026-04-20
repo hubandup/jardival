@@ -7,6 +7,14 @@ import { NearestStore } from "@/components/NearestStore";
 import { STORES, DEPARTMENTS, Store } from "@/data/stores";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
 import { MapPin, Search, Phone, Clock } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 const Stores = () => {
   const [query, setQuery] = useState("");
