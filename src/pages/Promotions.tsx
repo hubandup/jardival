@@ -27,9 +27,22 @@ const Promotions = () => {
   const { data: stores = [] } = useStores();
   const activeCatalogue = catalogues?.[0];
 
-  const [category, setCategory] = useState<string>(ALL);
-  const [storeId, setStoreId] = useState<string>(ALL);
-  const [query, setQuery] = useState<string>("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const category = searchParams.get("categorie") ?? ALL;
+  const storeId = searchParams.get("magasin") ?? ALL;
+  const query = searchParams.get("q") ?? "";
+
+  const updateParam = (key: string, value: string, defaultValue: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (!value || value === defaultValue) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next, { replace: true });
+  };
+
+  const setCategory = (v: string) => updateParam("categorie", v, ALL);
+  const setStoreId = (v: string) => updateParam("magasin", v, ALL);
+  const setQuery = (v: string) => updateParam("q", v, "");
+  const resetAll = () => setSearchParams(new URLSearchParams(), { replace: true });
 
   const categories = useMemo(() => {
     const set = new Set<string>();
