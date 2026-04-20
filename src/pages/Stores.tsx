@@ -73,7 +73,7 @@ const Stores = () => {
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-hero">
-        <div className="container-px mx-auto max-w-7xl py-16 md:py-24">
+        <div className="container-px mx-auto max-w-7xl pt-16 pb-8 md:pt-24 md:pb-10">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
             <MapPin className="h-3.5 w-3.5" /> Réseau Jardival & Point Vert
           </span>
@@ -127,7 +127,7 @@ const Stores = () => {
       </section>
 
       {/* Stores grid */}
-      <section className="py-10 md:py-12">
+      <section className="pt-2 pb-10 md:pt-4 md:pb-12">
         <div className="container-px mx-auto max-w-7xl">
           {/* Map */}
           <div className="mb-12">
