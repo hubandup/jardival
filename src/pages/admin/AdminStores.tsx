@@ -51,7 +51,7 @@ export default function AdminStores() {
     queryFn: async () => {
       const { data, error } = await supabase.from("stores").select("*").order("name");
       if (error) throw error;
-      return data as StoreRow[];
+      return data as unknown as StoreRow[];
     },
   });
 
