@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,10 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ImageDown } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
+import { exportPromotionsToXlsx, parsePromotionsFromFile } from "@/lib/promotionsXlsx";
 
 interface PromoRow {
   id: string;
@@ -44,6 +45,37 @@ export default function AdminPromotions() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [migrating, setMigrating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  
+
+  const handleExport = async () => {
+    const { data, error } = await supabase.from("promotions").select("*").order("display_order");
+    if (error || !data) return toast.error("Erreur export");
+    if (!data.length) return toast.error("Aucune promotion à exporter");
+    exportPromotionsToXlsx(data);
+    toast.success(`${data.length} promotions exportées`);
+  };
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const rows = await parsePromotionsFromFile(file);
+      const { error } = await supabase
+        .from("promotions")
+        .upsert(rows, { onConflict: "id" });
+      if (error) throw error;
+      toast.success(`${rows.length} promotions importées`);
+      qc.invalidateQueries({ queryKey: ["admin-promotions"] });
+      qc.invalidateQueries({ queryKey: ["promotions"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleMigrate = async () => {
     if (!confirm("Uploader les images locales du catalogue vers le bucket pour toutes les promos sans image ?")) return;
@@ -129,16 +161,29 @@ export default function AdminPromotions() {
           <h1 className="text-3xl font-bold">Promotions</h1>
           <p className="text-muted-foreground mt-1">Produits en promo affichés sur le site</p>
         </div>
-        <Button onClick={() => setEditing({ ...empty(), isNew: true })}>
-          <Plus className="h-4 w-4" /> Ajouter
-        </Button>
-      </div>
-
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={handleMigrate} disabled={migrating}>
-          {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
-          Migrer images locales → bucket
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="h-4 w-4" /> Exporter Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            Importer Excel
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
+          />
+          <Button variant="outline" size="sm" onClick={handleMigrate} disabled={migrating}>
+            {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
+            Migrer images
+          </Button>
+          <Button onClick={() => setEditing({ ...empty(), isNew: true })}>
+            <Plus className="h-4 w-4" /> Ajouter
+          </Button>
+        </div>
       </div>
 
       <Card>
