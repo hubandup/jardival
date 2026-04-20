@@ -27,6 +27,7 @@ interface Candidate {
   name: string;
   category?: string | null;
   hasImage: boolean;
+  recent?: boolean;
 }
 
 interface AssociateAssetDialogProps {
@@ -259,7 +260,7 @@ export default function AssociateAssetDialog({
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const filtered = useMemo(() => candidates, [candidates]);
+  const filtered = displayedCandidates;
 
   if (!asset) return null;
 
@@ -338,6 +339,11 @@ export default function AssociateAssetDialog({
                             {isSuggested && (
                               <span className="rounded-full bg-primary/10 text-primary text-[10px] font-medium px-2 py-0.5 shrink-0">
                                 suggéré
+                              </span>
+                            )}
+                            {!isSuggested && c.recent && (
+                              <span className="rounded-full bg-muted text-muted-foreground text-[10px] font-medium px-2 py-0.5 shrink-0">
+                                récent
                               </span>
                             )}
                           </div>
