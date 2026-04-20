@@ -232,17 +232,58 @@ export default function AdminPromotions() {
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4" /> Exporter Excel
           </Button>
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
-            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Importer Excel
-          </Button>
           <input
             ref={fileInputRef}
             type="file"
             accept=".xlsx,.xls"
             className="hidden"
-            onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
+            data-import-mode="upsert"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const mode = (fileInputRef.current?.dataset.importMode as "upsert" | "replace") || "upsert";
+              handleImport(file, mode);
+            }}
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={importing}>
+                {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Importer Excel
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuItem
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.dataset.importMode = "upsert";
+                    fileInputRef.current.click();
+                  }
+                }}
+              >
+                <div>
+                  <div className="font-medium">Fusionner</div>
+                  <div className="text-xs text-muted-foreground">Ajoute / met à jour les promotions du fichier sans supprimer les autres.</div>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.dataset.importMode = "replace";
+                    fileInputRef.current.click();
+                  }
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <div>
+                  <div className="font-medium">Remplacer tout</div>
+                  <div className="text-xs text-muted-foreground">Supprime les promotions existantes puis importe celles du fichier.</div>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" onClick={handleMigrate} disabled={migrating}>
             {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
             Migrer images
