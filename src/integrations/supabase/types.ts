@@ -159,6 +159,7 @@ export type Database = {
           old_price: number | null
           price: number | null
           ref: string | null
+          slug: string | null
           updated_at: string
         }
         Insert: {
@@ -176,6 +177,7 @@ export type Database = {
           old_price?: number | null
           price?: number | null
           ref?: string | null
+          slug?: string | null
           updated_at?: string
         }
         Update: {
@@ -193,6 +195,7 @@ export type Database = {
           old_price?: number | null
           price?: number | null
           ref?: string | null
+          slug?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -415,6 +418,8 @@ export type Database = {
           views: number
         }[]
       }
+      slugify: { Args: { _text: string }; Returns: string }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role: "super_admin" | "admin"
