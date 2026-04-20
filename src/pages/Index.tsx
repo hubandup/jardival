@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Hero } from "@/components/Hero";
 import { PromoSection } from "@/components/PromoSection";
 import { Catalogue } from "@/components/Catalogue";
+import { DriveToStoreBanner } from "@/components/DriveToStoreBanner";
 import { SiteFooter } from "@/components/SiteFooter";
 
 const products = productsData as Product[];
@@ -15,6 +16,7 @@ const Index = () => {
       <main>
         <Hero products={products} />
         <PromoSection products={products} />
+        <DriveToStoreBanner />
         <Catalogue products={products} />
       </main>
       <SiteFooter />
