@@ -78,5 +78,5 @@ Allow: /
 Sitemap: https://nwqhzsjajjluvwrbaemw.supabase.co/functions/v1/sitemap
 
 # Index Markdown destiné aux LLM (standard llms.txt)
-# Détail complet : /functions/v1/llms-full.txt
-LLM-Content: https://nwqhzsjajjluvwrbaemw.supabase.co/functions/v1/llms
+# Détail complet : /llms-full.txt
+LLM-Content: https://jardival.lovable.app/llms.txt
