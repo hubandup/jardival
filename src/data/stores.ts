@@ -48,6 +48,15 @@ export const DEPARTMENTS: Record<string, string> = {
 };
 
 export function mapsUrl(store: Store) {
-  const q = encodeURIComponent(`${store.name}, ${store.address}, ${store.postalCode ?? ""} ${store.city}`);
-  return `https://www.google.com/maps/search/?api=1&query=${q}`;
+  // Use coordinates directly — avoids tracking-style URLs blocked by ad-blockers
+  // and works on any device (opens native maps app on mobile).
+  const [lat, lon] = store.coords;
+  const label = encodeURIComponent(store.name);
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`;
+}
+
+export function directionsUrl(store: Store) {
+  const [lat, lon] = store.coords;
+  // geo: scheme works on mobile, falls back to Google Maps directions on desktop
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
 }
