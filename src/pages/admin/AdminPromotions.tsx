@@ -9,11 +9,13 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star } from "lucide-react";
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 import { exportPromotionsToXlsx, parsePromotionsFromFile } from "@/lib/promotionsXlsx";
 import { findCatalogueFallback } from "@/lib/promotion";
+import { useHeroMode, useSetHeroMode } from "@/hooks/useHero";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PromoRow {
   id: string;
@@ -26,6 +28,7 @@ interface PromoRow {
   ends_at: string | null;
   display_order: number;
   active: boolean;
+  hero_featured: boolean;
 }
 
 const empty = (): Omit<PromoRow, "id"> => ({
@@ -38,6 +41,7 @@ const empty = (): Omit<PromoRow, "id"> => ({
   ends_at: null,
   display_order: 0,
   active: true,
+  hero_featured: false,
 });
 
 export default function AdminPromotions() {
@@ -48,8 +52,16 @@ export default function AdminPromotions() {
   const [migrating, setMigrating] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { data: heroMode = "random" } = useHeroMode();
+  const setHeroMode = useSetHeroMode();
 
-  
+  const toggleHeroFeatured = async (id: string, value: boolean) => {
+    const { error } = await supabase.from("promotions").update({ hero_featured: value }).eq("id", id);
+    if (error) return toast.error("Erreur");
+    qc.invalidateQueries({ queryKey: ["admin-promotions"] });
+    qc.invalidateQueries({ queryKey: ["hero_promos"] });
+  };
+
 
   const handleExport = async () => {
     const { data, error } = await supabase.from("promotions").select("*").order("display_order");
@@ -121,6 +133,7 @@ export default function AdminPromotions() {
       ends_at: editing.ends_at || null,
       display_order: editing.display_order ?? 0,
       active: editing.active ?? true,
+      hero_featured: editing.hero_featured ?? false,
     };
     const { error } = editing.isNew
       ? await supabase.from("promotions").insert(payload)
@@ -187,6 +200,24 @@ export default function AdminPromotions() {
         </div>
       </div>
 
+      <Card className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="font-semibold flex items-center gap-2"><Star className="h-4 w-4 text-accent" />Section "Hero" (page d'accueil)</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {heroMode === "manual"
+              ? "Mode manuel : seules les promos cochées \"Mettre en avant\" sont affichées (4 max)."
+              : "Mode aléatoire : 4 promos actives sont tirées au hasard à chaque visite."}
+          </p>
+        </div>
+        <Select value={heroMode} onValueChange={(v) => setHeroMode(v as "manual" | "random").then(() => toast.success("Mode Hero mis à jour"))}>
+          <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="manual">Manuel (sélection)</SelectItem>
+            <SelectItem value="random">Aléatoire</SelectItem>
+          </SelectContent>
+        </Select>
+      </Card>
+
       <Card>
         {isLoading ? (
           <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
@@ -200,6 +231,7 @@ export default function AdminPromotions() {
                 <TableHead>Prix</TableHead>
                 <TableHead>Validité</TableHead>
                 <TableHead>Statut</TableHead>
+                <TableHead className="w-16 text-center">Hero</TableHead>
                 <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
@@ -229,6 +261,16 @@ export default function AdminPromotions() {
                       {p.active ? "Actif" : "Inactif"}
                     </span>
                   </TableCell>
+                  <TableCell className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => toggleHeroFeatured(p.id, !p.hero_featured)}
+                      className="inline-flex items-center justify-center"
+                      title={p.hero_featured ? "Retirer du Hero" : "Mettre en avant dans le Hero"}
+                    >
+                      <Star className={`h-4 w-4 ${p.hero_featured ? "fill-accent text-accent" : "text-muted-foreground"}`} />
+                    </button>
+                  </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={() => setEditing(p)}>
                       <Pencil className="h-4 w-4" />
@@ -241,7 +283,7 @@ export default function AdminPromotions() {
                 );
               })}
               {promos?.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -286,6 +328,15 @@ export default function AdminPromotions() {
               <div className="space-y-2 flex flex-col">
                 <Label>Actif</Label>
                 <Switch checked={editing.active ?? true} onCheckedChange={(v) => setEditing({ ...editing, active: v })} />
+              </div>
+              <div className="col-span-2 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm">Mettre en avant dans le Hero</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Affichée en haut de la page d'accueil (mode manuel uniquement)</p>
+                  </div>
+                  <Switch checked={editing.hero_featured ?? false} onCheckedChange={(v) => setEditing({ ...editing, hero_featured: v })} />
+                </div>
               </div>
               <div className="col-span-2 space-y-2">
                 <Label>Image</Label>

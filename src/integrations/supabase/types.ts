@@ -228,6 +228,7 @@ export type Database = {
           description: string | null
           display_order: number
           ends_at: string | null
+          hero_featured: boolean
           id: string
           image: string | null
           original_price: number | null
@@ -243,6 +244,7 @@ export type Database = {
           description?: string | null
           display_order?: number
           ends_at?: string | null
+          hero_featured?: boolean
           id?: string
           image?: string | null
           original_price?: number | null
@@ -258,6 +260,7 @@ export type Database = {
           description?: string | null
           display_order?: number
           ends_at?: string | null
+          hero_featured?: boolean
           id?: string
           image?: string | null
           original_price?: number | null
@@ -266,6 +269,24 @@ export type Database = {
           store_ids?: string[] | null
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
         }
         Relationships: []
       }
