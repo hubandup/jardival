@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Loader2, Upload } from "lucide-react";
+import { Pencil, Loader2, Download, FileUp } from "lucide-react";
 import { toast } from "sonner";
+import { exportStoresToXlsx, parseStoresFromFile } from "@/lib/storesXlsx";
 
 interface StoreRow {
   id: string;
@@ -30,6 +31,8 @@ export default function AdminStores() {
   const [editing, setEditing] = useState<StoreRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: stores, isLoading } = useQuery({
     queryKey: ["admin-stores"],
@@ -39,6 +42,31 @@ export default function AdminStores() {
       return data as StoreRow[];
     },
   });
+
+  const handleExport = () => {
+    if (!stores || stores.length === 0) {
+      toast.error("Aucun magasin à exporter");
+      return;
+    }
+    exportStoresToXlsx(stores as any);
+    toast.success(`${stores.length} magasins exportés`);
+  };
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const rows = await parseStoresFromFile(file);
+      const { error } = await supabase.from("stores").upsert(rows as any, { onConflict: "id" });
+      if (error) throw error;
+      toast.success(`${rows.length} magasins importés`);
+      qc.invalidateQueries({ queryKey: ["admin-stores"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSave = async () => {
     if (!editing) return;
@@ -87,9 +115,34 @@ export default function AdminStores() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Magasins</h1>
-        <p className="text-muted-foreground mt-1">Gérez les informations de vos {stores?.length ?? 0} magasins</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Magasins</h1>
+          <p className="text-muted-foreground mt-1">
+            Gérez les informations de vos {stores?.length ?? 0} magasins
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+          >
+            {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileUp className="h-4 w-4 mr-2" />}
+            Importer Excel
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Exporter Excel
+          </Button>
+        </div>
       </div>
 
       <Card>
