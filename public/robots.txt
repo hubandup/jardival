@@ -1,3 +1,68 @@
+# Jardival — robots.txt
+# Ouvert au crawl par tous les bots, y compris les agents IA.
+
+User-agent: *
+Allow: /
+
+# Bots IA explicitement autorisés
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+User-agent: MistralAI-User
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+# Bots de moteurs classiques (déjà couverts par *, listés pour clarté)
 User-agent: Googlebot
 Allow: /
 
@@ -10,7 +75,8 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
-Allow: /
-
 Sitemap: https://nwqhzsjajjluvwrbaemw.supabase.co/functions/v1/sitemap
+
+# Index Markdown destiné aux LLM (standard llms.txt)
+# Détail complet : /functions/v1/llms-full.txt
+LLM-Content: https://nwqhzsjajjluvwrbaemw.supabase.co/functions/v1/llms
