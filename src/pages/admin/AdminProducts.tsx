@@ -128,6 +128,50 @@ export default function AdminProducts() {
     setUploading(false);
   };
 
+  const handleExport = () => {
+    if (!products?.length) return toast.error("Aucun produit à exporter");
+    exportProductsToXlsx(products);
+    toast.success(`${products.length} produits exportés`);
+  };
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const rows = await parseProductsFromFile(file);
+      const { error } = await supabase
+        .from("products")
+        .upsert(rows, { onConflict: "id" });
+      if (error) throw error;
+      toast.success(`${rows.length} produits importés`);
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleMigrateImages = async () => {
+    if (!confirm("Migrer les images locales (products.json) vers le bucket pour les produits sans image ?")) return;
+    setMigrating(true);
+    try {
+      const r = await migrateProductImagesToBucket();
+      toast.success(
+        `Migration : ${r.updated}/${r.total} produits mis à jour (${r.skipped} ignorés)` +
+          (r.errors.length ? ` — ${r.errors.length} erreur(s)` : "")
+      );
+      if (r.errors.length) console.warn("Erreurs migration produits:", r.errors);
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -137,9 +181,29 @@ export default function AdminProducts() {
             Catalogue produits — {products?.length ?? 0} articles
           </p>
         </div>
-        <Button onClick={() => setEditing({ ...empty(), isNew: true })}>
-          <Plus className="h-4 w-4" /> Ajouter
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="h-4 w-4" /> Exporter Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            Importer Excel
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
+          />
+          <Button variant="outline" size="sm" onClick={handleMigrateImages} disabled={migrating}>
+            {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
+            Migrer images
+          </Button>
+          <Button onClick={() => setEditing({ ...empty(), isNew: true })}>
+            <Plus className="h-4 w-4" /> Ajouter
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
