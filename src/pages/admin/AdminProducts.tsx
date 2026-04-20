@@ -37,6 +37,9 @@ export default function AdminProducts() {
   const [uploading, setUploading] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [importing, setImporting] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const PAGE_SIZE = 50;
 
   const { data: products, isLoading } = useQuery({
