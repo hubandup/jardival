@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     if (resource === "products") {
       const { data } = await supabase
         .from("products")
-        .select("id, ref, name, category, description, image, images, price, old_price, discount, is_new, updated_at")
+        .select("id, slug, ref, name, category, description, image, images, price, old_price, discount, is_new, updated_at")
         .eq("active", true)
         .order("display_order")
         .limit(5000);
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
         count: data?.length ?? 0,
         products: (data ?? []).map((p) => ({
           ...p,
-          url: `${SITE_URL}/produit/${p.id}`,
+          url: `${SITE_URL}/produit/${p.slug || p.id}`,
         })),
       };
     } else if (resource === "stores") {
