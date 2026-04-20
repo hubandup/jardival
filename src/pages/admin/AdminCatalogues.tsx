@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MediaPickerDialog from "@/components/admin/MediaPickerDialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ExternalLink } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface CatalogueRow {
@@ -38,6 +39,7 @@ export default function AdminCatalogues() {
   const [saving, setSaving] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [mediaPicker, setMediaPicker] = useState(false);
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["admin-catalogues"],
@@ -186,8 +188,19 @@ export default function AdminCatalogues() {
               <div className="col-span-2 space-y-2">
                 <Label>Image de couverture</Label>
                 {editing.cover_image && <img src={editing.cover_image} alt="" className="h-32 rounded-md object-cover" />}
-                <Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0], "image")} disabled={uploadingImg} />
-                {uploadingImg && <Loader2 className="h-4 w-4 animate-spin" />}
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMediaPicker(true)}>
+                    <ImageIcon className="h-4 w-4" /> Médiathèque
+                  </Button>
+                  <Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0], "image")} disabled={uploadingImg} />
+                  {uploadingImg && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
+                <MediaPickerDialog
+                  open={mediaPicker}
+                  onOpenChange={setMediaPicker}
+                  onSelect={(url) => setEditing({ ...editing, cover_image: url })}
+                  defaultBucket="catalogues"
+                />
               </div>
               <div className="col-span-2 space-y-2">
                 <Label>Fichier PDF</Label>

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import MediaPickerDialog from "@/components/admin/MediaPickerDialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 import { exportPromotionsToXlsx, parsePromotionsFromFile } from "@/lib/promotionsXlsx";
@@ -51,6 +52,7 @@ export default function AdminPromotions() {
   const [uploading, setUploading] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [mediaPicker, setMediaPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: heroMode = "random" } = useHeroMode();
   const setHeroMode = useSetHeroMode();
@@ -355,12 +357,23 @@ export default function AdminPromotions() {
                     </div>
                   ) : null;
                 })()}
-                <Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} disabled={uploading} />
-                {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMediaPicker(true)}>
+                    <ImageIcon className="h-4 w-4" /> Médiathèque
+                  </Button>
+                  <Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} disabled={uploading} />
+                  {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
                 <Input
                   placeholder="Ou collez une URL"
                   value={editing.image ?? ""}
                   onChange={(e) => setEditing({ ...editing, image: e.target.value || null })}
+                />
+                <MediaPickerDialog
+                  open={mediaPicker}
+                  onOpenChange={setMediaPicker}
+                  onSelect={(url) => setEditing({ ...editing, image: url })}
+                  defaultBucket="promo-images"
                 />
               </div>
             </div>

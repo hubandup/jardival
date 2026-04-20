@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import MediaPickerDialog from "@/components/admin/MediaPickerDialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Loader2, Download, FileUp } from "lucide-react";
+import { Pencil, Loader2, Download, FileUp, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { exportStoresToXlsx, parseStoresFromFile } from "@/lib/storesXlsx";
 
@@ -32,6 +33,7 @@ export default function AdminStores() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [mediaPicker, setMediaPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: stores, isLoading } = useQuery({
@@ -225,6 +227,9 @@ export default function AdminStores() {
                 <Label>Image de couverture</Label>
                 {editing.image && <img src={editing.image} alt="" className="h-32 rounded-md object-cover" />}
                 <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMediaPicker(true)}>
+                    <ImageIcon className="h-4 w-4" /> Médiathèque
+                  </Button>
                   <Input
                     type="file"
                     accept="image/*"
@@ -237,6 +242,12 @@ export default function AdminStores() {
                   placeholder="Ou collez une URL"
                   value={editing.image ?? ""}
                   onChange={(e) => setEditing({ ...editing, image: e.target.value || null })}
+                />
+                <MediaPickerDialog
+                  open={mediaPicker}
+                  onOpenChange={setMediaPicker}
+                  onSelect={(url) => setEditing({ ...editing, image: url })}
+                  defaultBucket="store-images"
                 />
               </div>
               <div className="col-span-2 space-y-2">
