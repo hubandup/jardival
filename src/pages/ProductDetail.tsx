@@ -2,13 +2,14 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import productsData from "@/data/products.json";
 import { Product } from "@/types/product";
+import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ProductCard } from "@/components/ProductCard";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MapPin, Truck, ShieldCheck, Leaf } from "lucide-react";
 
-const products = productsData as Product[];
+const products = [...CATALOGUE_PROMOS, ...(productsData as Product[])];
 
 const DESCRIPTIONS = [
   "Conçu pour durer, ce produit Jardival allie robustesse et design soigné pour sublimer votre extérieur saison après saison.",
