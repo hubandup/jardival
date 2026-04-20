@@ -78,19 +78,19 @@ export const Hero = ({ products }: Props) => {
                       -{p.discount}%
                     </span>
                   )}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black/85 via-black/55 to-transparent p-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-                    <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-white">
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-primary/95 via-primary/75 to-transparent p-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                    <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-primary-foreground">
                       {p.title}
                     </p>
                     {(p.price || p.original_price) && (
                       <p className="mt-1 flex items-baseline gap-1.5">
                         {p.price && (
-                          <span className="text-sm font-bold text-white">
+                          <span className="text-sm font-bold text-primary-foreground">
                             {p.price.toFixed(2).replace(".", ",")} €
                           </span>
                         )}
                         {p.original_price && p.price && p.original_price > p.price && (
-                          <span className="text-[10px] text-white/60 line-through">
+                          <span className="text-[10px] text-primary-foreground/70 line-through">
                             {p.original_price.toFixed(2).replace(".", ",")} €
                           </span>
                         )}
