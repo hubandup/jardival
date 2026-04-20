@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     } else if (resource === "promotions") {
       const { data } = await supabase
         .from("promotions")
-        .select("id, title, description, image, price, original_price, starts_at, ends_at, active, store_ids, updated_at")
+        .select("id, slug, title, description, image, price, original_price, starts_at, ends_at, active, store_ids, updated_at")
         .order("display_order")
         .limit(2000);
       const all = data ?? [];
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
         count: activeOnly.length,
         promotions: activeOnly.map((p) => ({
           ...p,
-          url: `${SITE_URL}/produit/${p.id}`,
+          url: `${SITE_URL}/produit/${p.slug || p.id}`,
         })),
       };
     } else {
