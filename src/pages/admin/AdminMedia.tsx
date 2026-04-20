@@ -49,6 +49,7 @@ const BUCKET_LABELS: Record<string, string> = {
   "promo-images": "Promotions",
   "store-images": "Magasins",
   catalogues: "Catalogues",
+  external: "URL externes",
 };
 
 export default function AdminMedia() {
