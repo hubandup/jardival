@@ -176,15 +176,14 @@ const ProductDetail = () => {
             {product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-3">
                 {product.images.map((img, i) => (
-                  <button
+                  <ThumbButton
                     key={i}
+                    img={img}
+                    index={i}
+                    productName={product.name}
+                    active={activeImg === i}
                     onClick={() => setActiveImg(i)}
-                    className={`aspect-square overflow-hidden rounded-lg border-2 bg-secondary/40 transition-all ${
-                      activeImg === i ? "border-primary shadow-soft" : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <img src={img} alt={`${product.name} ${i + 1}`} className="h-full w-full object-contain p-2" />
-                  </button>
+                  />
                 ))}
               </div>
             )}
@@ -262,6 +261,32 @@ const ProductDetail = () => {
 
       <SiteFooter />
     </div>
+  );
+};
+
+const ThumbButton = ({
+  img,
+  index,
+  productName,
+  active,
+  onClick,
+}: {
+  img: string;
+  index: number;
+  productName: string;
+  active: boolean;
+  onClick: () => void;
+}) => {
+  const alt = useMediaAlt(img, `${productName} ${index + 1}`);
+  return (
+    <button
+      onClick={onClick}
+      className={`aspect-square overflow-hidden rounded-lg border-2 bg-secondary/40 transition-all ${
+        active ? "border-primary shadow-soft" : "border-border hover:border-primary/40"
+      }`}
+    >
+      <img src={img} alt={alt} className="h-full w-full object-contain p-2" />
+    </button>
   );
 };
 

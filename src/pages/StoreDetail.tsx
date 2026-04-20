@@ -31,6 +31,7 @@ import { useStore, useStores } from "@/hooks/useStores";
 import { usePromotions } from "@/hooks/usePromotions";
 import { promotionToProduct } from "@/lib/promotion";
 import { useSeo } from "@/hooks/useSeo";
+import { useMediaAlt } from "@/hooks/useMedia";
 import storeHero from "@/assets/store-placeholder.jpg";
 
 const StoreDetail = () => {
@@ -159,6 +160,9 @@ const StoreDetail = () => {
     );
   }
 
+  const heroImage = store.image ?? storeHero;
+  const heroAlt = useMediaAlt(store.image ?? undefined, `Devanture du magasin ${store.name}`);
+
   const today = new Date().getDay(); // 0 = dim, 1 = lun…
   const todayIndex = today === 0 ? 6 : today - 1;
   const todayHours = store.hours?.[todayIndex];
@@ -204,8 +208,8 @@ const StoreDetail = () => {
       {/* Hero */}
       <section className="relative h-[420px] w-full overflow-hidden md:h-[520px]">
         <img
-          src={store.image ?? storeHero}
-          alt={`Devanture du magasin ${store.name}`}
+          src={heroImage}
+          alt={heroAlt}
           className="absolute inset-0 h-full w-full object-cover"
           width={1920}
           height={1024}
