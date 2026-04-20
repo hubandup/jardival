@@ -7,6 +7,14 @@ import { NearestStore } from "@/components/NearestStore";
 import { STORES, DEPARTMENTS, Store } from "@/data/stores";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
 import { MapPin, Search, Phone, Clock } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 const Stores = () => {
   const [query, setQuery] = useState("");
@@ -40,6 +48,25 @@ const Stores = () => {
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
+
+      {/* Breadcrumb */}
+      <div className="border-b border-border bg-card">
+        <div className="container-px mx-auto max-w-7xl py-3">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/">Accueil</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Magasins</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+      </div>
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-hero">
