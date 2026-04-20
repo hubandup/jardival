@@ -30,12 +30,6 @@ export interface Store {
   /** Image de couverture importée via `import` ou URL publique. */
   image?: string;
 }
-  phone?: string;
-  hours?: StoreHours[];
-  services?: string[];
-  /** Image de couverture importée via `import` ou URL publique. */
-  image?: string;
-}
 
 // Horaires types appliqués par défaut à tous les magasins
 // (à personnaliser magasin par magasin plus tard)
