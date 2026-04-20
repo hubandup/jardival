@@ -8,6 +8,7 @@ import ProductDetail from "./pages/ProductDetail.tsx";
 import Stores from "./pages/Stores.tsx";
 import StoreDetail from "./pages/StoreDetail.tsx";
 import Catalogue from "./pages/Catalogue.tsx";
+import Promotions from "./pages/Promotions.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import AdminLogin from "./pages/admin/AdminLogin.tsx";
 import AdminLayout from "./pages/admin/AdminLayout.tsx";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/magasins" element={<Stores />} />
             <Route path="/magasins/:id" element={<StoreDetail />} />
             <Route path="/catalogue" element={<Catalogue />} />
+            <Route path="/promotions" element={<Promotions />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />

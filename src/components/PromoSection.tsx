@@ -1,7 +1,9 @@
 import { ProductCard } from "./ProductCard";
 import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
 import { useMemo } from "react";
-import { Tag, Loader2 } from "lucide-react";
+import { Tag, Loader2, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { usePromotions } from "@/hooks/usePromotions";
 import { useCatalogues } from "@/hooks/usePromotions";
 import { promotionToProduct } from "@/lib/promotion";
@@ -59,11 +61,21 @@ export const PromoSection = () => {
             <Loader2 className="h-5 w-5 animate-spin" /> Chargement des promotions…
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
-            {promos.map((p, i) => (
-              <ProductCard key={p.id} product={p} featured={i < 2} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
+              {promos.map((p, i) => (
+                <ProductCard key={p.id} product={p} featured={i < 2} />
+              ))}
+            </div>
+            <div className="mt-12 flex justify-center">
+              <Button asChild size="lg" variant="outline">
+                <Link to="/promotions">
+                  Voir toutes les promotions
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </>
         )}
       </div>
     </section>
