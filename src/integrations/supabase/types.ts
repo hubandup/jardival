@@ -298,10 +298,36 @@ export type Database = {
           views: number
         }[]
       }
+      pageviews_stats: {
+        Args: { _days: number }
+        Returns: {
+          desktop_views: number
+          mobile_views: number
+          tablet_views: number
+          total_views: number
+          unique_sessions: number
+        }[]
+      }
       pageviews_top_paths: {
         Args: { _days: number; _limit?: number }
         Returns: {
           path: string
+          views: number
+        }[]
+      }
+      pageviews_top_products: {
+        Args: { _days: number; _limit?: number }
+        Returns: {
+          product_id: string
+          product_name: string
+          views: number
+        }[]
+      }
+      pageviews_top_stores: {
+        Args: { _days: number; _limit?: number }
+        Returns: {
+          store_id: string
+          store_name: string
           views: number
         }[]
       }
