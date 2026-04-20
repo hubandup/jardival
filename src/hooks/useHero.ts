@@ -40,6 +40,7 @@ export interface HeroPromo {
   price: number | null;
   original_price: number | null;
   discount: number | null;
+  href: string;
 }
 
 function computeDiscount(p: PromotionRow & { hero_featured?: boolean }): number | null {
@@ -79,15 +80,22 @@ export function useHeroPromos() {
         .map((p) => extractRef(p.description))
         .filter((r): r is string => !!r);
       let imageByRef = new Map<string, string | null>();
+      let slugByRef = new Map<string, string | null>();
       if (allRefs.length > 0) {
         const { data: products } = await supabase
           .from("products")
-          .select("ref, image")
+          .select("ref, image, slug, id")
           .in("ref", allRefs);
         imageByRef = new Map(
           (products ?? []).map((p) => [
             p.ref as string,
             (p as { image: string | null }).image,
+          ]),
+        );
+        slugByRef = new Map(
+          (products ?? []).map((p) => [
+            p.ref as string,
+            ((p as { slug: string | null }).slug) ?? (p as { id: string }).id,
           ]),
         );
       }
@@ -96,6 +104,12 @@ export function useHeroPromos() {
         if (p.image) return p.image;
         const ref = extractRef(p.description);
         return ref ? imageByRef.get(ref) ?? null : null;
+      };
+
+      const resolveHref = (p: PromotionRow): string => {
+        const ref = extractRef(p.description);
+        const slug = ref ? slugByRef.get(ref) : null;
+        return slug ? `/produit/${slug}` : "/catalogue";
       };
 
       // On garde uniquement celles qui ont une image résoluble, et on prend les 4 premières
@@ -109,6 +123,7 @@ export function useHeroPromos() {
         price: p.price,
         original_price: p.original_price,
         discount: computeDiscount(p),
+        href: resolveHref(p),
       }));
       return { promos, activeCount: all.length };
     },
