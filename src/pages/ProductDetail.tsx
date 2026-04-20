@@ -14,6 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useProduct, useProducts } from "@/hooks/useProducts";
+import { useSeo } from "@/hooks/useSeo";
 
 const DESCRIPTIONS = [
   "Conçu pour durer, ce produit Jardival allie robustesse et design soigné pour sublimer votre extérieur saison après saison.",
@@ -75,6 +76,9 @@ const ProductDetail = () => {
     .slice(0, 4);
 
   return (
+    <>
+      <ProductSeo product={product} description={description} />
+)
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
