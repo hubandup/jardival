@@ -288,55 +288,93 @@ export default function AdminStores() {
                   </Button>
                 </div>
                 <div className="rounded-md border divide-y">
-                  {ensureHours(editing.hours).map((h, i) => (
-                    <div key={i} className="grid grid-cols-12 items-center gap-2 p-2">
-                      <div className="col-span-3 text-sm font-medium">{DAYS[i]}</div>
-                      <div className="col-span-2 flex items-center gap-2">
-                        <Checkbox
-                          id={`closed-${i}`}
-                          checked={!!h.closed}
-                          onCheckedChange={(v) => {
-                            const next = ensureHours(editing.hours).map((x, idx) =>
-                              idx === i
-                                ? v
-                                  ? { day: DAYS[i], closed: true }
-                                  : { day: DAYS[i], morning: "", afternoon: "", closed: false }
-                                : x,
-                            );
-                            setEditing({ ...editing, hours: next });
-                          }}
-                        />
-                        <label htmlFor={`closed-${i}`} className="text-xs">Fermé</label>
+                  {ensureHours(editing.hours).map((h, i) => {
+                    const isContinuous = !h.closed && !!h.morning && !h.afternoon;
+                    return (
+                      <div key={i} className="grid grid-cols-12 items-center gap-2 p-2">
+                        <div className="col-span-2 text-sm font-medium">{DAYS[i]}</div>
+                        <div className="col-span-2 flex items-center gap-1.5">
+                          <Checkbox
+                            id={`closed-${i}`}
+                            checked={!!h.closed}
+                            onCheckedChange={(v) => {
+                              const next = ensureHours(editing.hours).map((x, idx) =>
+                                idx === i
+                                  ? v
+                                    ? { day: DAYS[i], closed: true }
+                                    : { day: DAYS[i], morning: "", afternoon: "", closed: false }
+                                  : x,
+                              );
+                              setEditing({ ...editing, hours: next });
+                            }}
+                          />
+                          <label htmlFor={`closed-${i}`} className="text-xs">Fermé</label>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-1.5">
+                          <Checkbox
+                            id={`cont-${i}`}
+                            checked={isContinuous}
+                            disabled={!!h.closed}
+                            onCheckedChange={(v) => {
+                              const next = ensureHours(editing.hours).map((x, idx) =>
+                                idx === i
+                                  ? v
+                                    ? { day: DAYS[i], morning: x.morning ?? "", afternoon: "", closed: false }
+                                    : { day: DAYS[i], morning: x.morning ?? "", afternoon: "14h00 – 19h00", closed: false }
+                                  : x,
+                              );
+                              setEditing({ ...editing, hours: next });
+                            }}
+                          />
+                          <label htmlFor={`cont-${i}`} className="text-xs">Continu</label>
+                        </div>
+                        {isContinuous ? (
+                          <Input
+                            className="col-span-6 h-8"
+                            placeholder="9h00 – 19h00"
+                            disabled={!!h.closed}
+                            value={h.morning ?? ""}
+                            onChange={(e) => {
+                              const next = ensureHours(editing.hours).map((x, idx) =>
+                                idx === i ? { ...x, day: DAYS[i], morning: e.target.value, afternoon: "" } : x,
+                              );
+                              setEditing({ ...editing, hours: next });
+                            }}
+                          />
+                        ) : (
+                          <>
+                            <Input
+                              className="col-span-3 h-8"
+                              placeholder="9h00 – 12h00"
+                              disabled={!!h.closed}
+                              value={h.morning ?? ""}
+                              onChange={(e) => {
+                                const next = ensureHours(editing.hours).map((x, idx) =>
+                                  idx === i ? { ...x, day: DAYS[i], morning: e.target.value } : x,
+                                );
+                                setEditing({ ...editing, hours: next });
+                              }}
+                            />
+                            <Input
+                              className="col-span-3 h-8"
+                              placeholder="14h00 – 19h00"
+                              disabled={!!h.closed}
+                              value={h.afternoon ?? ""}
+                              onChange={(e) => {
+                                const next = ensureHours(editing.hours).map((x, idx) =>
+                                  idx === i ? { ...x, day: DAYS[i], afternoon: e.target.value } : x,
+                                );
+                                setEditing({ ...editing, hours: next });
+                              }}
+                            />
+                          </>
+                        )}
                       </div>
-                      <Input
-                        className="col-span-3 h-8"
-                        placeholder="9h00 – 12h00"
-                        disabled={!!h.closed}
-                        value={h.morning ?? ""}
-                        onChange={(e) => {
-                          const next = ensureHours(editing.hours).map((x, idx) =>
-                            idx === i ? { ...x, day: DAYS[i], morning: e.target.value } : x,
-                          );
-                          setEditing({ ...editing, hours: next });
-                        }}
-                      />
-                      <Input
-                        className="col-span-4 h-8"
-                        placeholder="14h00 – 19h00"
-                        disabled={!!h.closed}
-                        value={h.afternoon ?? ""}
-                        onChange={(e) => {
-                          const next = ensureHours(editing.hours).map((x, idx) =>
-                            idx === i ? { ...x, day: DAYS[i], afternoon: e.target.value } : x,
-                          );
-                          setEditing({ ...editing, hours: next });
-                        }}
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Format conseillé : « 9h00 – 12h00 » (avec tiret long « – »).
+                  Cochez « Continu » pour une journée non-stop (un seul créneau). Format conseillé : « 9h00 – 12h00 » (tiret long « – »).
                 </p>
               </div>
             </div>
