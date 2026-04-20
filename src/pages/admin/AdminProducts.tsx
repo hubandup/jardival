@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import MediaPickerDialog from "@/components/admin/MediaPickerDialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, Search, Download, Upload, ImageDown } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, Search, Download, Upload, ImageDown, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { ProductRow } from "@/hooks/useProducts";
 import { exportProductsToXlsx, parseProductsFromFile } from "@/lib/productsXlsx";
@@ -36,6 +37,7 @@ export default function AdminProducts() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [search, setSearch] = useState("");
+  const [mediaPicker, setMediaPicker] = useState(false);
   const [page, setPage] = useState(0);
   const [importing, setImporting] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -396,17 +398,28 @@ export default function AdminProducts() {
               <div className="col-span-2 space-y-2">
                 <Label>Image principale</Label>
                 {editing.image && <img src={editing.image} alt="" className="h-32 rounded-md object-cover" />}
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
-                  disabled={uploading}
-                />
-                {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMediaPicker(true)}>
+                    <ImageIcon className="h-4 w-4" /> Médiathèque
+                  </Button>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+                    disabled={uploading}
+                  />
+                  {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
                 <Input
                   placeholder="Ou collez une URL"
                   value={editing.image ?? ""}
                   onChange={(e) => setEditing({ ...editing, image: e.target.value || null })}
+                />
+                <MediaPickerDialog
+                  open={mediaPicker}
+                  onOpenChange={setMediaPicker}
+                  onSelect={(url) => setEditing({ ...editing, image: url })}
+                  defaultBucket="product-images"
                 />
               </div>
               <div className="col-span-2 space-y-2">
