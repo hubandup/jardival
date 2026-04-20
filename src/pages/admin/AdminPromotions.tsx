@@ -9,11 +9,13 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star } from "lucide-react";
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 import { exportPromotionsToXlsx, parsePromotionsFromFile } from "@/lib/promotionsXlsx";
 import { findCatalogueFallback } from "@/lib/promotion";
+import { useHeroMode, useSetHeroMode } from "@/hooks/useHero";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PromoRow {
   id: string;
