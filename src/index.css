@@ -72,3 +72,9 @@
 @layer components {
   .container-px { @apply px-5 md:px-10 lg:px-16; }
 }
+
+/* Keep Leaflet maps below Radix overlays (dropdowns, popovers, dialogs) */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom { z-index: 1 !important; }
+.leaflet-control { z-index: 2 !important; }
