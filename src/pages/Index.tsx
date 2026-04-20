@@ -17,7 +17,7 @@ const Index = () => {
       <CatalogueBanner />
       <main>
         <Hero products={products} />
-        <PromoSection products={products} />
+        <PromoSection />
         <DriveToStoreBanner />
         <Catalogue products={products} />
       </main>
