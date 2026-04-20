@@ -73,8 +73,6 @@ export function useHeroPromos() {
       } else {
         pool = [...all].sort(() => Math.random() - 0.5);
       }
-      const selected = pool.slice(0, 4);
-
       // Fallback : pour TOUTES les promos actives, on tente de résoudre une image
       // (priorité : promo.image, puis produit par ref extraite de la description)
       const allRefs = pool
