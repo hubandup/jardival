@@ -26,6 +26,7 @@ import {
   DEPARTMENTS,
   mapsUrl,
   distanceKm,
+  formatStoreHours,
 } from "@/data/stores";
 import { useStore, useStores } from "@/hooks/useStores";
 import { usePromotions } from "@/hooks/usePromotions";
@@ -253,9 +254,7 @@ const StoreDetail = () => {
                 Aujourd'hui
               </p>
               <p className="mt-1 font-semibold text-foreground">
-                {todayHours?.closed
-                  ? "Fermé"
-                  : `${todayHours?.morning} · ${todayHours?.afternoon}`}
+                {formatStoreHours(todayHours)}
               </p>
             </div>
           </div>
@@ -373,9 +372,7 @@ const StoreDetail = () => {
                     >
                       <span>{h.day}</span>
                       <span className="tabular-nums">
-                        {h.closed
-                          ? "Fermé"
-                          : `${h.morning} · ${h.afternoon}`}
+                        {formatStoreHours(h)}
                       </span>
                     </li>
                   );
