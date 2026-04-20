@@ -46,68 +46,111 @@ export default function AssociateAssetDialog({
   const [addToGallery, setAddToGallery] = useState(false);
   const qc = useQueryClient();
 
-  // Reset on open
+  // Extract searchable keywords from the uploaded file name
+  const fileKeywords = useMemo(() => {
+    if (!asset) return [] as string[];
+    const raw = asset.title || asset.path.split("/").pop() || "";
+    return raw
+      .replace(/\.[^.]+$/, "") // strip extension
+      .replace(/^\d+-/, "") // strip leading timestamp prefix from upload
+      .replace(/[_\-.]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ")
+      .filter((w) => w.length >= 3) // skip noise
+      .slice(0, 6);
+  }, [asset]);
+
+  const suggestedQuery = fileKeywords.join(" ");
+
+  // Reset on open + prefill from filename
   useEffect(() => {
     if (open) {
-      setQ("");
+      setQ(suggestedQuery);
       setSelectedId(null);
       setAddToGallery(false);
       setKind("product");
     }
-  }, [open]);
+  }, [open, suggestedQuery]);
 
   const { data: candidates = [], isLoading } = useQuery({
-    queryKey: ["associate-candidates", kind, q],
+    queryKey: ["associate-candidates", kind, q, fileKeywords.join("|")],
     enabled: open,
     queryFn: async (): Promise<Candidate[]> => {
       const term = q.trim();
+      // Build OR-ilike from individual words for fuzzy multi-word matching
+      const words = term
+        .split(/\s+/)
+        .filter((w) => w.length >= 2)
+        .slice(0, 6);
+
+      const buildOr = (column: string) =>
+        words.map((w) => `${column}.ilike.%${w.replace(/[,()]/g, "")}%`).join(",");
+
       if (kind === "product") {
         let query = supabase
           .from("products")
           .select("id,name,category,image")
           .order("name")
-          .limit(40);
-        if (term) query = query.ilike("name", `%${term}%`);
+          .limit(60);
+        if (words.length) query = query.or(buildOr("name"));
         const { data, error } = await query;
         if (error) throw error;
-        return (data ?? []).map((p) => ({
+        const list = (data ?? []).map((p) => ({
           id: p.id,
           name: p.name,
           category: p.category,
           hasImage: !!p.image,
         }));
+        return rankCandidates(list, words);
       }
       if (kind === "promotion") {
         let query = supabase
           .from("promotions")
           .select("id,title,image")
           .order("title")
-          .limit(40);
-        if (term) query = query.ilike("title", `%${term}%`);
+          .limit(60);
+        if (words.length) query = query.or(buildOr("title"));
         const { data, error } = await query;
         if (error) throw error;
-        return (data ?? []).map((p) => ({
+        const list = (data ?? []).map((p) => ({
           id: p.id,
           name: p.title,
           hasImage: !!p.image,
         }));
+        return rankCandidates(list, words);
       }
       let query = supabase
         .from("stores")
         .select("id,name,city,image")
         .order("name")
-        .limit(40);
-      if (term) query = query.or(`name.ilike.%${term}%,city.ilike.%${term}%`);
+        .limit(60);
+      if (words.length) {
+        query = query.or([buildOr("name"), buildOr("city")].filter(Boolean).join(","));
+      }
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []).map((s) => ({
+      const list = (data ?? []).map((s) => ({
         id: s.id,
         name: s.name,
         category: s.city,
         hasImage: !!s.image,
       }));
+      return rankCandidates(list, words);
     },
   });
+
+  // Auto-select the top match when products tab opens with suggestions
+  useEffect(() => {
+    if (kind === "product" && !selectedId && candidates.length && fileKeywords.length) {
+      // Only auto-select if there is a strong match (top candidate score > 0)
+      const top = candidates[0];
+      if (top && scoreMatch(top.name, fileKeywords) > 0) {
+        setSelectedId(top.id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates, kind]);
 
   const associate = useMutation({
     mutationFn: async () => {
@@ -241,27 +284,40 @@ export default function AssociateAssetDialog({
                 </p>
               ) : (
                 <RadioGroup value={selectedId ?? ""} onValueChange={setSelectedId}>
-                  {filtered.map((c) => (
-                    <Label
-                      key={c.id}
-                      htmlFor={`assoc-${c.id}`}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 cursor-pointer border-b last:border-b-0 hover:bg-muted/50 transition-colors",
-                        selectedId === c.id && "bg-primary/5",
-                      )}
-                    >
-                      <RadioGroupItem id={`assoc-${c.id}`} value={c.id} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{c.name}</p>
-                        {c.category && (
-                          <p className="text-xs text-muted-foreground truncate">{c.category}</p>
+                  {filtered.map((c, idx) => {
+                    const isSuggested =
+                      idx === 0 &&
+                      fileKeywords.length > 0 &&
+                      scoreMatch(c.name, fileKeywords) > 0;
+                    return (
+                      <Label
+                        key={c.id}
+                        htmlFor={`assoc-${c.id}`}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 cursor-pointer border-b last:border-b-0 hover:bg-muted/50 transition-colors",
+                          selectedId === c.id && "bg-primary/5",
                         )}
-                      </div>
-                      {c.hasImage && (
-                        <span className="text-[10px] text-muted-foreground">image actuelle sera remplacée</span>
-                      )}
-                    </Label>
-                  ))}
+                      >
+                        <RadioGroupItem id={`assoc-${c.id}`} value={c.id} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{c.name}</p>
+                            {isSuggested && (
+                              <span className="rounded-full bg-primary/10 text-primary text-[10px] font-medium px-2 py-0.5 shrink-0">
+                                suggéré
+                              </span>
+                            )}
+                          </div>
+                          {c.category && (
+                            <p className="text-xs text-muted-foreground truncate">{c.category}</p>
+                          )}
+                        </div>
+                        {c.hasImage && (
+                          <span className="text-[10px] text-muted-foreground">image actuelle sera remplacée</span>
+                        )}
+                      </Label>
+                    );
+                  })}
                 </RadioGroup>
               )}
             </div>
@@ -296,4 +352,36 @@ export default function AssociateAssetDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function scoreMatch(name: string, keywords: string[]): number {
+  if (!keywords.length) return 0;
+  const n = normalize(name);
+  const tokens = new Set(n.split(" ").filter(Boolean));
+  let score = 0;
+  for (const k of keywords) {
+    const kn = normalize(k);
+    if (!kn) continue;
+    if (tokens.has(kn)) score += 3;
+    else if (n.includes(kn)) score += 1;
+  }
+  return score;
+}
+
+function rankCandidates<T extends { name: string }>(list: T[], keywords: string[]): T[] {
+  if (!keywords.length) return list;
+  return [...list]
+    .map((c) => ({ c, s: scoreMatch(c.name, keywords) }))
+    .sort((a, b) => b.s - a.s || a.c.name.localeCompare(b.c.name))
+    .map((x) => x.c);
 }
