@@ -55,7 +55,7 @@ const Promotions = () => {
   }, [dbPromos, category, storeId, query]);
 
   const promos = filtered.map(promotionToProduct);
-  const hasFilters = category !== ALL || storeId !== ALL;
+  const hasFilters = category !== ALL || storeId !== ALL || query.trim() !== "";
 
   const validityLabel = activeCatalogue?.ends_at
     ? `jusqu'au ${new Date(activeCatalogue.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
@@ -133,6 +133,7 @@ const Promotions = () => {
                 onClick={() => {
                   setCategory(ALL);
                   setStoreId(ALL);
+                  setQuery("");
                 }}
                 className="self-end"
               >
