@@ -55,13 +55,49 @@ export function useProduct(id: string | undefined) {
     queryKey: ["product", id],
     enabled: !!id,
     queryFn: async () => {
+      // 1) Essai dans products
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
-      return data ? { row: data as ProductRow, product: toProduct(data as ProductRow) } : null;
+      if (data) {
+        return { row: data as ProductRow, product: toProduct(data as ProductRow) };
+      }
+
+      // 2) Fallback : c'est peut-être une promotion
+      const { data: promo, error: promoErr } = await supabase
+        .from("promotions")
+        .select("*")
+        .eq("id", id!)
+        .maybeSingle();
+      if (promoErr) throw promoErr;
+      if (!promo) return null;
+
+      const price = promo.price ?? 0;
+      const oldPrice = promo.original_price ?? undefined;
+      const discount =
+        oldPrice && oldPrice > price && price > 0
+          ? Math.round(((oldPrice - price) / oldPrice) * 100)
+          : 0;
+      const image = promo.image ?? "";
+      const row: ProductRow = {
+        id: promo.id,
+        ref: promo.id.slice(0, 8),
+        name: promo.title,
+        category: promo.description ?? "Promotion",
+        description: promo.description,
+        image,
+        images: image ? [image] : null,
+        price,
+        old_price: oldPrice ?? null,
+        discount,
+        is_new: false,
+        display_order: promo.display_order,
+        active: promo.active,
+      };
+      return { row, product: toProduct(row) };
     },
   });
 }
