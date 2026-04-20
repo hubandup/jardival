@@ -148,7 +148,6 @@ const CataloguePage = () => {
             >
               {numPages > 0 && (
                 <div className="flex justify-center">
-                  {/* @ts-expect-error react-pageflip types are loose */}
                   <HTMLFlipBook
                     ref={bookRef}
                     width={size.w}
