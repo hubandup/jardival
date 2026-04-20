@@ -225,12 +225,23 @@ export default function AdminMedia() {
             ou <b>Ajouter</b> pour téléverser de nouveaux médias.
           </p>
         </div>
-      ) : (
+      ) : view === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {assets.map((asset) => (
             <MediaCard key={asset.id} asset={asset} onSelect={setSelected} />
           ))}
         </div>
+      ) : (
+        <MediaListView
+          assets={assets}
+          onSelect={setSelected}
+          sortKey={sortKey}
+          sortAsc={sortAsc}
+          onSort={(key) => {
+            if (key === sortKey) setSortAsc(!sortAsc);
+            else { setSortKey(key); setSortAsc(true); }
+          }}
+        />
       )}
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
