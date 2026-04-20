@@ -332,6 +332,60 @@ export default function AdminDashboard() {
           )}
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Store className="h-4 w-4" /> Top magasins consultés
+            </CardTitle>
+            <CardDescription>Sur les {days} derniers jours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(topStores ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">Aucune consultation</p>
+            ) : (
+              <ul className="space-y-1">
+                {(topStores ?? []).map((s: any) => (
+                  <li
+                    key={s.store_id}
+                    className="flex justify-between items-center text-sm py-2 border-b last:border-0"
+                  >
+                    <span className="truncate">{s.store_name ?? s.store_id}</span>
+                    <span className="font-semibold">{Number(s.views)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="h-4 w-4" /> Top produits vus
+            </CardTitle>
+            <CardDescription>Sur les {days} derniers jours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(topProducts ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">Aucune consultation</p>
+            ) : (
+              <ul className="space-y-1">
+                {(topProducts ?? []).map((p: any) => (
+                  <li
+                    key={p.product_id}
+                    className="flex justify-between items-center text-sm py-2 border-b last:border-0"
+                  >
+                    <span className="truncate">{p.product_name ?? p.product_id}</span>
+                    <span className="font-semibold">{Number(p.views)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
