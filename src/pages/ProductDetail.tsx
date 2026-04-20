@@ -29,6 +29,11 @@ const ProductDetail = () => {
   const product = useMemo(() => products.find((p) => p.id === id), [id]);
   const [activeImg, setActiveImg] = useState(0);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+    setActiveImg(0);
+  }, [id]);
+
   if (!product) {
     return (
       <div className="min-h-screen bg-background">
