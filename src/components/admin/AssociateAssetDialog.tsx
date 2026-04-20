@@ -353,3 +353,35 @@ export default function AssociateAssetDialog({
     </Dialog>
   );
 }
+
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function scoreMatch(name: string, keywords: string[]): number {
+  if (!keywords.length) return 0;
+  const n = normalize(name);
+  const tokens = new Set(n.split(" ").filter(Boolean));
+  let score = 0;
+  for (const k of keywords) {
+    const kn = normalize(k);
+    if (!kn) continue;
+    if (tokens.has(kn)) score += 3;
+    else if (n.includes(kn)) score += 1;
+  }
+  return score;
+}
+
+function rankCandidates<T extends { name: string }>(list: T[], keywords: string[]): T[] {
+  if (!keywords.length) return list;
+  return [...list]
+    .map((c) => ({ c, s: scoreMatch(c.name, keywords) }))
+    .sort((a, b) => b.s - a.s || a.c.name.localeCompare(b.c.name))
+    .map((x) => x.c);
+}
