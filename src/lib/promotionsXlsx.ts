@@ -90,7 +90,7 @@ function parseDate(raw: unknown): string | null {
   return d.toISOString().slice(0, 10);
 }
 
-export async function parsePromotionsFromFile(file: File): Promise<PromoUpsert[]> {
+export async function parsePromotionsFromFile(file: File): Promise<ParsedPromotion[]> {
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: "array" });
   const ws = wb.Sheets[wb.SheetNames[0]];
@@ -103,7 +103,7 @@ export async function parsePromotionsFromFile(file: File): Promise<PromoUpsert[]
       const title = str(row.title);
       if (!title) throw new Error("title requis");
       const id = str(row.id);
-      const out: PromoUpsert = {
+      const out: ParsedPromotion = {
         ...(id ? { id } : {}),
         title,
         description: str(row.description),
@@ -115,10 +115,60 @@ export async function parsePromotionsFromFile(file: File): Promise<PromoUpsert[]
         display_order: Math.round(num(row.display_order, "display_order") ?? 0),
         image: str(row.image),
         store_ids: parseList(row.store_ids),
+        image_filename: str(row.image_filename),
       };
       return out;
     } catch (e) {
       throw new Error(`Ligne ${i + 2}: ${(e as Error).message}`);
     }
   });
+}
+
+/**
+ * Pour chaque promo sans `image` mais avec `image_filename`, tente de trouver
+ * le média correspondant dans `media_assets` (match case-insensitive sur le
+ * suffixe du chemin, après le préfixe timestamp éventuel) et renseigne `image`.
+ */
+export async function autoAssociateImages(
+  promos: ParsedPromotion[],
+): Promise<{ matched: number; missing: string[] }> {
+  const filenames = promos
+    .map((p) => p.image_filename)
+    .filter((f): f is string => !!f);
+  if (filenames.length === 0) return { matched: 0, missing: [] };
+
+  const { data, error } = await supabase
+    .from("media_assets")
+    .select("path, public_url");
+  if (error) throw error;
+
+  const byKey = new Map<string, string>();
+  for (const m of data ?? []) {
+    const path = (m as { path: string }).path;
+    const url = (m as { public_url: string }).public_url;
+    const stripped = path.replace(/^\d+-/, "");
+    byKey.set(stripped.toLowerCase(), url);
+    byKey.set(path.toLowerCase(), url);
+  }
+
+  let matched = 0;
+  const missing: string[] = [];
+  for (const p of promos) {
+    if (p.image) continue;
+    const fn = p.image_filename;
+    if (!fn) continue;
+    const url = byKey.get(fn.toLowerCase());
+    if (url) {
+      p.image = url;
+      matched++;
+    } else {
+      missing.push(fn);
+    }
+  }
+  return { matched, missing };
+}
+
+/** Retire les champs non destinés à la table promotions avant upsert. */
+export function stripParsedExtras(promos: ParsedPromotion[]): PromoUpsert[] {
+  return promos.map(({ image_filename: _ignored, ...rest }) => rest);
 }
