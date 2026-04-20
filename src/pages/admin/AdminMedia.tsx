@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Loader2, RefreshCw, Search, Trash2, Upload, X, Copy, FileText } from "lucide-react";
+import { Loader2, RefreshCw, Search, Trash2, Upload, X, Copy, FileText, LayoutGrid, List, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   MediaAsset,
@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const BUCKET_LABELS: Record<string, string> = {
   all: "Tous",
@@ -57,8 +58,33 @@ export default function AdminMedia() {
   const [selected, setSelected] = useState<MediaAsset | null>(null);
   const [toDelete, setToDelete] = useState<MediaAsset | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [sortKey, setSortKey] = useState<"title" | "bucket" | "size" | "date">("date");
+  const [sortAsc, setSortAsc] = useState(false);
 
-  const { data: assets = [], isLoading } = useMediaAssets({ bucket, type, q });
+  const { data: rawAssets = [], isLoading } = useMediaAssets({ bucket, type, q });
+
+  const assets = useMemo(() => {
+    const sorted = [...rawAssets].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "title":
+          cmp = (a.title ?? a.path).localeCompare(b.title ?? b.path);
+          break;
+        case "bucket":
+          cmp = a.bucket.localeCompare(b.bucket);
+          break;
+        case "size":
+          cmp = (a.size_bytes ?? 0) - (b.size_bytes ?? 0);
+          break;
+        case "date":
+          cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+    return sorted;
+  }, [rawAssets, sortKey, sortAsc]);
   const sync = useSyncMedia();
   const upload = useUploadMedia();
   const remove = useDeleteMediaAsset();
