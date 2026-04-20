@@ -42,6 +42,18 @@ const ProductDetail = () => {
     setActiveImg(0);
   }, [id]);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <div className="container-px mx-auto max-w-3xl py-32 text-center">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+        </div>
+        <SiteFooter />
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className="min-h-screen bg-background">
@@ -58,11 +70,9 @@ const ProductDetail = () => {
     );
   }
 
-  const related = products
+  const related = allProducts
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
-
-  const description = descriptionFor(product.id);
 
   return (
     <div className="min-h-screen bg-background">
