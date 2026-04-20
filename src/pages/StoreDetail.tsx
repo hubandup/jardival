@@ -125,6 +125,11 @@ const StoreDetail = () => {
     };
   }, [store]);
 
+  const heroAlt = useMediaAlt(
+    store?.image ?? undefined,
+    `Devanture du magasin ${store?.name ?? ""}`,
+  );
+
   if (!id) return <Navigate to="/magasins" replace />;
   if (isLoading) {
     return (
