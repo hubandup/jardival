@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Jardival",
+  "name_for_model": "jardival",
+  "description_for_human": "Trouvez vos magasins Jardival, consultez les promotions en cours et explorez le catalogue jardin & animalerie.",
+  "description_for_model": "Plugin officiel Jardival, réseau français de jardineries. Permet de poser des questions en langage naturel sur les magasins (adresses, horaires, services), les promotions actives et le catalogue produits. Utilise l'opération `ask` pour toute question utilisateur. Les flux JSON `products`, `stores` et `promotions` sont disponibles pour des listings complets.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://jardival.lovable.app/openapi.yaml"
+  },
+  "logo_url": "https://jardival.lovable.app/placeholder.svg",
+  "contact_email": "contact@jardival.fr",
+  "legal_info_url": "https://jardival.lovable.app"
+}
