@@ -1,4 +1,6 @@
 import logo from "@/assets/logo-jardival.png";
+import { Link } from "react-router-dom";
+import { STORES } from "@/data/stores";
 
 export const SiteFooter = () => {
   return (

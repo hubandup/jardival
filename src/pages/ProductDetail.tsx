@@ -144,13 +144,13 @@ const ProductDetail = () => {
             </div>
 
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="#magasin"
+              <Link
+                to="/magasins"
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-7 py-4 text-sm font-semibold text-primary-foreground shadow-soft transition-all hover:shadow-glow hover:scale-[1.01]"
               >
                 <MapPin className="h-4 w-4" />
                 Voir en magasin
-              </a>
+              </Link>
               <button
                 className="rounded-full border border-border bg-background px-7 py-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
               >
