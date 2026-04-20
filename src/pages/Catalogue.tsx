@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, forwardRef } from "react";
 import { Link } from "react-router-dom";
 import { Document, Page, pdfjs } from "react-pdf";
+import HTMLFlipBook from "react-pageflip";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import {
@@ -8,8 +9,6 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  ZoomIn,
-  ZoomOut,
   Loader2,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -21,12 +20,45 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 
 const PDF_URL = "/catalogue-jardival-jardinales.pdf";
 
+// Each page must be a forwardRef component for react-pageflip to attach refs
+type FlipPageProps = {
+  pageNumber: number;
+  width: number;
+  height: number;
+};
+
+const FlipPage = forwardRef<HTMLDivElement, FlipPageProps>(
+  ({ pageNumber, width, height }, ref) => (
+    <div
+      ref={ref}
+      className="overflow-hidden bg-white shadow-card"
+      style={{ width, height }}
+    >
+      <Page
+        pageNumber={pageNumber}
+        width={width}
+        renderAnnotationLayer={false}
+        renderTextLayer={false}
+        loading={
+          <div
+            className="flex items-center justify-center bg-muted"
+            style={{ width, height }}
+          >
+            <Loader2 className="h-5 w-5 animate-spin text-foreground/50" />
+          </div>
+        }
+      />
+    </div>
+  )
+);
+FlipPage.displayName = "FlipPage";
+
 const CataloguePage = () => {
   const isMobile = useIsMobile();
   const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1);
-  const [containerWidth, setContainerWidth] = useState<number>(800);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: 500, h: 700 });
+  const bookRef = useRef<any>(null);
 
   useEffect(() => {
     document.title = "Catalogue Jardinales — Feuilleter en ligne | Jardival";
@@ -35,26 +67,29 @@ const CataloguePage = () => {
       "Feuilletez en ligne le catalogue Jardinales Jardival : 8 pages de promotions valables jusqu'au 16 mai 2026.";
     if (meta) meta.setAttribute("content", desc);
 
-    const updateWidth = () => {
-      const w = Math.min(window.innerWidth - 48, 1000);
-      setContainerWidth(w);
+    const update = () => {
+      // A4 ratio ~ 1:1.414. On desktop the book displays 2 pages side-by-side,
+      // so total width = 2 * pageWidth. Cap to viewport.
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const mobile = vw < 768;
+      const maxBookWidth = Math.min(vw - 48, 1100);
+      const pageW = mobile ? Math.min(vw - 48, 500) : maxBookWidth / 2;
+      const pageH = Math.min(pageW * 1.414, vh - 280);
+      const finalW = pageH / 1.414;
+      setSize({ w: finalW, h: pageH });
     };
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
   const onLoad = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
   }, []);
 
-  const goPrev = () => setPageNumber((p) => Math.max(1, p - (isMobile ? 1 : 2)));
-  const goNext = () =>
-    setPageNumber((p) => Math.min(numPages, p + (isMobile ? 1 : 2)));
-
-  // Two pages side-by-side on desktop (book mode), single page on mobile
-  const showSpread = !isMobile && pageNumber > 1 && pageNumber < numPages;
-  const pageWidth = showSpread ? containerWidth / 2 : containerWidth;
+  const goPrev = () => bookRef.current?.pageFlip()?.flipPrev();
+  const goNext = () => bookRef.current?.pageFlip()?.flipNext();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -82,106 +117,102 @@ const CataloguePage = () => {
             Catalogue <span className="italic">Jardinales</span>
           </h1>
           <p className="mt-2 text-foreground/70">
-            8 pages de promotions valables jusqu'au 16 mai 2026 dans tous les magasins Jardival.
+            Feuilletez les 8 pages de promotions — cliquez ou glissez le coin d'une page pour la tourner.
           </p>
 
-          {/* Toolbar */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-t-xl border border-b-0 border-border bg-card px-4 py-3">
-            <div className="flex items-center gap-2">
+          {/* Flip book */}
+          <div className="mt-8 rounded-xl bg-gradient-to-br from-muted to-muted/40 p-4 shadow-card md:p-8">
+            <Document
+              file={PDF_URL}
+              onLoadSuccess={onLoad}
+              loading={
+                <div className="flex items-center justify-center gap-3 p-16 text-foreground/70">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Chargement du catalogue…
+                </div>
+              }
+              error={
+                <div className="flex flex-col items-center gap-4 p-10 text-center">
+                  <p className="text-foreground/80">
+                    Impossible d'afficher le catalogue. Téléchargez-le pour le consulter.
+                  </p>
+                  <a
+                    href={PDF_URL}
+                    download
+                    className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+                  >
+                    <Download className="h-4 w-4" /> Télécharger le PDF
+                  </a>
+                </div>
+              }
+            >
+              {numPages > 0 && (
+                <div className="flex justify-center">
+                  <HTMLFlipBook
+                    ref={bookRef}
+                    width={size.w}
+                    height={size.h}
+                    size="fixed"
+                    minWidth={200}
+                    maxWidth={1000}
+                    minHeight={300}
+                    maxHeight={1400}
+                    showCover={true}
+                    flippingTime={800}
+                    usePortrait={isMobile}
+                    drawShadow={true}
+                    maxShadowOpacity={0.5}
+                    mobileScrollSupport={true}
+                    onFlip={(e: any) => setCurrentPage(e.data)}
+                    className="mx-auto"
+                    style={{}}
+                    startPage={0}
+                    startZIndex={0}
+                    autoSize={false}
+                    clickEventForward={true}
+                    useMouseEvents={true}
+                    swipeDistance={30}
+                    showPageCorners={true}
+                    disableFlipByClick={false}
+                  >
+                    {Array.from({ length: numPages }, (_, i) => (
+                      <FlipPage
+                        key={i + 1}
+                        pageNumber={i + 1}
+                        width={size.w}
+                        height={size.h}
+                      />
+                    ))}
+                  </HTMLFlipBook>
+                </div>
+              )}
+            </Document>
+          </div>
+
+          {/* Toolbar under the book */}
+          {numPages > 0 && (
+            <div className="mt-4 flex items-center justify-center gap-4">
               <button
                 onClick={goPrev}
-                disabled={pageNumber <= 1}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={currentPage <= 0}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-card transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Page précédente"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-5 w-5" />
               </button>
-              <span className="text-sm font-semibold tabular-nums text-foreground/80">
-                {numPages > 0
-                  ? showSpread
-                    ? `${pageNumber}–${pageNumber + 1} / ${numPages}`
-                    : `${pageNumber} / ${numPages}`
-                  : "—"}
+              <span className="text-sm font-semibold tabular-nums text-foreground/80 min-w-[80px] text-center">
+                {currentPage + 1} / {numPages}
               </span>
               <button
                 onClick={goNext}
-                disabled={pageNumber >= numPages}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={currentPage >= numPages - 1}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-card transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Page suivante"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5" />
               </button>
             </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setScale((s) => Math.max(0.5, s - 0.2))}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:bg-muted"
-                aria-label="Zoom arrière"
-              >
-                <ZoomOut className="h-4 w-4" />
-              </button>
-              <span className="text-sm font-semibold tabular-nums text-foreground/70 w-12 text-center">
-                {Math.round(scale * 100)}%
-              </span>
-              <button
-                onClick={() => setScale((s) => Math.min(2.5, s + 0.2))}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:bg-muted"
-                aria-label="Zoom avant"
-              >
-                <ZoomIn className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* PDF viewer */}
-          <div className="overflow-auto rounded-b-xl border border-border bg-muted p-4 shadow-card md:p-6">
-            <div className="flex justify-center">
-              <Document
-                file={PDF_URL}
-                onLoadSuccess={onLoad}
-                loading={
-                  <div className="flex items-center justify-center gap-3 p-16 text-foreground/70">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Chargement du catalogue…
-                  </div>
-                }
-                error={
-                  <div className="flex flex-col items-center gap-4 p-10 text-center">
-                    <p className="text-foreground/80">
-                      Impossible d'afficher le catalogue. Téléchargez-le pour le consulter.
-                    </p>
-                    <a
-                      href={PDF_URL}
-                      download
-                      className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
-                    >
-                      <Download className="h-4 w-4" /> Télécharger le PDF
-                    </a>
-                  </div>
-                }
-              >
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Page
-                    pageNumber={pageNumber}
-                    width={pageWidth * scale}
-                    renderAnnotationLayer={false}
-                    renderTextLayer={false}
-                    className="shadow-card"
-                  />
-                  {showSpread && (
-                    <Page
-                      pageNumber={pageNumber + 1}
-                      width={pageWidth * scale}
-                      renderAnnotationLayer={false}
-                      renderTextLayer={false}
-                      className="shadow-card"
-                    />
-                  )}
-                </div>
-              </Document>
-            </div>
-          </div>
+          )}
         </div>
       </main>
 
