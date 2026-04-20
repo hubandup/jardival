@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Navigation, Loader2, Compass } from "lucide-react";
-import { STORES, mapsUrl, directionsUrl, DEPARTMENTS } from "@/data/stores";
+import { STORES, DEPARTMENTS } from "@/data/stores";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { nearestStore } from "@/lib/geo";
+import { DirectionsMenu } from "@/components/DirectionsMenu";
 
 interface Props {
   onLocate?: (storeId: string) => void;
