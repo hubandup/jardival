@@ -290,6 +290,15 @@ export default function AdminPromotions() {
                 <Label>Actif</Label>
                 <Switch checked={editing.active ?? true} onCheckedChange={(v) => setEditing({ ...editing, active: v })} />
               </div>
+              <div className="col-span-2 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm">Mettre en avant dans le Hero</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Affichée en haut de la page d'accueil (mode manuel uniquement)</p>
+                  </div>
+                  <Switch checked={editing.hero_featured ?? false} onCheckedChange={(v) => setEditing({ ...editing, hero_featured: v })} />
+                </div>
+              </div>
               <div className="col-span-2 space-y-2">
                 <Label>Image</Label>
                 {(() => {
