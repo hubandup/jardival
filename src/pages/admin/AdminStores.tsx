@@ -31,6 +31,8 @@ export default function AdminStores() {
   const [editing, setEditing] = useState<StoreRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: stores, isLoading } = useQuery({
     queryKey: ["admin-stores"],
@@ -40,6 +42,31 @@ export default function AdminStores() {
       return data as StoreRow[];
     },
   });
+
+  const handleExport = () => {
+    if (!stores || stores.length === 0) {
+      toast.error("Aucun magasin à exporter");
+      return;
+    }
+    exportStoresToXlsx(stores as any);
+    toast.success(`${stores.length} magasins exportés`);
+  };
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const rows = await parseStoresFromFile(file);
+      const { error } = await supabase.from("stores").upsert(rows as any, { onConflict: "id" });
+      if (error) throw error;
+      toast.success(`${rows.length} magasins importés`);
+      qc.invalidateQueries({ queryKey: ["admin-stores"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSave = async () => {
     if (!editing) return;
