@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface StoreRow {
   id: string;
+  slug: string | null;
   name: string;
   address: string;
   postal_code: string | null;
