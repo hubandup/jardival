@@ -9,8 +9,9 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ImageDown } from "lucide-react";
 import { toast } from "sonner";
+import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 
 interface PromoRow {
   id: string;
@@ -42,6 +43,25 @@ export default function AdminPromotions() {
   const [editing, setEditing] = useState<(Partial<PromoRow> & { isNew?: boolean }) | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+
+  const handleMigrate = async () => {
+    if (!confirm("Uploader les images locales du catalogue vers le bucket pour toutes les promos sans image ?")) return;
+    setMigrating(true);
+    try {
+      const r = await migratePromoImagesToBucket();
+      toast.success(
+        `Migration terminée : ${r.updated}/${r.total} promos mises à jour (${r.skipped} ignorées)` +
+          (r.errors.length ? ` — ${r.errors.length} erreur(s)` : "")
+      );
+      if (r.errors.length) console.warn("Erreurs migration:", r.errors);
+      qc.invalidateQueries({ queryKey: ["admin-promotions"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   const { data: promos, isLoading } = useQuery({
     queryKey: ["admin-promotions"],
@@ -111,6 +131,13 @@ export default function AdminPromotions() {
         </div>
         <Button onClick={() => setEditing({ ...empty(), isNew: true })}>
           <Plus className="h-4 w-4" /> Ajouter
+        </Button>
+      </div>
+
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={handleMigrate} disabled={migrating}>
+          {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
+          Migrer images locales → bucket
         </Button>
       </div>
 
