@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Navigation, Loader2, Compass } from "lucide-react";
-import { STORES, DEPARTMENTS } from "@/data/stores";
+import { DEPARTMENTS } from "@/data/stores";
+import { useStores } from "@/hooks/useStores";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { nearestStore } from "@/lib/geo";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
@@ -12,11 +13,12 @@ interface Props {
 
 export const NearestStore = ({ onLocate }: Props) => {
   const { state, request } = useGeolocation();
+  const { data: stores = [] } = useStores();
 
   const nearest = useMemo(() => {
-    if (state.status !== "ready") return null;
-    return nearestStore(state.position, STORES);
-  }, [state]);
+    if (state.status !== "ready" || stores.length === 0) return null;
+    return nearestStore(state.position, stores);
+  }, [state, stores]);
 
   // Idle: invitation
   if (state.status === "idle") {

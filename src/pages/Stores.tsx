@@ -4,7 +4,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { StoresMap } from "@/components/StoresMap";
 import { NearestStore } from "@/components/NearestStore";
-import { STORES, DEPARTMENTS, Store } from "@/data/stores";
+import { DEPARTMENTS, Store } from "@/data/stores";
+import { useStores } from "@/hooks/useStores";
+import { Loader2 } from "lucide-react";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
 import { MapPin, Search, Phone, Clock } from "lucide-react";
 import {
@@ -21,18 +23,19 @@ const Stores = () => {
   const [dept, setDept] = useState<string>("Tous");
   const [activeId, setActiveId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
+  const { data: stores = [], isLoading } = useStores();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
 
   const departments = useMemo(() => {
-    const set = new Set(STORES.map((s) => s.department));
+    const set = new Set(stores.map((s) => s.department));
     return Array.from(set).sort();
-  }, []);
+  }, [stores]);
 
   const filtered = useMemo(() => {
-    return STORES.filter((s) => {
+    return stores.filter((s) => {
       if (dept !== "Tous" && s.department !== dept) return false;
       if (!query) return true;
       const q = query.toLowerCase();
@@ -43,7 +46,7 @@ const Stores = () => {
         s.department.includes(q)
       );
     });
-  }, [query, dept]);
+  }, [stores, query, dept]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,7 +81,7 @@ const Stores = () => {
             Trouvez votre magasin <span className="italic text-primary">Jardival</span>
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-            {STORES.length} magasins partout en Bourgogne-Franche-Comté pour découvrir notre catalogue, profiter des promotions et bénéficier des conseils de nos jardiniers.
+            {stores.length} magasins partout en Bourgogne-Franche-Comté pour découvrir notre catalogue, profiter des promotions et bénéficier des conseils de nos jardiniers.
           </p>
 
           {/* Search bar */}
@@ -139,7 +142,11 @@ const Stores = () => {
             />
           </div>
 
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-3 rounded-xl border border-border bg-card p-12 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" /> Chargement des magasins…
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-secondary/30 p-12 text-center text-muted-foreground">
               Aucun magasin ne correspond à votre recherche.
             </div>

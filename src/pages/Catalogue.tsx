@@ -14,6 +14,7 @@ import {
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCatalogues } from "@/hooks/usePromotions";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -26,7 +27,7 @@ import {
 // Worker hosted on the same package CDN — version must match pdfjs-dist
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-const PDF_URL = "/catalogue-jardival-jardinales.pdf";
+const FALLBACK_PDF_URL = "/catalogue-jardival-jardinales.pdf";
 
 // Each page must be a forwardRef component for react-pageflip to attach refs
 type FlipPageProps = {
@@ -63,16 +64,20 @@ FlipPage.displayName = "FlipPage";
 
 const CataloguePage = () => {
   const isMobile = useIsMobile();
+  const { data: catalogues } = useCatalogues();
+  const activeCatalogue = catalogues?.[0];
+  const pdfUrl = activeCatalogue?.pdf_url ?? FALLBACK_PDF_URL;
+  const title = activeCatalogue?.title ?? "Jardinales";
+
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 500, h: 700 });
   const bookRef = useRef<any>(null);
 
   useEffect(() => {
-    document.title = "Catalogue Jardinales — Feuilleter en ligne | Jardival";
+    document.title = `Catalogue ${title} — Feuilleter en ligne | Jardival`;
     const meta = document.querySelector('meta[name="description"]');
-    const desc =
-      "Feuilletez en ligne le catalogue Jardinales Jardival : 8 pages de promotions valables jusqu'au 16 mai 2026.";
+    const desc = `Feuilletez en ligne le catalogue ${title} Jardival.`;
     if (meta) meta.setAttribute("content", desc);
 
     const update = () => {
@@ -131,7 +136,7 @@ const CataloguePage = () => {
               <ArrowLeft className="h-4 w-4" /> Retour à l'accueil
             </Link>
             <a
-              href={PDF_URL}
+              href={pdfUrl}
               download
               className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-card transition-all hover:scale-[1.02]"
             >
@@ -149,7 +154,7 @@ const CataloguePage = () => {
           {/* Flip book */}
           <div className="mt-8 rounded-xl bg-gradient-to-br from-muted to-muted/40 p-4 shadow-card md:p-8">
             <Document
-              file={PDF_URL}
+              file={pdfUrl}
               onLoadSuccess={onLoad}
               loading={
                 <div className="flex items-center justify-center gap-3 p-16 text-foreground/70">
@@ -163,7 +168,7 @@ const CataloguePage = () => {
                     Impossible d'afficher le catalogue. Téléchargez-le pour le consulter.
                   </p>
                   <a
-                    href={PDF_URL}
+                    href={pdfUrl}
                     download
                     className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
                   >
