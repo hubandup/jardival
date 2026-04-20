@@ -16,7 +16,7 @@ const CATALOGUE_BY_NAME = new Map(
   CATALOGUE_PROMOS.map((p) => [normalize(p.name), p])
 );
 
-function findCatalogueFallback(title: string): Product | undefined {
+export function findCatalogueFallback(title: string): Product | undefined {
   const key = normalize(title);
   if (CATALOGUE_BY_NAME.has(key)) return CATALOGUE_BY_NAME.get(key);
   // fallback souple : match partiel sur les premiers mots

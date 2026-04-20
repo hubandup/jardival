@@ -13,6 +13,7 @@ import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload } from "luci
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 import { exportPromotionsToXlsx, parsePromotionsFromFile } from "@/lib/promotionsXlsx";
+import { findCatalogueFallback } from "@/lib/promotion";
 
 interface PromoRow {
   id: string;
@@ -193,6 +194,7 @@ export default function AdminPromotions() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Image</TableHead>
                 <TableHead>Ordre</TableHead>
                 <TableHead>Titre</TableHead>
                 <TableHead>Prix</TableHead>
@@ -202,8 +204,17 @@ export default function AdminPromotions() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {promos?.map((p) => (
+              {promos?.map((p) => {
+                const img = p.image ?? findCatalogueFallback(p.title)?.image ?? null;
+                return (
                 <TableRow key={p.id}>
+                  <TableCell>
+                    {img ? (
+                      <img src={img} alt="" className="h-10 w-10 object-cover rounded" />
+                    ) : (
+                      <div className="h-10 w-10 rounded bg-muted" />
+                    )}
+                  </TableCell>
                   <TableCell>{p.display_order}</TableCell>
                   <TableCell className="font-medium">{p.title}</TableCell>
                   <TableCell>
