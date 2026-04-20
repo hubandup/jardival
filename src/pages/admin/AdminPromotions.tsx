@@ -9,8 +9,9 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ImageDown } from "lucide-react";
 import { toast } from "sonner";
+import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 
 interface PromoRow {
   id: string;
