@@ -53,6 +53,69 @@ export type Database = {
         }
         Relationships: []
       }
+      media_assets: {
+        Row: {
+          alt: string | null
+          bucket: string
+          caption: string | null
+          created_at: string
+          credit: string | null
+          description: string | null
+          height: number | null
+          id: string
+          mime_type: string | null
+          path: string
+          public_url: string
+          seo_slug: string | null
+          size_bytes: number | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+          uploaded_by: string | null
+          width: number | null
+        }
+        Insert: {
+          alt?: string | null
+          bucket: string
+          caption?: string | null
+          created_at?: string
+          credit?: string | null
+          description?: string | null
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          path: string
+          public_url: string
+          seo_slug?: string | null
+          size_bytes?: number | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          width?: number | null
+        }
+        Update: {
+          alt?: string | null
+          bucket?: string
+          caption?: string | null
+          created_at?: string
+          credit?: string | null
+          description?: string | null
+          height?: number | null
+          id?: string
+          mime_type?: string | null
+          path?: string
+          public_url?: string
+          seo_slug?: string | null
+          size_bytes?: number | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          width?: number | null
+        }
+        Relationships: []
+      }
       page_views: {
         Row: {
           created_at: string

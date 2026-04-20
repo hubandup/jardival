@@ -2,6 +2,7 @@ import { Product } from "@/types/product";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useMediaAlt } from "@/hooks/useMedia";
 
 interface Props {
   product: Product;
@@ -11,6 +12,7 @@ interface Props {
 export const ProductCard = ({ product, featured = false }: Props) => {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
+  const alt = useMediaAlt(product.image, product.name);
 
   return (
     <Link
@@ -21,7 +23,7 @@ export const ProductCard = ({ product, featured = false }: Props) => {
         {!errored ? (
           <img
             src={product.image}
-            alt={product.name}
+            alt={alt}
             loading="lazy"
             onLoad={() => setLoaded(true)}
             onError={() => setErrored(true)}
