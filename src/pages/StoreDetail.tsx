@@ -153,7 +153,7 @@ const StoreDetail = () => {
       {/* Hero */}
       <section className="relative h-[420px] w-full overflow-hidden md:h-[520px]">
         <img
-          src={storeHero}
+          src={store.image ?? storeHero}
           alt={`Devanture du magasin ${store.name}`}
           className="absolute inset-0 h-full w-full object-cover"
           width={1920}
