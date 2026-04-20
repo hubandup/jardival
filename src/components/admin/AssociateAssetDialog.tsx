@@ -46,68 +46,111 @@ export default function AssociateAssetDialog({
   const [addToGallery, setAddToGallery] = useState(false);
   const qc = useQueryClient();
 
-  // Reset on open
+  // Extract searchable keywords from the uploaded file name
+  const fileKeywords = useMemo(() => {
+    if (!asset) return [] as string[];
+    const raw = asset.title || asset.path.split("/").pop() || "";
+    return raw
+      .replace(/\.[^.]+$/, "") // strip extension
+      .replace(/^\d+-/, "") // strip leading timestamp prefix from upload
+      .replace(/[_\-.]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ")
+      .filter((w) => w.length >= 3) // skip noise
+      .slice(0, 6);
+  }, [asset]);
+
+  const suggestedQuery = fileKeywords.join(" ");
+
+  // Reset on open + prefill from filename
   useEffect(() => {
     if (open) {
-      setQ("");
+      setQ(suggestedQuery);
       setSelectedId(null);
       setAddToGallery(false);
       setKind("product");
     }
-  }, [open]);
+  }, [open, suggestedQuery]);
 
   const { data: candidates = [], isLoading } = useQuery({
-    queryKey: ["associate-candidates", kind, q],
+    queryKey: ["associate-candidates", kind, q, fileKeywords.join("|")],
     enabled: open,
     queryFn: async (): Promise<Candidate[]> => {
       const term = q.trim();
+      // Build OR-ilike from individual words for fuzzy multi-word matching
+      const words = term
+        .split(/\s+/)
+        .filter((w) => w.length >= 2)
+        .slice(0, 6);
+
+      const buildOr = (column: string) =>
+        words.map((w) => `${column}.ilike.%${w.replace(/[,()]/g, "")}%`).join(",");
+
       if (kind === "product") {
         let query = supabase
           .from("products")
           .select("id,name,category,image")
           .order("name")
-          .limit(40);
-        if (term) query = query.ilike("name", `%${term}%`);
+          .limit(60);
+        if (words.length) query = query.or(buildOr("name"));
         const { data, error } = await query;
         if (error) throw error;
-        return (data ?? []).map((p) => ({
+        const list = (data ?? []).map((p) => ({
           id: p.id,
           name: p.name,
           category: p.category,
           hasImage: !!p.image,
         }));
+        return rankCandidates(list, words);
       }
       if (kind === "promotion") {
         let query = supabase
           .from("promotions")
           .select("id,title,image")
           .order("title")
-          .limit(40);
-        if (term) query = query.ilike("title", `%${term}%`);
+          .limit(60);
+        if (words.length) query = query.or(buildOr("title"));
         const { data, error } = await query;
         if (error) throw error;
-        return (data ?? []).map((p) => ({
+        const list = (data ?? []).map((p) => ({
           id: p.id,
           name: p.title,
           hasImage: !!p.image,
         }));
+        return rankCandidates(list, words);
       }
       let query = supabase
         .from("stores")
         .select("id,name,city,image")
         .order("name")
-        .limit(40);
-      if (term) query = query.or(`name.ilike.%${term}%,city.ilike.%${term}%`);
+        .limit(60);
+      if (words.length) {
+        query = query.or([buildOr("name"), buildOr("city")].filter(Boolean).join(","));
+      }
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []).map((s) => ({
+      const list = (data ?? []).map((s) => ({
         id: s.id,
         name: s.name,
         category: s.city,
         hasImage: !!s.image,
       }));
+      return rankCandidates(list, words);
     },
   });
+
+  // Auto-select the top match when products tab opens with suggestions
+  useEffect(() => {
+    if (kind === "product" && !selectedId && candidates.length && fileKeywords.length) {
+      // Only auto-select if there is a strong match (top candidate score > 0)
+      const top = candidates[0];
+      if (top && scoreMatch(top.name, fileKeywords) > 0) {
+        setSelectedId(top.id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates, kind]);
 
   const associate = useMutation({
     mutationFn: async () => {
