@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { StoresMap } from "@/components/StoresMap";
+import { NearestStore } from "@/components/NearestStore";
 import { STORES, DEPARTMENTS, mapsUrl, Store } from "@/data/stores";
 import { MapPin, Navigation, Search, Phone, Clock } from "lucide-react";
 
@@ -86,6 +87,17 @@ const Stores = () => {
       {/* Stores grid */}
       <section className="py-16 md:py-20">
         <div className="container-px mx-auto max-w-7xl">
+          {/* Nearest store via geolocation */}
+          <div className="mb-10">
+            <NearestStore
+              onLocate={(id) => {
+                setActiveId(id);
+                const el = cardRefs.current[id];
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            />
+          </div>
+
           {/* Map */}
           <div className="mb-12">
             <StoresMap
