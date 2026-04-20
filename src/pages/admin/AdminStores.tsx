@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pencil, Loader2, Download, FileUp, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { exportStoresToXlsx, parseStoresFromFile } from "@/lib/storesXlsx";
+import { DEFAULT_HOURS, StoreHours } from "@/data/stores";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface StoreRow {
   id: string;
@@ -25,6 +27,14 @@ interface StoreRow {
   longitude: number;
   image: string | null;
   services: string[] | null;
+  hours: StoreHours[] | null;
+}
+
+const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+
+function ensureHours(h: StoreHours[] | null | undefined): StoreHours[] {
+  if (Array.isArray(h) && h.length === 7) return h;
+  return DEFAULT_HOURS.map((d) => ({ ...d }));
 }
 
 export default function AdminStores() {
