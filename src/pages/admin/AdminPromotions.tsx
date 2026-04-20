@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 import { exportPromotionsToXlsx, parsePromotionsFromFile } from "@/lib/promotionsXlsx";
@@ -53,6 +53,14 @@ export default function AdminPromotions() {
   const [migrating, setMigrating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(false);
+  const [view, setView] = useState<"table" | "grid">(() => {
+    if (typeof window === "undefined") return "table";
+    return (localStorage.getItem("admin-promos-view") as "table" | "grid") || "table";
+  });
+  const switchView = (v: "table" | "grid") => {
+    setView(v);
+    try { localStorage.setItem("admin-promos-view", v); } catch {}
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: heroMode = "random" } = useHeroMode();
   const setHeroMode = useSetHeroMode();
@@ -178,6 +186,28 @@ export default function AdminPromotions() {
           <p className="text-muted-foreground mt-1">Produits en promo affichés sur le site</p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="inline-flex items-center rounded-md border border-border p-0.5">
+            <Button
+              type="button"
+              variant={view === "table" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => switchView("table")}
+              title="Vue tableau"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant={view === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2"
+              onClick={() => switchView("grid")}
+              title="Vue grille"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4" /> Exporter Excel
           </Button>
