@@ -190,9 +190,27 @@ export default function AdminMedia() {
           <SelectContent>
             <SelectItem value="all">Tous types</SelectItem>
             <SelectItem value="image">Images</SelectItem>
-            <SelectItem value="pdf">PDF</SelectItem>
+          <SelectItem value="pdf">PDF</SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex border rounded-md">
+          <Button
+            variant={view === "grid" ? "secondary" : "ghost"}
+            size="icon"
+            className="h-9 w-9 rounded-r-none"
+            onClick={() => setView("grid")}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={view === "list" ? "secondary" : "ghost"}
+            size="icon"
+            className="h-9 w-9 rounded-l-none"
+            onClick={() => setView("list")}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
