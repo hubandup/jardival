@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import productsData from "@/data/products.json";
 import { Product } from "@/types/product";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -28,6 +28,11 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const product = useMemo(() => products.find((p) => p.id === id), [id]);
   const [activeImg, setActiveImg] = useState(0);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+    setActiveImg(0);
+  }, [id]);
 
   if (!product) {
     return (
