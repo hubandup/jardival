@@ -200,6 +200,24 @@ export default function AdminPromotions() {
         </div>
       </div>
 
+      <Card className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="font-semibold flex items-center gap-2"><Star className="h-4 w-4 text-accent" />Section "Hero" (page d'accueil)</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {heroMode === "manual"
+              ? "Mode manuel : seules les promos cochées \"Mettre en avant\" sont affichées (4 max)."
+              : "Mode aléatoire : 4 promos actives sont tirées au hasard à chaque visite."}
+          </p>
+        </div>
+        <Select value={heroMode} onValueChange={(v) => setHeroMode(v as "manual" | "random").then(() => toast.success("Mode Hero mis à jour"))}>
+          <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="manual">Manuel (sélection)</SelectItem>
+            <SelectItem value="random">Aléatoire</SelectItem>
+          </SelectContent>
+        </Select>
+      </Card>
+
       <Card>
         {isLoading ? (
           <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
@@ -213,6 +231,7 @@ export default function AdminPromotions() {
                 <TableHead>Prix</TableHead>
                 <TableHead>Validité</TableHead>
                 <TableHead>Statut</TableHead>
+                <TableHead className="w-16 text-center">Hero</TableHead>
                 <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
@@ -242,6 +261,16 @@ export default function AdminPromotions() {
                       {p.active ? "Actif" : "Inactif"}
                     </span>
                   </TableCell>
+                  <TableCell className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => toggleHeroFeatured(p.id, !p.hero_featured)}
+                      className="inline-flex items-center justify-center"
+                      title={p.hero_featured ? "Retirer du Hero" : "Mettre en avant dans le Hero"}
+                    >
+                      <Star className={`h-4 w-4 ${p.hero_featured ? "fill-accent text-accent" : "text-muted-foreground"}`} />
+                    </button>
+                  </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={() => setEditing(p)}>
                       <Pencil className="h-4 w-4" />
@@ -254,7 +283,7 @@ export default function AdminPromotions() {
                 );
               })}
               {promos?.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
