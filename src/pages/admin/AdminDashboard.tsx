@@ -81,7 +81,49 @@ export default function AdminDashboard() {
     },
   });
 
-  const totalViews = (daily ?? []).reduce((s, d) => s + d.views, 0);
+  const { data: stats } = useQuery({
+    queryKey: ["pageviews-stats", days],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("pageviews_stats", { _days: days });
+      if (error) throw error;
+      return (data?.[0] ?? null) as {
+        total_views: number;
+        unique_sessions: number;
+        mobile_views: number;
+        tablet_views: number;
+        desktop_views: number;
+      } | null;
+    },
+  });
+
+  const { data: topStores } = useQuery({
+    queryKey: ["pageviews-top-stores", days],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("pageviews_top_stores", { _days: days, _limit: 10 });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: topProducts } = useQuery({
+    queryKey: ["pageviews-top-products", days],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("pageviews_top_products", { _days: days, _limit: 10 });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const totalViews = Number(stats?.total_views ?? 0);
+  const uniqueRate =
+    stats && Number(stats.total_views) > 0
+      ? Math.round((Number(stats.unique_sessions) / Number(stats.total_views)) * 100)
+      : 0;
+  const deviceTotal =
+    Number(stats?.mobile_views ?? 0) +
+    Number(stats?.tablet_views ?? 0) +
+    Number(stats?.desktop_views ?? 0);
+  const pct = (n: number) => (deviceTotal > 0 ? Math.round((n / deviceTotal) * 100) : 0);
 
   const cards = [
     { to: "/admin/magasins", label: "Magasins", icon: Store, count: counts?.stores },
