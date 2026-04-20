@@ -1,7 +1,9 @@
+import { Link } from "react-router-dom";
 import cover from "@/assets/catalogue-cover.jpg";
 import { Download, Sparkles, Calendar } from "lucide-react";
 
 const PDF_URL = "/catalogue-jardival-jardinales.pdf";
+const VIEWER_URL = "/catalogue";
 
 export const CatalogueBanner = () => {
   return (
@@ -13,12 +15,10 @@ export const CatalogueBanner = () => {
 
       <div className="container-px relative mx-auto flex max-w-7xl flex-col items-center gap-8 py-10 md:flex-row md:gap-12 md:py-12">
         {/* Cover */}
-        <a
-          href={PDF_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to={VIEWER_URL}
           className="group relative shrink-0"
-          aria-label="Ouvrir le catalogue Jardinales en PDF"
+          aria-label="Feuilleter le catalogue Jardinales en ligne"
         >
           <div className="absolute -inset-2 rounded-xl bg-foreground/10 blur-xl transition-opacity group-hover:opacity-70" />
           <img
@@ -30,7 +30,7 @@ export const CatalogueBanner = () => {
           <span className="absolute -right-3 -top-3 inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground shadow-card">
             <Sparkles className="h-3 w-3" /> Nouveau
           </span>
-        </a>
+        </Link>
 
         {/* Content */}
         <div className="flex-1 text-center md:text-left">
@@ -47,21 +47,18 @@ export const CatalogueBanner = () => {
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
             <a
               href={PDF_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+              download
               className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background shadow-card transition-all hover:scale-[1.02] hover:shadow-glow"
             >
               <Download className="h-4 w-4" />
               Télécharger le catalogue
             </a>
-            <a
-              href={PDF_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to={VIEWER_URL}
               className="inline-flex items-center gap-2 rounded-full border border-foreground/30 bg-background/30 px-6 py-3 text-sm font-semibold text-foreground backdrop-blur transition-colors hover:bg-background/60"
             >
               Feuilleter en ligne
-            </a>
+            </Link>
           </div>
         </div>
       </div>
