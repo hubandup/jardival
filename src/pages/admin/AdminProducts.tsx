@@ -82,6 +82,7 @@ export default function AdminProducts() {
     const payload = {
       ref: editing.ref ?? null,
       name: editing.name,
+      slug: editing.slug?.trim() ? editing.slug.trim() : null,
       category: editing.category ?? null,
       description: editing.description ?? null,
       image: editing.image ?? null,
