@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Loader2, Upload } from "lucide-react";
+import { Pencil, Loader2, Download, FileUp } from "lucide-react";
 import { toast } from "sonner";
+import { exportStoresToXlsx, parseStoresFromFile } from "@/lib/storesXlsx";
 
 interface StoreRow {
   id: string;
