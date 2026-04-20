@@ -127,19 +127,8 @@ const Stores = () => {
       </section>
 
       {/* Stores grid */}
-      <section className="py-16 md:py-20">
+      <section className="py-10 md:py-12">
         <div className="container-px mx-auto max-w-7xl">
-          {/* Nearest store via geolocation */}
-          <div className="mb-10">
-            <NearestStore
-              onLocate={(id) => {
-                setActiveId(id);
-                const el = cardRefs.current[id];
-                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-              }}
-            />
-          </div>
-
           {/* Map */}
           <div className="mb-12">
             <StoresMap
