@@ -1,6 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image"));
+    };
+    img.src = url;
+  });
+}
+
 export interface MediaAsset {
   id: string;
   bucket: string;
@@ -121,6 +137,19 @@ export function useUploadMedia() {
         .slice(0, 80);
       const path = `${Date.now()}-${slug || "file"}.${ext}`;
 
+      // Calculate image dimensions if applicable
+      let width: number | null = null;
+      let height: number | null = null;
+      if (file.type.startsWith("image/")) {
+        try {
+          const dims = await getImageDimensions(file);
+          width = dims.width;
+          height = dims.height;
+        } catch {
+          // Non-blocking: dimensions remain null
+        }
+      }
+
       const { error: upErr } = await supabase.storage
         .from("media")
         .upload(path, file, { contentType: file.type, upsert: false });
@@ -137,6 +166,8 @@ export function useUploadMedia() {
           mime_type: file.type || null,
           size_bytes: file.size,
           title: file.name.replace(/\.[^.]+$/, ""),
+          width,
+          height,
         })
         .select()
         .single();
