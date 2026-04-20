@@ -5,6 +5,16 @@ export interface StoreHours {
   closed?: boolean;
 }
 
+/** Renders an hours line, supporting continuous days (only morning filled). */
+export function formatStoreHours(h: StoreHours | undefined | null): string {
+  if (!h) return "";
+  if (h.closed) return "Fermé";
+  const m = h.morning?.trim();
+  const a = h.afternoon?.trim();
+  if (m && a) return `${m} · ${a}`;
+  return m || a || "";
+}
+
 export interface Store {
   id: string;
   name: string;
