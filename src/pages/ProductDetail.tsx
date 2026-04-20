@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { useProduct, useProducts } from "@/hooks/useProducts";
 import { useSeo } from "@/hooks/useSeo";
+import { useMediaAlt } from "@/hooks/useMedia";
 
 const DESCRIPTIONS = [
   "Conçu pour durer, ce produit Jardival allie robustesse et design soigné pour sublimer votre extérieur saison après saison.",
@@ -37,6 +38,8 @@ const ProductDetail = () => {
   const product = result?.product;
   const description = result?.row.description || (id ? descriptionFor(id) : "");
   const [activeImg, setActiveImg] = useState(0);
+  const currentImage = product?.images[activeImg] ?? product?.image ?? "";
+  const heroAlt = useMediaAlt(currentImage, product?.name ?? "");
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -154,8 +157,8 @@ const ProductDetail = () => {
           <div className="space-y-4">
             <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-secondary/40">
               <img
-                src={product.images[activeImg] ?? product.image}
-                alt={product.name}
+                src={currentImage}
+                alt={heroAlt}
                 className="h-full w-full object-contain p-8"
               />
               {product.discount > 0 && (
