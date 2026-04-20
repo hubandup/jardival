@@ -267,6 +267,13 @@ export default function AdminMedia() {
       </Sheet>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+
+      <AssociateAssetDialog
+        open={!!associateAsset}
+        onOpenChange={(o) => !o && setAssociateAsset(null)}
+        asset={associateAsset}
+      />
+
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer ce fichier ?</AlertDialogTitle>
