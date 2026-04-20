@@ -52,8 +52,16 @@ export default function AdminPromotions() {
   const [migrating, setMigrating] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { data: heroMode = "random" } = useHeroMode();
+  const setHeroMode = useSetHeroMode();
 
-  
+  const toggleHeroFeatured = async (id: string, value: boolean) => {
+    const { error } = await supabase.from("promotions").update({ hero_featured: value }).eq("id", id);
+    if (error) return toast.error("Erreur");
+    qc.invalidateQueries({ queryKey: ["admin-promotions"] });
+    qc.invalidateQueries({ queryKey: ["hero_promos"] });
+  };
+
 
   const handleExport = async () => {
     const { data, error } = await supabase.from("promotions").select("*").order("display_order");
