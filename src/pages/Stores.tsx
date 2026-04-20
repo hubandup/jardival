@@ -84,8 +84,19 @@ const Stores = () => {
             {stores.length} magasins partout en Bourgogne-Franche-Comté pour découvrir notre catalogue, profiter des promotions et bénéficier des conseils de nos jardiniers.
           </p>
 
+          {/* Nearest store via geolocation */}
+          <div className="mt-10">
+            <NearestStore
+              onLocate={(id) => {
+                setActiveId(id);
+                const el = cardRefs.current[id];
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            />
+          </div>
+
           {/* Search bar */}
-          <div className="mt-10 flex flex-col gap-3 rounded-2xl border border-border bg-background p-4 shadow-card sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-border bg-background p-4 shadow-card sm:flex-row">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
