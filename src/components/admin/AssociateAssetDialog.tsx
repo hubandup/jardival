@@ -284,27 +284,40 @@ export default function AssociateAssetDialog({
                 </p>
               ) : (
                 <RadioGroup value={selectedId ?? ""} onValueChange={setSelectedId}>
-                  {filtered.map((c) => (
-                    <Label
-                      key={c.id}
-                      htmlFor={`assoc-${c.id}`}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 cursor-pointer border-b last:border-b-0 hover:bg-muted/50 transition-colors",
-                        selectedId === c.id && "bg-primary/5",
-                      )}
-                    >
-                      <RadioGroupItem id={`assoc-${c.id}`} value={c.id} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{c.name}</p>
-                        {c.category && (
-                          <p className="text-xs text-muted-foreground truncate">{c.category}</p>
+                  {filtered.map((c, idx) => {
+                    const isSuggested =
+                      idx === 0 &&
+                      fileKeywords.length > 0 &&
+                      scoreMatch(c.name, fileKeywords) > 0;
+                    return (
+                      <Label
+                        key={c.id}
+                        htmlFor={`assoc-${c.id}`}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 cursor-pointer border-b last:border-b-0 hover:bg-muted/50 transition-colors",
+                          selectedId === c.id && "bg-primary/5",
                         )}
-                      </div>
-                      {c.hasImage && (
-                        <span className="text-[10px] text-muted-foreground">image actuelle sera remplacée</span>
-                      )}
-                    </Label>
-                  ))}
+                      >
+                        <RadioGroupItem id={`assoc-${c.id}`} value={c.id} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{c.name}</p>
+                            {isSuggested && (
+                              <span className="rounded-full bg-primary/10 text-primary text-[10px] font-medium px-2 py-0.5 shrink-0">
+                                suggéré
+                              </span>
+                            )}
+                          </div>
+                          {c.category && (
+                            <p className="text-xs text-muted-foreground truncate">{c.category}</p>
+                          )}
+                        </div>
+                        {c.hasImage && (
+                          <span className="text-[10px] text-muted-foreground">image actuelle sera remplacée</span>
+                        )}
+                      </Label>
+                    );
+                  })}
                 </RadioGroup>
               )}
             </div>
