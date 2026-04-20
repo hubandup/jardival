@@ -69,6 +69,30 @@ const ProductDetail = () => {
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
+      <div className="border-b border-border bg-card">
+        <div className="container-px mx-auto max-w-7xl py-3">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/">Accueil</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/catalogue">Catalogue</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="line-clamp-1">{product.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+      </div>
+
       <div className="container-px mx-auto max-w-7xl pt-8">
         <button
           onClick={() => navigate(-1)}
