@@ -161,16 +161,29 @@ export default function AdminPromotions() {
           <h1 className="text-3xl font-bold">Promotions</h1>
           <p className="text-muted-foreground mt-1">Produits en promo affichés sur le site</p>
         </div>
-        <Button onClick={() => setEditing({ ...empty(), isNew: true })}>
-          <Plus className="h-4 w-4" /> Ajouter
-        </Button>
-      </div>
-
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={handleMigrate} disabled={migrating}>
-          {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
-          Migrer images locales → bucket
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="h-4 w-4" /> Exporter Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            Importer Excel
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
+          />
+          <Button variant="outline" size="sm" onClick={handleMigrate} disabled={migrating}>
+            {migrating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />}
+            Migrer images
+          </Button>
+          <Button onClick={() => setEditing({ ...empty(), isNew: true })}>
+            <Plus className="h-4 w-4" /> Ajouter
+          </Button>
+        </div>
       </div>
 
       <Card>
