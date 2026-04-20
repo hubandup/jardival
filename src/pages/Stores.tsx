@@ -58,7 +58,7 @@ const Stores = () => {
             latitude: s.coords[0],
             longitude: s.coords[1],
           },
-          url: typeof window !== "undefined" ? `${window.location.origin}/magasins/${s.id}` : undefined,
+          url: typeof window !== "undefined" ? `${window.location.origin}/magasins/${s.slug || s.id}` : undefined,
         },
       })),
     },
