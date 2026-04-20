@@ -15,6 +15,14 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
 import { ProductCard } from "@/components/ProductCard";
 import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
   getStore,
   nearbyStores,
   DEPARTMENTS,
@@ -116,6 +124,31 @@ const StoreDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
+
+      {/* Breadcrumb */}
+      <div className="border-b border-border bg-card">
+        <div className="container-px mx-auto max-w-7xl py-3">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/">Accueil</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/magasins">Magasins</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{store.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+      </div>
 
       {/* Hero */}
       <section className="relative h-[420px] w-full overflow-hidden md:h-[520px]">
