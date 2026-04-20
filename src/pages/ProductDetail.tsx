@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import productsData from "@/data/products.json";
 import { Product } from "@/types/product";
 import { SiteHeader } from "@/components/SiteHeader";
