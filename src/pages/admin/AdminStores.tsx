@@ -96,6 +96,7 @@ export default function AdminStores() {
         longitude: editing.longitude,
         image: editing.image,
         services: editing.services,
+        hours: ensureHours(editing.hours) as any,
       })
       .eq("id", editing.id);
     setSaving(false);
