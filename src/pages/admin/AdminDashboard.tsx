@@ -36,7 +36,7 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-bold">Tableau de bord</h1>
         <p className="text-muted-foreground mt-1">Vue d'ensemble de votre site Jardival</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
           <Link key={c.to} to={c.to}>
             <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
