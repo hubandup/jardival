@@ -244,7 +244,11 @@ export default function AdminProducts() {
             </TableHeader>
             <TableBody>
               {paged.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow
+                  key={p.id}
+                  onClick={() => setEditing(p)}
+                  className="cursor-pointer hover:bg-muted/50"
+                >
                   <TableCell>
                     {p.image ? (
                       <img src={p.image} alt="" className="h-10 w-10 object-cover rounded" />
@@ -266,7 +270,7 @@ export default function AdminProducts() {
                       {p.active ? "Actif" : "Inactif"}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" onClick={() => setEditing(p)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
