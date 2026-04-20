@@ -41,6 +41,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import AssociateAssetDialog from "@/components/admin/AssociateAssetDialog";
 
 const BUCKET_LABELS: Record<string, string> = {
   all: "Tous",
@@ -62,6 +63,7 @@ export default function AdminMedia() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [sortKey, setSortKey] = useState<"title" | "bucket" | "size" | "date">("date");
   const [sortAsc, setSortAsc] = useState(false);
+  const [associateAsset, setAssociateAsset] = useState<MediaAsset | null>(null);
 
   const { data: rawAssets = [], isLoading } = useMediaAssets({ bucket, type, q });
 
@@ -102,14 +104,21 @@ export default function AdminMedia() {
 
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length) return;
+    const uploaded: MediaAsset[] = [];
     for (const f of Array.from(files)) {
       try {
-        await upload.mutateAsync(f);
+        const a = await upload.mutateAsync(f);
+        uploaded.push(a);
       } catch (e) {
         toast.error(`${f.name} : ${(e as Error).message}`);
       }
     }
-    toast.success(`${files.length} fichier(s) ajouté(s)`);
+    if (uploaded.length) {
+      toast.success(`${uploaded.length} fichier(s) ajouté(s)`);
+      // Propose association for the first uploaded image
+      const firstImage = uploaded.find((a) => a.mime_type?.startsWith("image/"));
+      if (firstImage) setAssociateAsset(firstImage);
+    }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -272,6 +281,12 @@ export default function AdminMedia() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AssociateAssetDialog
+        open={!!associateAsset}
+        onOpenChange={(o) => !o && setAssociateAsset(null)}
+        asset={associateAsset}
+      />
     </div>
   );
 }
