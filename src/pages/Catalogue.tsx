@@ -15,6 +15,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCatalogues } from "@/hooks/usePromotions";
+import { useSeo } from "@/hooks/useSeo";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -74,15 +75,25 @@ const CataloguePage = () => {
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 500, h: 700 });
   const bookRef = useRef<any>(null);
 
-  useEffect(() => {
-    document.title = `Catalogue ${title} — Feuilleter en ligne | Jardival`;
-    const meta = document.querySelector('meta[name="description"]');
-    const desc = `Feuilletez en ligne le catalogue ${title} Jardival.`;
-    if (meta) meta.setAttribute("content", desc);
+  useSeo({
+    title: `Catalogue ${title} — Feuilleter en ligne | Jardival`,
+    description: `Feuilletez en ligne le catalogue ${title} Jardival : promotions jardin, plein air, mobilier et plus, dans votre magasin Jardival.`,
+    canonical: typeof window !== "undefined" ? window.location.origin + "/catalogue" : undefined,
+    image: activeCatalogue?.cover_image ?? undefined,
+    type: "article",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "Book",
+      name: `Catalogue ${title}`,
+      bookFormat: "https://schema.org/EBook",
+      url: typeof window !== "undefined" ? window.location.origin + "/catalogue" : undefined,
+      image: activeCatalogue?.cover_image ?? undefined,
+      publisher: { "@type": "Organization", name: "Jardival" },
+    },
+  });
 
+  useEffect(() => {
     const update = () => {
-      // A4 ratio ~ 1:1.414. On desktop the book displays 2 pages side-by-side,
-      // so total width = 2 * pageWidth. Cap to viewport.
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const mobile = vw < 768;
