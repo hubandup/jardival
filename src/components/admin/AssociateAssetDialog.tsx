@@ -27,6 +27,7 @@ interface Candidate {
   name: string;
   category?: string | null;
   hasImage: boolean;
+  recent?: boolean;
 }
 
 interface AssociateAssetDialogProps {
@@ -140,10 +141,43 @@ export default function AssociateAssetDialog({
     },
   });
 
+  // Fallback: 3 most recently created products
+  const { data: recentProducts = [] } = useQuery({
+    queryKey: ["associate-recent-products"],
+    enabled: open && kind === "product",
+    staleTime: 60_000,
+    queryFn: async (): Promise<Candidate[]> => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id,name,category,image")
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (error) throw error;
+      return (data ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        hasImage: !!p.image,
+        recent: true,
+      }));
+    },
+  });
+
+  // If no keyword match, prepend recent products
+  const displayedCandidates = useMemo(() => {
+    if (kind !== "product") return candidates;
+    const topScore = candidates[0]
+      ? scoreMatch(candidates[0].name, fileKeywords)
+      : 0;
+    if (topScore > 0 || recentProducts.length === 0) return candidates;
+    const existingIds = new Set(candidates.map((c) => c.id));
+    const recents = recentProducts.filter((r) => !existingIds.has(r.id));
+    return [...recents, ...candidates];
+  }, [candidates, kind, recentProducts, fileKeywords]);
+
   // Auto-select the top match when products tab opens with suggestions
   useEffect(() => {
     if (kind === "product" && !selectedId && candidates.length && fileKeywords.length) {
-      // Only auto-select if there is a strong match (top candidate score > 0)
       const top = candidates[0];
       if (top && scoreMatch(top.name, fileKeywords) > 0) {
         setSelectedId(top.id);
@@ -226,7 +260,7 @@ export default function AssociateAssetDialog({
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const filtered = useMemo(() => candidates, [candidates]);
+  const filtered = displayedCandidates;
 
   if (!asset) return null;
 
@@ -305,6 +339,11 @@ export default function AssociateAssetDialog({
                             {isSuggested && (
                               <span className="rounded-full bg-primary/10 text-primary text-[10px] font-medium px-2 py-0.5 shrink-0">
                                 suggéré
+                              </span>
+                            )}
+                            {!isSuggested && c.recent && (
+                              <span className="rounded-full bg-muted text-muted-foreground text-[10px] font-medium px-2 py-0.5 shrink-0">
+                                récent
                               </span>
                             )}
                           </div>
