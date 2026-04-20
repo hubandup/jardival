@@ -116,15 +116,7 @@ export const NearestStore = ({ onLocate }: Props) => {
         </div>
 
         <div className="flex flex-wrap gap-2 md:flex-nowrap">
-          <a
-            href={directionsUrl(store)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:shadow-glow"
-          >
-            <Navigation className="h-4 w-4" />
-            Itinéraire
-          </a>
+          <DirectionsMenu store={store} />
           <button
             onClick={() => onLocate?.(store.id)}
             className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
