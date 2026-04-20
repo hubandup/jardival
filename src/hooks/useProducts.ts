@@ -4,6 +4,7 @@ import { Product } from "@/types/product";
 
 export interface ProductRow {
   id: string;
+  slug: string | null;
   ref: string | null;
   name: string;
   category: string | null;
@@ -21,6 +22,7 @@ export interface ProductRow {
 function toProduct(row: ProductRow): Product {
   return {
     id: row.id,
+    slug: row.slug ?? undefined,
     ref: row.ref ?? row.id,
     name: row.name,
     category: row.category ?? "",
