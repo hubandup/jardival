@@ -13,6 +13,7 @@ import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload } from "luci
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 import { exportPromotionsToXlsx, parsePromotionsFromFile } from "@/lib/promotionsXlsx";
+import { findCatalogueFallback } from "@/lib/promotion";
 
 interface PromoRow {
   id: string;
@@ -193,6 +194,7 @@ export default function AdminPromotions() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Image</TableHead>
                 <TableHead>Ordre</TableHead>
                 <TableHead>Titre</TableHead>
                 <TableHead>Prix</TableHead>
@@ -202,8 +204,17 @@ export default function AdminPromotions() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {promos?.map((p) => (
+              {promos?.map((p) => {
+                const img = p.image ?? findCatalogueFallback(p.title)?.image ?? null;
+                return (
                 <TableRow key={p.id}>
+                  <TableCell>
+                    {img ? (
+                      <img src={img} alt="" className="h-10 w-10 object-cover rounded" />
+                    ) : (
+                      <div className="h-10 w-10 rounded bg-muted" />
+                    )}
+                  </TableCell>
                   <TableCell>{p.display_order}</TableCell>
                   <TableCell className="font-medium">{p.title}</TableCell>
                   <TableCell>
@@ -227,9 +238,10 @@ export default function AdminPromotions() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
               {promos?.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -277,9 +289,24 @@ export default function AdminPromotions() {
               </div>
               <div className="col-span-2 space-y-2">
                 <Label>Image</Label>
-                {editing.image && <img src={editing.image} alt="" className="h-32 rounded-md object-cover" />}
+                {(() => {
+                  const preview = editing.image ?? findCatalogueFallback(editing.title ?? "")?.image;
+                  return preview ? (
+                    <div className="space-y-1">
+                      <img src={preview} alt="" className="h-32 rounded-md object-cover" />
+                      {!editing.image && (
+                        <p className="text-xs text-muted-foreground">Image issue du catalogue (non sauvegardée). Cliquez "Migrer images" ou uploadez ci-dessous.</p>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
                 <Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} disabled={uploading} />
                 {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                <Input
+                  placeholder="Ou collez une URL"
+                  value={editing.image ?? ""}
+                  onChange={(e) => setEditing({ ...editing, image: e.target.value || null })}
+                />
               </div>
             </div>
           )}
