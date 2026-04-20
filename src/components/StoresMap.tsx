@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Store, mapsUrl } from "@/data/stores";
+import { Store, directionsUrl } from "@/data/stores";
 
 interface Props {
   stores: Store[];
@@ -73,7 +73,7 @@ export const StoresMap = ({ stores, activeId, onSelect }: Props) => {
         <div style="font-family:Inter,sans-serif;min-width:200px">
           <div style="font-weight:600;font-size:14px;color:hsl(150,20%,12%)">${s.name}</div>
           <div style="color:hsl(150,8%,42%);font-size:12px;margin-top:4px">${s.address}<br/>${s.postalCode ? s.postalCode + " " : ""}${s.city}</div>
-          <a href="${mapsUrl(s)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;padding:6px 12px;background:hsl(142,65%,28%);color:white;border-radius:999px;font-size:12px;font-weight:600;text-decoration:none">Itinéraire →</a>
+          <a href="${directionsUrl(s)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;padding:6px 12px;background:hsl(142,65%,28%);color:white;border-radius:999px;font-size:12px;font-weight:600;text-decoration:none">Itinéraire →</a>
         </div>`;
       marker.bindPopup(popupHtml);
       marker.on("click", () => onSelect?.(s.id));

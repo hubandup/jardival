@@ -47,7 +47,16 @@ export const DEPARTMENTS: Record<string, string> = {
   "90": "Territoire de Belfort",
 };
 
+// OpenStreetMap URL — never blocked by ad-blockers (unlike google.com/maps/search
+// which is often blocked as a tracking URL by uBlock/Brave/etc).
 export function mapsUrl(store: Store) {
-  const q = encodeURIComponent(`${store.name}, ${store.address}, ${store.postalCode ?? ""} ${store.city}`);
-  return `https://www.google.com/maps/search/?api=1&query=${q}`;
+  const [lat, lon] = store.coords;
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`;
+}
+
+// Directions URL using the universal "geo:" intent on mobile, with an OSM fallback.
+// We keep OSM here too because google.com/maps/dir is sometimes blocked.
+export function directionsUrl(store: Store) {
+  const [lat, lon] = store.coords;
+  return `https://www.openstreetmap.org/directions?to=${lat}%2C${lon}`;
 }
