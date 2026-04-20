@@ -63,17 +63,26 @@ export function useHeroPromos() {
       let pool: typeof all;
       if (mode === "manual") {
         pool = all.filter((p) => p.hero_featured);
-        if (pool.length === 0) {
-          // Fallback: take any active promos
-          pool = all;
-        }
+        if (pool.length === 0) pool = all;
       } else {
         pool = [...all].sort(() => Math.random() - 0.5);
       }
-      const promos: HeroPromo[] = pool.slice(0, 4).map((p) => ({
+      const selected = pool.slice(0, 4);
+
+      // Fallback : si la promo n'a pas d'image, prendre celle du produit lié (même id)
+      const ids = selected.map((p) => p.id);
+      const { data: products } = await supabase
+        .from("products")
+        .select("id, image")
+        .in("id", ids);
+      const productImageById = new Map<string, string | null>(
+        (products ?? []).map((p) => [p.id as string, (p as { image: string | null }).image]),
+      );
+
+      const promos: HeroPromo[] = selected.map((p) => ({
         id: p.id,
         title: p.title,
-        image: p.image,
+        image: p.image || productImageById.get(p.id) || null,
         price: p.price,
         original_price: p.original_price,
         discount: computeDiscount(p),
