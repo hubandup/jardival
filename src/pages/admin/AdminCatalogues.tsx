@@ -202,7 +202,6 @@ export default function AdminCatalogues() {
                   defaultBucket="catalogues"
                 />
               </div>
-              </div>
               <div className="col-span-2 space-y-2">
                 <Label>Fichier PDF</Label>
                 {editing.pdf_url && (
