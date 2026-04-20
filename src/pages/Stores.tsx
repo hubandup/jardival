@@ -49,6 +49,25 @@ const Stores = () => {
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
+      {/* Breadcrumb */}
+      <div className="border-b border-border bg-card">
+        <div className="container-px mx-auto max-w-7xl py-3">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/">Accueil</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Magasins</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+      </div>
+
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-hero">
         <div className="container-px mx-auto max-w-7xl py-16 md:py-24">
