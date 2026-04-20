@@ -20,7 +20,15 @@ import AdminProfile from "./pages/admin/AdminProfile.tsx";
 import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import { AuthProvider } from "./hooks/useAuth";
 
+import { AuthProvider } from "./hooks/useAuth";
+import { usePageTracking } from "./hooks/usePageTracking";
+
 const queryClient = new QueryClient();
+
+function PageTracker() {
+  usePageTracking();
+  return null;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
