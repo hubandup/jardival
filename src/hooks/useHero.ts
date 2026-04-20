@@ -49,6 +49,12 @@ function computeDiscount(p: PromotionRow & { hero_featured?: boolean }): number 
   return null;
 }
 
+function extractRef(description: string | null | undefined): string | null {
+  if (!description) return null;
+  const m = description.match(/Réf\.\s*(\d+)/i);
+  return m ? m[1] : null;
+}
+
 export function useHeroPromos() {
   const { data: mode = "random" } = useHeroMode();
   return useQuery({
@@ -67,22 +73,39 @@ export function useHeroPromos() {
       } else {
         pool = [...all].sort(() => Math.random() - 0.5);
       }
-      const selected = pool.slice(0, 4);
+      // Fallback : pour TOUTES les promos actives, on tente de résoudre une image
+      // (priorité : promo.image, puis produit par ref extraite de la description)
+      const allRefs = pool
+        .map((p) => extractRef(p.description))
+        .filter((r): r is string => !!r);
+      let imageByRef = new Map<string, string | null>();
+      if (allRefs.length > 0) {
+        const { data: products } = await supabase
+          .from("products")
+          .select("ref, image")
+          .in("ref", allRefs);
+        imageByRef = new Map(
+          (products ?? []).map((p) => [
+            p.ref as string,
+            (p as { image: string | null }).image,
+          ]),
+        );
+      }
 
-      // Fallback : si la promo n'a pas d'image, prendre celle du produit lié (même id)
-      const ids = selected.map((p) => p.id);
-      const { data: products } = await supabase
-        .from("products")
-        .select("id, image")
-        .in("id", ids);
-      const productImageById = new Map<string, string | null>(
-        (products ?? []).map((p) => [p.id as string, (p as { image: string | null }).image]),
-      );
+      const resolveImage = (p: PromotionRow): string | null => {
+        if (p.image) return p.image;
+        const ref = extractRef(p.description);
+        return ref ? imageByRef.get(ref) ?? null : null;
+      };
 
-      const promos: HeroPromo[] = selected.map((p) => ({
+      // On garde uniquement celles qui ont une image résoluble, et on prend les 4 premières
+      const withImage = pool.filter((p) => !!resolveImage(p)).slice(0, 4);
+      const finalSelection = withImage.length >= 4 ? withImage : [...withImage, ...pool.filter((p) => !withImage.includes(p))].slice(0, 4);
+
+      const promos: HeroPromo[] = finalSelection.map((p) => ({
         id: p.id,
         title: p.title,
-        image: p.image || productImageById.get(p.id) || null,
+        image: resolveImage(p),
         price: p.price,
         original_price: p.original_price,
         discount: computeDiscount(p),
