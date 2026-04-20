@@ -250,10 +250,10 @@ export default function AdminPromotions() {
         </Select>
       </Card>
 
-      <Card>
-        {isLoading ? (
-          <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
-        ) : (
+      {isLoading ? (
+        <Card><div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div></Card>
+      ) : view === "table" ? (
+        <Card>
           <Table>
             <TableHeader>
               <TableRow>
@@ -323,8 +323,82 @@ export default function AdminPromotions() {
               )}
             </TableBody>
           </Table>
-        )}
-      </Card>
+        </Card>
+      ) : (
+        <>
+          {promos?.length === 0 ? (
+            <Card><div className="p-8 text-center text-muted-foreground">Aucune promotion</div></Card>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {promos?.map((p) => {
+                const img = p.image ?? findCatalogueFallback(p.title)?.image ?? null;
+                const discount =
+                  p.original_price && p.price && p.original_price > p.price
+                    ? Math.round(((p.original_price - p.price) / p.original_price) * 100)
+                    : 0;
+                return (
+                  <Card
+                    key={p.id}
+                    onClick={() => setEditing(p)}
+                    className="group relative overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-primary/40"
+                  >
+                    <div className="relative aspect-square bg-muted/40">
+                      {img ? (
+                        <img src={img} alt={p.title} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                          <ImageIcon className="h-8 w-8" />
+                        </div>
+                      )}
+                      {discount > 0 && (
+                        <span className="absolute left-2 top-2 rounded-full bg-destructive px-2 py-0.5 text-xs font-bold text-destructive-foreground shadow">
+                          -{discount}%
+                        </span>
+                      )}
+                      {!p.active && (
+                        <span className="absolute right-2 top-2 rounded-full bg-foreground/80 px-2 py-0.5 text-[10px] font-semibold uppercase text-background">
+                          Inactif
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); toggleHeroFeatured(p.id, !p.hero_featured); }}
+                        className="absolute bottom-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-background/90 shadow backdrop-blur transition hover:bg-background"
+                        title={p.hero_featured ? "Retirer du Hero" : "Mettre en avant dans le Hero"}
+                      >
+                        <Star className={`h-4 w-4 ${p.hero_featured ? "fill-accent text-accent" : "text-muted-foreground"}`} />
+                      </button>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      <p className="line-clamp-2 text-sm font-semibold leading-snug min-h-[2.5rem]">{p.title}</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-base font-bold text-foreground">
+                          {p.price != null ? `${p.price}€` : "—"}
+                        </span>
+                        {p.original_price && (
+                          <span className="text-xs text-muted-foreground line-through">{p.original_price}€</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>Ordre : {p.display_order}</span>
+                        {p.ends_at && <span>jusqu'au {p.ends_at}</span>}
+                      </div>
+                      <div className="flex items-center justify-end gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(p)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(p.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
