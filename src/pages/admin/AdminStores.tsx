@@ -175,7 +175,11 @@ export default function AdminStores() {
             </TableHeader>
             <TableBody>
               {stores?.map((s) => (
-                <TableRow key={s.id}>
+                <TableRow
+                  key={s.id}
+                  className="cursor-pointer"
+                  onClick={() => setEditing(s)}
+                >
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell>{s.city}</TableCell>
                   <TableCell>{s.department}</TableCell>
@@ -183,7 +187,7 @@ export default function AdminStores() {
                   <TableCell>
                     {s.image ? <span className="text-xs text-green-600">✓</span> : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" onClick={() => setEditing(s)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
