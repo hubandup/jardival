@@ -29,7 +29,7 @@ import {
   mapsUrl,
 } from "@/data/stores";
 import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
-import storeHero from "@/assets/store-generic.jpg";
+import storeHero from "@/assets/store-placeholder.jpg";
 
 const StoreDetail = () => {
   const { id } = useParams<{ id: string }>();
