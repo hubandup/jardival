@@ -147,19 +147,19 @@ const StoreCard = ({ store, active, onHover }: { store: Store; active?: boolean;
       active ? "border-accent shadow-card ring-2 ring-accent/20" : "border-border hover:border-primary/40"
     }`}
   >
-    <div className="flex items-start justify-between gap-3">
+    <Link to={`/magasins/${store.id}`} className="flex items-start justify-between gap-3">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
           {DEPARTMENTS[store.department] ?? `Département ${store.department}`}
         </p>
-        <h3 className="mt-1 font-display text-xl font-semibold leading-tight text-foreground">
+        <h3 className="mt-1 font-display text-xl font-semibold leading-tight text-foreground group-hover:text-primary">
           {store.name}
         </h3>
       </div>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
         <MapPin className="h-5 w-5" />
       </span>
-    </div>
+    </Link>
 
     <div className="space-y-1 text-sm text-foreground/80">
       <p>{store.address}</p>
@@ -175,15 +175,23 @@ const StoreCard = ({ store, active, onHover }: { store: Store; active?: boolean;
       </span>
     </div>
 
-    <div className="mt-auto flex gap-2 pt-2">
-      <DirectionsMenu store={store} className="flex-1" />
-      <a
-        href="tel:+33000000000"
-        className="inline-flex items-center justify-center rounded-full border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-secondary"
-        aria-label="Appeler le magasin"
+    <div className="mt-auto flex flex-col gap-2 pt-2">
+      <Link
+        to={`/magasins/${store.id}`}
+        className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:shadow-glow"
       >
-        <Phone className="h-4 w-4" />
-      </a>
+        Voir le magasin
+      </Link>
+      <div className="flex gap-2">
+        <DirectionsMenu store={store} variant="outline" className="flex-1" />
+        <a
+          href="tel:+33000000000"
+          className="inline-flex items-center justify-center rounded-full border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-secondary"
+          aria-label="Appeler le magasin"
+        >
+          <Phone className="h-4 w-4" />
+        </a>
+      </div>
     </div>
   </article>
 );

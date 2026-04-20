@@ -1,3 +1,10 @@
+export interface StoreHours {
+  day: string;
+  morning?: string;
+  afternoon?: string;
+  closed?: boolean;
+}
+
 export interface Store {
   id: string;
   name: string;
@@ -6,7 +13,34 @@ export interface Store {
   city: string;
   department: string;
   coords: [number, number];
+  phone?: string;
+  hours?: StoreHours[];
+  services?: string[];
 }
+
+// Horaires types appliqués par défaut à tous les magasins
+// (à personnaliser magasin par magasin plus tard)
+export const DEFAULT_HOURS: StoreHours[] = [
+  { day: "Lundi", morning: "9h00 – 12h00", afternoon: "14h00 – 19h00" },
+  { day: "Mardi", morning: "9h00 – 12h00", afternoon: "14h00 – 19h00" },
+  { day: "Mercredi", morning: "9h00 – 12h00", afternoon: "14h00 – 19h00" },
+  { day: "Jeudi", morning: "9h00 – 12h00", afternoon: "14h00 – 19h00" },
+  { day: "Vendredi", morning: "9h00 – 12h00", afternoon: "14h00 – 19h00" },
+  { day: "Samedi", morning: "9h00 – 12h00", afternoon: "14h00 – 19h00" },
+  { day: "Dimanche", closed: true },
+];
+
+// Services types proposés dans tous les magasins du réseau
+export const DEFAULT_SERVICES: string[] = [
+  "Pépinière & Plantes",
+  "Jardin & Outillage",
+  "Animalerie",
+  "Mobilier de jardin",
+  "Barbecue & Plancha",
+  "Conseils experts",
+  "Carte fidélité",
+  "Parking gratuit",
+];
 
 export const STORES: Store[] = [
   { id: "arbois", name: "Jardival Arbois", address: "29 Route de Villeneuve", city: "Arbois", department: "39", coords: [46.92013, 5.76592] },
@@ -79,4 +113,39 @@ export function directionsUrlFor(store: Store, provider: DirectionsProvider) {
     default:
       return `https://www.openstreetmap.org/directions?to=${lat}%2C${lon}`;
   }
+}
+
+// Récupère un magasin par son id avec horaires/services par défaut appliqués
+export function getStore(id: string | undefined): Store | undefined {
+  if (!id) return undefined;
+  const s = STORES.find((x) => x.id === id);
+  if (!s) return undefined;
+  return {
+    ...s,
+    phone: s.phone ?? "+33 0 00 00 00 00",
+    hours: s.hours ?? DEFAULT_HOURS,
+    services: s.services ?? DEFAULT_SERVICES,
+  };
+}
+
+// Calcule la distance haversine en km entre deux points
+export function distanceKm(a: [number, number], b: [number, number]) {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(b[0] - a[0]);
+  const dLon = toRad(b[1] - a[1]);
+  const lat1 = toRad(a[0]);
+  const lat2 = toRad(b[0]);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Renvoie les N magasins les plus proches d'un magasin donné
+export function nearbyStores(store: Store, n = 3): Array<Store & { distance: number }> {
+  return STORES.filter((s) => s.id !== store.id)
+    .map((s) => ({ ...s, distance: distanceKm(store.coords, s.coords) }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, n);
 }
