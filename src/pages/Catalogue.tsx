@@ -104,6 +104,24 @@ const CataloguePage = () => {
       <SiteHeader />
 
       <main className="flex-1">
+        <div className="border-b border-border bg-card">
+          <div className="container-px mx-auto max-w-7xl py-3">
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/">Accueil</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>Catalogue</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+        </div>
+
         <div className="container-px mx-auto max-w-7xl py-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Link
