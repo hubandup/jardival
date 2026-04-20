@@ -26,6 +26,7 @@ interface PromoRow {
   ends_at: string | null;
   display_order: number;
   active: boolean;
+  hero_featured: boolean;
 }
 
 const empty = (): Omit<PromoRow, "id"> => ({
@@ -38,6 +39,7 @@ const empty = (): Omit<PromoRow, "id"> => ({
   ends_at: null,
   display_order: 0,
   active: true,
+  hero_featured: false,
 });
 
 export default function AdminPromotions() {
@@ -121,6 +123,7 @@ export default function AdminPromotions() {
       ends_at: editing.ends_at || null,
       display_order: editing.display_order ?? 0,
       active: editing.active ?? true,
+      hero_featured: editing.hero_featured ?? false,
     };
     const { error } = editing.isNew
       ? await supabase.from("promotions").insert(payload)
