@@ -6,6 +6,7 @@ import { StoresMap } from "@/components/StoresMap";
 import { NearestStore } from "@/components/NearestStore";
 import { DEPARTMENTS, Store } from "@/data/stores";
 import { useStores } from "@/hooks/useStores";
+import { useSeo } from "@/hooks/useSeo";
 import { Loader2 } from "lucide-react";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
 import { MapPin, Search, Phone, Clock } from "lucide-react";
@@ -28,6 +29,40 @@ const Stores = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
+
+  useSeo({
+    title: "Magasins Jardival en Bourgogne-Franche-Comté — Trouvez votre jardinerie",
+    description:
+      "Trouvez votre magasin Jardival le plus proche en Bourgogne-Franche-Comté : adresses, horaires, services et itinéraire des jardineries du réseau.",
+    canonical: typeof window !== "undefined" ? window.location.origin + "/magasins" : undefined,
+    type: "website",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: "Magasins Jardival",
+      itemListElement: stores.slice(0, 50).map((s, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        item: {
+          "@type": "LocalBusiness",
+          name: s.name,
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: s.address,
+            postalCode: s.postalCode ?? undefined,
+            addressLocality: s.city,
+            addressCountry: "FR",
+          },
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: s.coords[0],
+            longitude: s.coords[1],
+          },
+          url: typeof window !== "undefined" ? `${window.location.origin}/magasins/${s.id}` : undefined,
+        },
+      })),
+    },
+  });
 
   const departments = useMemo(() => {
     const set = new Set(stores.map((s) => s.department));

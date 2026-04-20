@@ -30,6 +30,7 @@ import {
 import { useStore, useStores } from "@/hooks/useStores";
 import { usePromotions } from "@/hooks/usePromotions";
 import { promotionToProduct } from "@/lib/promotion";
+import { useSeo } from "@/hooks/useSeo";
 import storeHero from "@/assets/store-placeholder.jpg";
 
 const StoreDetail = () => {
@@ -44,17 +45,46 @@ const StoreDetail = () => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [id]);
 
-  useEffect(() => {
-    if (!store) return;
-    document.title = `${store.name} — ${store.city} | Jardival`;
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) {
-      meta.setAttribute(
-        "content",
-        `${store.name}, ${store.address}, ${store.city}. Horaires, itinéraire et services du magasin Jardival.`,
-      );
-    }
-  }, [store]);
+  const canonical = typeof window !== "undefined" ? window.location.origin + `/magasins/${id}` : undefined;
+  useSeo({
+    title: store ? `${store.name} — ${store.city} | Jardival` : "Magasin Jardival",
+    description: store
+      ? `${store.name}, ${store.address}, ${store.city}. Horaires, itinéraire et services du magasin Jardival.`
+      : "Magasin du réseau Jardival.",
+    canonical,
+    image: store?.image ?? undefined,
+    type: "website",
+    jsonLd: store
+      ? {
+          "@context": "https://schema.org",
+          "@type": "LocalBusiness",
+          name: store.name,
+          image: store.image ?? undefined,
+          telephone: store.phone ?? undefined,
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: store.address,
+            postalCode: store.postalCode ?? undefined,
+            addressLocality: store.city,
+            addressCountry: "FR",
+          },
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: store.coords[0],
+            longitude: store.coords[1],
+          },
+          url: canonical,
+          openingHoursSpecification: store.hours
+            ?.filter((h) => !h.closed)
+            .map((h) => ({
+              "@type": "OpeningHoursSpecification",
+              dayOfWeek: h.day,
+              opens: h.morning?.split("–")[0]?.trim(),
+              closes: h.afternoon?.split("–")[1]?.trim(),
+            })),
+        }
+      : undefined,
+  });
 
   // Init mini-map
   useEffect(() => {
