@@ -26,7 +26,7 @@ export function useSetHeroMode() {
   return async (mode: HeroMode) => {
     const { error } = await supabase
       .from("site_settings")
-      .upsert({ key: "hero_mode", value: mode as unknown as object, updated_at: new Date().toISOString() }, { onConflict: "key" });
+      .upsert([{ key: "hero_mode", value: mode as never, updated_at: new Date().toISOString() }], { onConflict: "key" });
     if (error) throw error;
     qc.invalidateQueries({ queryKey: ["site_setting", "hero_mode"] });
     qc.invalidateQueries({ queryKey: ["hero_promos"] });
