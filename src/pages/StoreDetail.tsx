@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { Link, useParams, Navigate } from "react-router-dom";
+import { Link, useParams, Navigate, useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -37,6 +37,7 @@ import storeHero from "@/assets/store-placeholder.jpg";
 
 const StoreDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data: store, isLoading } = useStore(id);
   const { data: allStores = [] } = useStores();
   const { data: allPromos = [] } = usePromotions();
@@ -46,6 +47,14 @@ const StoreDetail = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [id]);
+
+  // 301-style client redirect: if URL param doesn't match the canonical slug, replace with slug
+  useEffect(() => {
+    if (!id || !store?.slug) return;
+    if (store.slug !== id) {
+      navigate(`/magasins/${store.slug}`, { replace: true });
+    }
+  }, [id, store?.slug, navigate]);
 
   const canonical = typeof window !== "undefined" ? window.location.origin + `/magasins/${store?.slug || id}` : undefined;
   useSeo({

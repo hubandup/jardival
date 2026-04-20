@@ -46,6 +46,15 @@ const ProductDetail = () => {
     setActiveImg(0);
   }, [id]);
 
+  // 301-style client redirect: if URL param is a UUID but product has a slug, replace URL with slug
+  useEffect(() => {
+    if (!id || !product?.slug) return;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isUuid && product.slug !== id) {
+      navigate(`/produit/${product.slug}`, { replace: true });
+    }
+  }, [id, product?.slug, navigate]);
+
   const seoTitle = product ? `${product.name} | Jardival` : "Produit | Jardival";
   const seoDesc = product
     ? `${description.slice(0, 140)} Disponible chez Jardival, votre jardinerie de proximité.`
