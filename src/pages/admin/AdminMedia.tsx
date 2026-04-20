@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Loader2, RefreshCw, Search, Trash2, Upload, X, Copy, FileText } from "lucide-react";
+import { Loader2, RefreshCw, Search, Trash2, Upload, X, Copy, FileText, LayoutGrid, List, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   MediaAsset,
@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const BUCKET_LABELS: Record<string, string> = {
   all: "Tous",
@@ -57,8 +58,33 @@ export default function AdminMedia() {
   const [selected, setSelected] = useState<MediaAsset | null>(null);
   const [toDelete, setToDelete] = useState<MediaAsset | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [sortKey, setSortKey] = useState<"title" | "bucket" | "size" | "date">("date");
+  const [sortAsc, setSortAsc] = useState(false);
 
-  const { data: assets = [], isLoading } = useMediaAssets({ bucket, type, q });
+  const { data: rawAssets = [], isLoading } = useMediaAssets({ bucket, type, q });
+
+  const assets = useMemo(() => {
+    const sorted = [...rawAssets].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "title":
+          cmp = (a.title ?? a.path).localeCompare(b.title ?? b.path);
+          break;
+        case "bucket":
+          cmp = a.bucket.localeCompare(b.bucket);
+          break;
+        case "size":
+          cmp = (a.size_bytes ?? 0) - (b.size_bytes ?? 0);
+          break;
+        case "date":
+          cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+    return sorted;
+  }, [rawAssets, sortKey, sortAsc]);
   const sync = useSyncMedia();
   const upload = useUploadMedia();
   const remove = useDeleteMediaAsset();
@@ -164,9 +190,27 @@ export default function AdminMedia() {
           <SelectContent>
             <SelectItem value="all">Tous types</SelectItem>
             <SelectItem value="image">Images</SelectItem>
-            <SelectItem value="pdf">PDF</SelectItem>
+          <SelectItem value="pdf">PDF</SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex border rounded-md">
+          <Button
+            variant={view === "grid" ? "secondary" : "ghost"}
+            size="icon"
+            className="h-9 w-9 rounded-r-none"
+            onClick={() => setView("grid")}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={view === "list" ? "secondary" : "ghost"}
+            size="icon"
+            className="h-9 w-9 rounded-l-none"
+            onClick={() => setView("list")}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -181,12 +225,23 @@ export default function AdminMedia() {
             ou <b>Ajouter</b> pour téléverser de nouveaux médias.
           </p>
         </div>
-      ) : (
+      ) : view === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {assets.map((asset) => (
             <MediaCard key={asset.id} asset={asset} onSelect={setSelected} />
           ))}
         </div>
+      ) : (
+        <MediaListView
+          assets={assets}
+          onSelect={setSelected}
+          sortKey={sortKey}
+          sortAsc={sortAsc}
+          onSort={(key) => {
+            if (key === sortKey) setSortAsc(!sortAsc);
+            else { setSortKey(key); setSortAsc(true); }
+          }}
+        />
       )}
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
@@ -216,6 +271,116 @@ export default function AdminMedia() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function SortHeader({
+  label,
+  active,
+  asc,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  asc: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <TableHead>
+      <button
+        type="button"
+        onClick={onClick}
+        className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+      >
+        {label}
+        <ArrowUpDown className={cn("h-3 w-3", active ? "text-foreground" : "text-muted-foreground/50")} />
+        {active && <span className="text-[10px]">{asc ? "↑" : "↓"}</span>}
+      </button>
+    </TableHead>
+  );
+}
+
+function MediaListView({
+  assets,
+  onSelect,
+  sortKey,
+  sortAsc,
+  onSort,
+}: {
+  assets: MediaAsset[];
+  onSelect: (a: MediaAsset) => void;
+  sortKey: string;
+  sortAsc: boolean;
+  onSort: (key: "title" | "bucket" | "size" | "date") => void;
+}) {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12"></TableHead>
+            <SortHeader label="Titre" active={sortKey === "title"} asc={sortAsc} onClick={() => onSort("title")} />
+            <SortHeader label="Bucket" active={sortKey === "bucket"} asc={sortAsc} onClick={() => onSort("bucket")} />
+            <TableHead>Type</TableHead>
+            <TableHead>Dimensions</TableHead>
+            <SortHeader label="Taille" active={sortKey === "size"} asc={sortAsc} onClick={() => onSort("size")} />
+            <TableHead>Alt</TableHead>
+            <SortHeader label="Date" active={sortKey === "date"} asc={sortAsc} onClick={() => onSort("date")} />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {assets.map((asset) => {
+            const isImage = asset.mime_type?.startsWith("image/");
+            return (
+              <TableRow
+                key={asset.id}
+                onClick={() => onSelect(asset)}
+                className="cursor-pointer hover:bg-muted/50"
+              >
+                <TableCell>
+                  {isImage ? (
+                    <img src={asset.public_url} alt="" className="h-9 w-9 rounded object-cover" />
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded bg-muted">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="font-medium max-w-[200px] truncate">
+                  {asset.title ?? asset.path}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="text-[10px]">
+                    {BUCKET_LABELS[asset.bucket] ?? asset.bucket}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {asset.mime_type?.split("/").pop() ?? "—"}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {asset.width && asset.height ? `${asset.width}×${asset.height}` : "—"}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {asset.size_bytes ? `${(asset.size_bytes / 1024).toFixed(0)} Ko` : "—"}
+                </TableCell>
+                <TableCell>
+                  {isImage && !asset.alt ? (
+                    <Badge variant="destructive" className="text-[10px]">manquant</Badge>
+                  ) : isImage ? (
+                    <span className="text-xs text-muted-foreground max-w-[120px] truncate block">{asset.alt}</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                  {new Date(asset.created_at).toLocaleDateString("fr-FR")}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
   );
 }
