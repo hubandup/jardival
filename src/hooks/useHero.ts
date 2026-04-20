@@ -49,6 +49,12 @@ function computeDiscount(p: PromotionRow & { hero_featured?: boolean }): number 
   return null;
 }
 
+function extractRef(description: string | null | undefined): string | null {
+  if (!description) return null;
+  const m = description.match(/Réf\.\s*(\d+)/i);
+  return m ? m[1] : null;
+}
+
 export function useHeroPromos() {
   const { data: mode = "random" } = useHeroMode();
   return useQuery({
@@ -69,24 +75,37 @@ export function useHeroPromos() {
       }
       const selected = pool.slice(0, 4);
 
-      // Fallback : si la promo n'a pas d'image, prendre celle du produit lié (même id)
-      const ids = selected.map((p) => p.id);
-      const { data: products } = await supabase
-        .from("products")
-        .select("id, image")
-        .in("id", ids);
-      const productImageById = new Map<string, string | null>(
-        (products ?? []).map((p) => [p.id as string, (p as { image: string | null }).image]),
-      );
+      // Fallback : si la promo n'a pas d'image, chercher le produit par ref
+      // (la ref est extraite de la description, ex. "Barbecue — Réf. 199370")
+      const refs = selected
+        .map((p) => extractRef(p.description))
+        .filter((r): r is string => !!r);
+      let imageByRef = new Map<string, string | null>();
+      if (refs.length > 0) {
+        const { data: products } = await supabase
+          .from("products")
+          .select("ref, image")
+          .in("ref", refs);
+        imageByRef = new Map(
+          (products ?? []).map((p) => [
+            p.ref as string,
+            (p as { image: string | null }).image,
+          ]),
+        );
+      }
 
-      const promos: HeroPromo[] = selected.map((p) => ({
-        id: p.id,
-        title: p.title,
-        image: p.image || productImageById.get(p.id) || null,
-        price: p.price,
-        original_price: p.original_price,
-        discount: computeDiscount(p),
-      }));
+      const promos: HeroPromo[] = selected.map((p) => {
+        const ref = extractRef(p.description);
+        const fallback = ref ? imageByRef.get(ref) ?? null : null;
+        return {
+          id: p.id,
+          title: p.title,
+          image: p.image || fallback,
+          price: p.price,
+          original_price: p.original_price,
+          discount: computeDiscount(p),
+        };
+      });
       return { promos, activeCount: all.length };
     },
     staleTime: 30 * 1000,
