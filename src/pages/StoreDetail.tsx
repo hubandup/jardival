@@ -166,7 +166,6 @@ const StoreDetail = () => {
   }
 
   const heroImage = store.image ?? storeHero;
-  const heroAlt = useMediaAlt(store.image ?? undefined, `Devanture du magasin ${store.name}`);
 
   const today = new Date().getDay(); // 0 = dim, 1 = lun…
   const todayIndex = today === 0 ? 6 : today - 1;
