@@ -136,7 +136,7 @@ const CataloguePage = () => {
               <ArrowLeft className="h-4 w-4" /> Retour à l'accueil
             </Link>
             <a
-              href={PDF_URL}
+              href={pdfUrl}
               download
               className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-card transition-all hover:scale-[1.02]"
             >
@@ -154,7 +154,7 @@ const CataloguePage = () => {
           {/* Flip book */}
           <div className="mt-8 rounded-xl bg-gradient-to-br from-muted to-muted/40 p-4 shadow-card md:p-8">
             <Document
-              file={PDF_URL}
+              file={pdfUrl}
               onLoadSuccess={onLoad}
               loading={
                 <div className="flex items-center justify-center gap-3 p-16 text-foreground/70">
@@ -168,7 +168,7 @@ const CataloguePage = () => {
                     Impossible d'afficher le catalogue. Téléchargez-le pour le consulter.
                   </p>
                   <a
-                    href={PDF_URL}
+                    href={pdfUrl}
                     download
                     className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
                   >
