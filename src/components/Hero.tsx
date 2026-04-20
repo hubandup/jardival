@@ -74,10 +74,29 @@ export const Hero = ({ products }: Props) => {
                     <div className="h-full w-full bg-muted" />
                   )}
                   {p.discount && (
-                    <span className="absolute left-2 top-2 rounded-full bg-gradient-promo px-2.5 py-1 text-[10px] font-bold text-accent-foreground">
+                    <span className="absolute left-2 top-2 z-10 rounded-full bg-gradient-promo px-2.5 py-1 text-[10px] font-bold text-accent-foreground">
                       -{p.discount}%
                     </span>
                   )}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black/85 via-black/55 to-transparent p-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                    <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-white">
+                      {p.title}
+                    </p>
+                    {(p.price || p.original_price) && (
+                      <p className="mt-1 flex items-baseline gap-1.5">
+                        {p.price && (
+                          <span className="text-sm font-bold text-white">
+                            {p.price.toFixed(2).replace(".", ",")} €
+                          </span>
+                        )}
+                        {p.original_price && p.price && p.original_price > p.price && (
+                          <span className="text-[10px] text-white/60 line-through">
+                            {p.original_price.toFixed(2).replace(".", ",")} €
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}
