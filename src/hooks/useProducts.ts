@@ -81,7 +81,9 @@ export function useProduct(id: string | undefined) {
         oldPrice && oldPrice > price && price > 0
           ? Math.round(((oldPrice - price) / oldPrice) * 100)
           : 0;
-      const image = promo.image ?? "";
+      const { findCatalogueFallback } = await import("@/lib/promotion");
+      const fallback = !promo.image ? findCatalogueFallback(promo.title) : undefined;
+      const image = promo.image ?? fallback?.image ?? "";
       const row: ProductRow = {
         id: promo.id,
         ref: promo.id.slice(0, 8),
