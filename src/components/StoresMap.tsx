@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Store, directionsUrl } from "@/data/stores";
+import { Store, directionsUrlFor } from "@/data/stores";
 
 interface Props {
   stores: Store[];
@@ -69,11 +69,19 @@ export const StoresMap = ({ stores, activeId, onSelect }: Props) => {
 
     stores.forEach((s) => {
       const marker = L.marker(s.coords, { icon: makePin(false) }).addTo(map);
+      const linkStyle =
+        "display:inline-block;padding:5px 10px;background:hsl(142,65%,28%);color:white;border-radius:999px;font-size:11px;font-weight:600;text-decoration:none";
       const popupHtml = `
-        <div style="font-family:Inter,sans-serif;min-width:200px">
+        <div style="font-family:Inter,sans-serif;min-width:220px">
           <div style="font-weight:600;font-size:14px;color:hsl(150,20%,12%)">${s.name}</div>
           <div style="color:hsl(150,8%,42%);font-size:12px;margin-top:4px">${s.address}<br/>${s.postalCode ? s.postalCode + " " : ""}${s.city}</div>
-          <a href="${directionsUrl(s)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;padding:6px 12px;background:hsl(142,65%,28%);color:white;border-radius:999px;font-size:12px;font-weight:600;text-decoration:none">Itinéraire →</a>
+          <div style="margin-top:10px;font-size:10px;color:hsl(150,8%,42%);text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Itinéraire — ouvrir avec</div>
+          <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
+            <a href="${directionsUrlFor(s, "google")}" target="_blank" rel="noopener" style="${linkStyle}">Google Maps</a>
+            <a href="${directionsUrlFor(s, "apple")}" target="_blank" rel="noopener" style="${linkStyle}">Plans</a>
+            <a href="${directionsUrlFor(s, "waze")}" target="_blank" rel="noopener" style="${linkStyle}">Waze</a>
+            <a href="${directionsUrlFor(s, "osm")}" target="_blank" rel="noopener" style="${linkStyle}">OSM</a>
+          </div>
         </div>`;
       marker.bindPopup(popupHtml);
       marker.on("click", () => onSelect?.(s.id));

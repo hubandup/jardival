@@ -4,8 +4,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { StoresMap } from "@/components/StoresMap";
 import { NearestStore } from "@/components/NearestStore";
-import { STORES, DEPARTMENTS, directionsUrl, Store } from "@/data/stores";
-import { MapPin, Navigation, Search, Phone, Clock } from "lucide-react";
+import { STORES, DEPARTMENTS, Store } from "@/data/stores";
+import { DirectionsMenu } from "@/components/DirectionsMenu";
+import { MapPin, Search, Phone, Clock } from "lucide-react";
 
 const Stores = () => {
   const [query, setQuery] = useState("");
@@ -175,15 +176,7 @@ const StoreCard = ({ store, active, onHover }: { store: Store; active?: boolean;
     </div>
 
     <div className="mt-auto flex gap-2 pt-2">
-      <a
-        href={directionsUrl(store)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:shadow-glow"
-      >
-        <Navigation className="h-4 w-4" />
-        Itinéraire
-      </a>
+      <DirectionsMenu store={store} className="flex-1" />
       <a
         href="tel:+33000000000"
         className="inline-flex items-center justify-center rounded-full border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-secondary"

@@ -60,3 +60,23 @@ export function directionsUrl(store: Store) {
   const [lat, lon] = store.coords;
   return `https://www.openstreetmap.org/directions?to=${lat}%2C${lon}`;
 }
+
+// Multi-provider directions URLs. Used by the "Ouvrir avec…" dropdown so
+// users can pick their preferred navigation app.
+export type DirectionsProvider = "google" | "apple" | "waze" | "osm";
+
+export function directionsUrlFor(store: Store, provider: DirectionsProvider) {
+  const [lat, lon] = store.coords;
+  const label = encodeURIComponent(`${store.name} — ${store.city}`);
+  switch (provider) {
+    case "google":
+      return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&destination_place_id=${label}`;
+    case "apple":
+      return `https://maps.apple.com/?daddr=${lat},${lon}&q=${label}`;
+    case "waze":
+      return `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`;
+    case "osm":
+    default:
+      return `https://www.openstreetmap.org/directions?to=${lat}%2C${lon}`;
+  }
+}
