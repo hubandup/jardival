@@ -53,6 +53,33 @@ export type Database = {
         }
         Relationships: []
       }
+      page_views: {
+        Row: {
+          created_at: string
+          id: string
+          path: string
+          referrer: string | null
+          session_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          path: string
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          path?: string
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active: boolean
@@ -264,6 +291,20 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      pageviews_daily: {
+        Args: { _days: number }
+        Returns: {
+          day: string
+          views: number
+        }[]
+      }
+      pageviews_top_paths: {
+        Args: { _days: number; _limit?: number }
+        Returns: {
+          path: string
+          views: number
+        }[]
+      }
     }
     Enums: {
       app_role: "super_admin" | "admin"
