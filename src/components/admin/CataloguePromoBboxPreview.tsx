@@ -14,6 +14,16 @@ export interface PreviewBox {
   label: string; // titre
   subLabel?: string; // ex. "12,90 € · au lieu de 19,90 €"
   selected: boolean;
+  price?: number | null;
+  originalPrice?: number | null;
+  description?: string | null;
+}
+
+export interface PreviewTextPatch {
+  title?: string;
+  price?: number | null;
+  original_price?: number | null;
+  description?: string | null;
 }
 
 interface Props {
@@ -23,6 +33,7 @@ interface Props {
   onDeleteBox?: (i: number) => void;
   onUpdateBbox?: (i: number, bbox: Bbox) => void;
   onAddBox?: (pageNumber: number, bbox: Bbox) => void;
+  onUpdateText?: (i: number, patch: PreviewTextPatch) => void;
 }
 
 type DragState =
