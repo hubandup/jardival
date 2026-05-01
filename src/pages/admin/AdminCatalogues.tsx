@@ -133,7 +133,21 @@ export default function AdminCatalogues() {
           <h1 className="text-3xl font-bold">Catalogues</h1>
           <p className="text-muted-foreground mt-1">Catalogues PDF téléchargeables</p>
         </div>
-        <Button onClick={() => setEditing({ ...empty(), isNew: true })}>
+        <Button
+          onClick={async () => {
+            const { data, error } = await supabase
+              .from("catalogues")
+              .insert({ title: "Nouveau catalogue", active: false, display_order: 0 })
+              .select("*")
+              .single();
+            if (error || !data) {
+              toast.error("Impossible de créer le catalogue");
+              return;
+            }
+            qc.invalidateQueries({ queryKey: ["admin-catalogues"] });
+            setWorkflowFor({ catalogue: data as CatalogueRow, step: "upload" });
+          }}
+        >
           <Plus className="h-4 w-4" /> Ajouter
         </Button>
       </div>
