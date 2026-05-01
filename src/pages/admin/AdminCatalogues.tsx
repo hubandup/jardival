@@ -66,6 +66,7 @@ export default function AdminCatalogues() {
       ends_at: editing.ends_at || null,
       display_order: editing.display_order ?? 0,
       active: editing.active ?? true,
+      hero_colors: editing.hero_colors ?? null,
     };
     const { error } = editing.isNew
       ? await supabase.from("catalogues").insert(payload)
