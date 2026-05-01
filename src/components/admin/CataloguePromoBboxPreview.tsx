@@ -9,17 +9,9 @@ import {
   Trash2,
   Plus,
   MousePointer2,
-  ImageIcon,
-  ArrowLeftRight,
-  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { loadPdf, renderPage, type Bbox } from "@/lib/pdfImageCrop";
 
 export interface PreviewBox {
