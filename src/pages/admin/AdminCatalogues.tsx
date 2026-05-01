@@ -281,11 +281,45 @@ export default function AdminCatalogues() {
         </DialogContent>
       </Dialog>
 
-      {extractFor && (
-        <CataloguePromoExtractor
-          catalogue={extractFor}
-          open={!!extractFor}
-          onOpenChange={(o) => !o && setExtractFor(null)}
+      {/* Menu Reprendre / Recommencer (si un brouillon existe) */}
+      <AlertDialog open={!!resumeMenu} onOpenChange={(o) => !o && setResumeMenu(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Brouillon existant</AlertDialogTitle>
+            <AlertDialogDescription>
+              Un brouillon d'extraction existe déjà pour « {resumeMenu?.catalogue.title} ». Souhaitez-vous reprendre où vous en étiez, ou recommencer depuis l'étape « Zones » ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (resumeMenu) setWorkflowFor({ catalogue: resumeMenu.catalogue, step: "zones" });
+                setResumeMenu(null);
+              }}
+            >
+              Recommencer
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                if (resumeMenu) setWorkflowFor({ catalogue: resumeMenu.catalogue });
+                setResumeMenu(null);
+              }}
+            >
+              Reprendre
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {workflowFor && (
+        <CatalogueWorkflowDialog
+          catalogue={workflowFor.catalogue}
+          initialStep={workflowFor.step}
+          open={!!workflowFor}
+          onOpenChange={(o) => !o && setWorkflowFor(null)}
+          onCompleted={() => qc.invalidateQueries({ queryKey: ["admin-catalogues"] })}
         />
       )}
     </div>
