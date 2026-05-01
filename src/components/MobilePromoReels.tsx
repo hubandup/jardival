@@ -131,6 +131,40 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
           >
             Voir l'offre
           </Link>
+          <button
+            type="button"
+            onClick={async () => {
+              const shareUrl = `${window.location.origin}${link}`;
+              const shareData: ShareData = {
+                title: p.name,
+                text: p.discount > 0
+                  ? `${p.name} — -${p.discount}% chez Jardival`
+                  : `${p.name} chez Jardival`,
+                url: shareUrl,
+              };
+              try {
+                if (navigator.share && navigator.canShare?.(shareData) !== false) {
+                  await navigator.share(shareData);
+                  return;
+                }
+                await navigator.clipboard.writeText(shareUrl);
+                toast({ title: "Lien copié", description: "Vous pouvez le partager où vous voulez." });
+              } catch (err) {
+                // L'utilisateur a annulé le partage natif : on ignore silencieusement.
+                if ((err as Error)?.name === "AbortError") return;
+                try {
+                  await navigator.clipboard.writeText(shareUrl);
+                  toast({ title: "Lien copié", description: "Vous pouvez le partager où vous voulez." });
+                } catch {
+                  toast({ title: "Partage indisponible", description: shareUrl, variant: "destructive" });
+                }
+              }
+            }}
+            aria-label={`Partager ${p.name}`}
+            className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition-transform active:scale-95"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
           <Link
             to="/magasins"
             aria-label="Trouver un magasin"
