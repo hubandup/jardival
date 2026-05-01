@@ -85,7 +85,7 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
     setImgProgress({ done: 0, total: tasks.length });
     try {
       const results = await cropAndUploadPromoImages(
-        catalogue.pdf_url,
+        new URL(catalogue.pdf_url, window.location.origin).toString(),
         tasks,
         (done, total) => setImgProgress({ done, total })
       );
