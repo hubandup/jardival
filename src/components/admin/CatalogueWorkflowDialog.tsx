@@ -157,7 +157,7 @@ export default function CatalogueWorkflowDialog({
       const payload = {
         catalogue_id: catalogue.id,
         step,
-        promos: promos as unknown as object,
+        promos: promos as unknown as never,
         starts_at: startsAt || null,
         ends_at: endsAt || null,
         status: "draft" as const,
