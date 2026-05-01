@@ -126,7 +126,17 @@ export default function AdminCatalogues() {
               {items?.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell>{c.display_order}</TableCell>
-                  <TableCell className="font-medium">{c.title}</TableCell>
+                  <TableCell className="font-medium">
+                    <button
+                      type="button"
+                      onClick={() => c.pdf_url && setExtractFor(c)}
+                      disabled={!c.pdf_url}
+                      className="text-left hover:text-primary hover:underline disabled:no-underline disabled:cursor-not-allowed disabled:hover:text-foreground"
+                      title={c.pdf_url ? "Ouvrir l'extracteur de promotions" : "Aucun PDF associé"}
+                    >
+                      {c.title}
+                    </button>
+                  </TableCell>
                   <TableCell className="text-xs">
                     {c.starts_at && c.ends_at ? `${c.starts_at} → ${c.ends_at}` : "—"}
                   </TableCell>
