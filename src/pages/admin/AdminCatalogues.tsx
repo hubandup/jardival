@@ -234,6 +234,14 @@ export default function AdminCatalogues() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {extractFor && (
+        <CataloguePromoExtractor
+          catalogue={extractFor}
+          open={!!extractFor}
+          onOpenChange={(o) => !o && setExtractFor(null)}
+        />
+      )}
     </div>
   );
 }
