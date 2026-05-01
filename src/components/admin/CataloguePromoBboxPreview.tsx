@@ -184,6 +184,8 @@ export default function CataloguePromoBboxPreview({
                   boxes={pageBoxes}
                   allBoxes={boxes}
                   creating={creating}
+                  activeIndex={activeIndex}
+                  setActiveIndex={setActiveIndex}
                   onToggleBox={onToggleBox}
                   onDeleteBox={onDeleteBox}
                   onUpdateBbox={onUpdateBbox}
