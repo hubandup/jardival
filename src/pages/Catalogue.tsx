@@ -162,8 +162,8 @@ const CataloguePage = () => {
             Feuilletez les 8 pages de promotions — cliquez ou glissez le coin d'une page pour la tourner.
           </p>
 
-          {/* Flip book */}
-          <div className="mt-8 rounded-xl bg-gradient-to-br from-muted to-muted/40 p-4 shadow-card md:p-8">
+          {/* Catalogue viewer */}
+          <div className="mt-8 rounded-xl bg-gradient-to-br from-muted to-muted/40 p-2 shadow-card md:p-8">
             <Document
               file={pdfUrl}
               onLoadSuccess={onLoad}
@@ -189,44 +189,51 @@ const CataloguePage = () => {
               }
             >
               {numPages > 0 && (
-                <div className="flex justify-center">
-                  <HTMLFlipBook
-                    ref={bookRef}
-                    width={size.w}
-                    height={size.h}
-                    size="fixed"
-                    minWidth={200}
-                    maxWidth={1000}
-                    minHeight={300}
-                    maxHeight={1400}
-                    showCover={true}
-                    flippingTime={800}
-                    usePortrait={isMobile}
-                    drawShadow={true}
-                    maxShadowOpacity={0.5}
-                    mobileScrollSupport={true}
-                    onFlip={(e: any) => setCurrentPage(e.data)}
-                    className="mx-auto"
-                    style={{}}
-                    startPage={0}
-                    startZIndex={0}
-                    autoSize={false}
-                    clickEventForward={true}
-                    useMouseEvents={true}
-                    swipeDistance={30}
-                    showPageCorners={true}
-                    disableFlipByClick={false}
-                  >
-                    {Array.from({ length: numPages }, (_, i) => (
-                      <FlipPage
-                        key={i + 1}
-                        pageNumber={i + 1}
-                        width={size.w}
-                        height={size.h}
-                      />
-                    ))}
-                  </HTMLFlipBook>
-                </div>
+                isMobile ? (
+                  <MobileCatalogueCarousel
+                    numPages={numPages}
+                    onPageChange={setCurrentPage}
+                  />
+                ) : (
+                  <div className="flex justify-center">
+                    <HTMLFlipBook
+                      ref={bookRef}
+                      width={size.w}
+                      height={size.h}
+                      size="fixed"
+                      minWidth={200}
+                      maxWidth={1000}
+                      minHeight={300}
+                      maxHeight={1400}
+                      showCover={true}
+                      flippingTime={800}
+                      usePortrait={isMobile}
+                      drawShadow={true}
+                      maxShadowOpacity={0.5}
+                      mobileScrollSupport={true}
+                      onFlip={(e: any) => setCurrentPage(e.data)}
+                      className="mx-auto"
+                      style={{}}
+                      startPage={0}
+                      startZIndex={0}
+                      autoSize={false}
+                      clickEventForward={true}
+                      useMouseEvents={true}
+                      swipeDistance={30}
+                      showPageCorners={true}
+                      disableFlipByClick={false}
+                    >
+                      {Array.from({ length: numPages }, (_, i) => (
+                        <FlipPage
+                          key={i + 1}
+                          pageNumber={i + 1}
+                          width={size.w}
+                          height={size.h}
+                        />
+                      ))}
+                    </HTMLFlipBook>
+                  </div>
+                )
               )}
             </Document>
           </div>
