@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import cover from "@/assets/catalogue-cover.jpg";
 import { Download, Sparkles, Calendar } from "lucide-react";
 import { useCatalogues } from "@/hooks/usePromotions";
 import { useCoverPalette } from "@/hooks/useCoverPalette";
 import type { HeroPalette } from "@/lib/coverPalette";
+import { PdfCoverImage } from "@/components/PdfCoverImage";
 
 const FALLBACK_PDF_URL = "/catalogue-jardival-jardinales.pdf";
 const VIEWER_URL = "/catalogue";
@@ -22,7 +23,11 @@ export const CatalogueBanner = () => {
   const active = catalogues?.[0];
 
   const pdfUrl = active?.pdf_url ?? FALLBACK_PDF_URL;
-  const coverImg = active?.cover_image ?? cover;
+  // Stratégie : cover_image admin > rendu auto de la 1re page du PDF > image fallback statique.
+  const hasExplicitCover = !!active?.cover_image;
+  const hasPdf = !!active?.pdf_url;
+  const [pdfCoverDataUrl, setPdfCoverDataUrl] = useState<string | null>(null);
+  const coverImg = active?.cover_image ?? pdfCoverDataUrl ?? cover;
   const title = active?.title ?? "Jardinales";
   const validity = active?.ends_at
     ? `Jusqu'au ${new Date(active.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
@@ -83,15 +88,23 @@ export const CatalogueBanner = () => {
             className="absolute -inset-2 rounded-xl blur-xl transition-opacity group-hover:opacity-70"
             style={{ background: "hsl(var(--hero-fg) / 0.1)" }}
           />
-          <img
-            src={coverImg}
-            alt={`Catalogue ${title} Jardival`}
-            className="relative h-44 w-auto rounded-lg shadow-glow ring-1 transition-transform group-hover:-rotate-2 group-hover:scale-105 md:h-52"
-            style={{
-              boxShadow: `0 25px 50px -12px hsl(var(--hero-fg) / 0.35)`,
-            }}
-            loading="eager"
-          />
+          {!hasExplicitCover && hasPdf ? (
+            <PdfCoverImage
+              pdfUrl={pdfUrl}
+              alt={`Catalogue ${title} Jardival`}
+              className="relative h-44 w-auto rounded-lg shadow-glow ring-1 transition-transform group-hover:-rotate-2 group-hover:scale-105 md:h-52"
+              style={{ boxShadow: `0 25px 50px -12px hsl(var(--hero-fg) / 0.35)` }}
+              onReady={setPdfCoverDataUrl}
+            />
+          ) : (
+            <img
+              src={coverImg}
+              alt={`Catalogue ${title} Jardival`}
+              className="relative h-44 w-auto rounded-lg shadow-glow ring-1 transition-transform group-hover:-rotate-2 group-hover:scale-105 md:h-52"
+              style={{ boxShadow: `0 25px 50px -12px hsl(var(--hero-fg) / 0.35)` }}
+              loading="eager"
+            />
+          )}
           <span
             className="absolute -right-3 -top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-card"
             style={{
