@@ -258,9 +258,14 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
     );
   } catch (e) {
     console.error("extract-catalogue-promos error", e);
+    const isAbort = e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"));
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erreur inconnue" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: isAbort
+          ? "L'analyse IA du PDF a dépassé 140s. Essayez avec un PDF plus court ou réessayez."
+          : e instanceof Error ? e.message : "Erreur inconnue",
+      }),
+      { status: isAbort ? 504 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
