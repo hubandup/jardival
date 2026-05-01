@@ -39,6 +39,13 @@ export function usePromotions() {
   });
 }
 
+export interface CatalogueHeroColors {
+  primary?: string;
+  secondary?: string;
+  accent?: string;
+  foreground?: string;
+}
+
 export interface CatalogueRow {
   id: string;
   title: string;
@@ -48,6 +55,7 @@ export interface CatalogueRow {
   ends_at: string | null;
   display_order: number;
   active: boolean;
+  hero_colors: CatalogueHeroColors | null;
 }
 
 export function useCatalogues() {
