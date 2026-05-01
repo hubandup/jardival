@@ -164,7 +164,7 @@ export default function CataloguePromoBboxPreview({
       </div>
 
       {show && (
-        <div className="border-t p-3 space-y-4 max-h-[70vh] overflow-y-auto bg-muted/30">
+        <div className="border-t p-3 space-y-4 max-h-[78vh] overflow-y-auto bg-muted/30">
           {loading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-4 justify-center">
               <Loader2 className="h-4 w-4 animate-spin" /> Rendu des pages…
