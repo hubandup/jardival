@@ -162,6 +162,13 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
                         discount_percent: { type: "number" },
                         category: { type: "string" },
                         page_number: { type: "number" },
+                        bbox_2d: {
+                          type: "array",
+                          description: "Bounding box de l'image produit : [ymin, xmin, ymax, xmax] normalisé 0-1000",
+                          items: { type: "number" },
+                          minItems: 4,
+                          maxItems: 4,
+                        },
                       },
                       required: ["title"],
                     },
