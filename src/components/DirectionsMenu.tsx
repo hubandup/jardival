@@ -16,6 +16,7 @@ interface Props {
   size?: "default" | "sm";
   className?: string;
   label?: string;
+  origin?: [number, number] | null;
 }
 
 const PROVIDERS: { id: DirectionsProvider; name: string; emoji: string; hint: string }[] = [
@@ -31,6 +32,7 @@ export const DirectionsMenu = ({
   size = "default",
   className,
   label = "Itinéraire",
+  origin = null,
 }: Props) => {
   const base =
     "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all";
@@ -57,7 +59,7 @@ export const DirectionsMenu = ({
         {PROVIDERS.map((p) => (
           <DropdownMenuItem key={p.id} asChild>
             <a
-              href={directionsUrlFor(store, p.id)}
+              href={directionsUrlFor(store, p.id, origin)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex cursor-pointer items-center gap-3 px-2 py-2"

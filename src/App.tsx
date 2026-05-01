@@ -25,6 +25,7 @@ import AdminMedia from "./pages/admin/AdminMedia.tsx";
 import AdminSeoLlm from "./pages/admin/AdminSeoLlm.tsx";
 import { AuthProvider } from "./hooks/useAuth";
 import { usePageTracking } from "./hooks/usePageTracking";
+import { FloatingFindStoreCta } from "./components/FloatingFindStoreCta";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <FloatingFindStoreCta />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

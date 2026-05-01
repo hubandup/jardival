@@ -162,8 +162,8 @@ const CataloguePage = () => {
             Feuilletez les 8 pages de promotions — cliquez ou glissez le coin d'une page pour la tourner.
           </p>
 
-          {/* Flip book */}
-          <div className="mt-8 rounded-xl bg-gradient-to-br from-muted to-muted/40 p-4 shadow-card md:p-8">
+          {/* Catalogue viewer */}
+          <div className="mt-8 rounded-xl bg-gradient-to-br from-muted to-muted/40 p-2 shadow-card md:p-8">
             <Document
               file={pdfUrl}
               onLoadSuccess={onLoad}
@@ -189,50 +189,57 @@ const CataloguePage = () => {
               }
             >
               {numPages > 0 && (
-                <div className="flex justify-center">
-                  <HTMLFlipBook
-                    ref={bookRef}
-                    width={size.w}
-                    height={size.h}
-                    size="fixed"
-                    minWidth={200}
-                    maxWidth={1000}
-                    minHeight={300}
-                    maxHeight={1400}
-                    showCover={true}
-                    flippingTime={800}
-                    usePortrait={isMobile}
-                    drawShadow={true}
-                    maxShadowOpacity={0.5}
-                    mobileScrollSupport={true}
-                    onFlip={(e: any) => setCurrentPage(e.data)}
-                    className="mx-auto"
-                    style={{}}
-                    startPage={0}
-                    startZIndex={0}
-                    autoSize={false}
-                    clickEventForward={true}
-                    useMouseEvents={true}
-                    swipeDistance={30}
-                    showPageCorners={true}
-                    disableFlipByClick={false}
-                  >
-                    {Array.from({ length: numPages }, (_, i) => (
-                      <FlipPage
-                        key={i + 1}
-                        pageNumber={i + 1}
-                        width={size.w}
-                        height={size.h}
-                      />
-                    ))}
-                  </HTMLFlipBook>
-                </div>
+                isMobile ? (
+                  <MobileCatalogueCarousel
+                    numPages={numPages}
+                    onPageChange={setCurrentPage}
+                  />
+                ) : (
+                  <div className="flex justify-center">
+                    <HTMLFlipBook
+                      ref={bookRef}
+                      width={size.w}
+                      height={size.h}
+                      size="fixed"
+                      minWidth={200}
+                      maxWidth={1000}
+                      minHeight={300}
+                      maxHeight={1400}
+                      showCover={true}
+                      flippingTime={800}
+                      usePortrait={isMobile}
+                      drawShadow={true}
+                      maxShadowOpacity={0.5}
+                      mobileScrollSupport={true}
+                      onFlip={(e: any) => setCurrentPage(e.data)}
+                      className="mx-auto"
+                      style={{}}
+                      startPage={0}
+                      startZIndex={0}
+                      autoSize={false}
+                      clickEventForward={true}
+                      useMouseEvents={true}
+                      swipeDistance={30}
+                      showPageCorners={true}
+                      disableFlipByClick={false}
+                    >
+                      {Array.from({ length: numPages }, (_, i) => (
+                        <FlipPage
+                          key={i + 1}
+                          pageNumber={i + 1}
+                          width={size.w}
+                          height={size.h}
+                        />
+                      ))}
+                    </HTMLFlipBook>
+                  </div>
+                )
               )}
             </Document>
           </div>
 
-          {/* Toolbar under the book */}
-          {numPages > 0 && (
+          {/* Toolbar — desktop seulement (mobile gère son propre compteur) */}
+          {numPages > 0 && !isMobile && (
             <div className="mt-4 flex items-center justify-center gap-4">
               <button
                 onClick={goPrev}
@@ -259,6 +266,114 @@ const CataloguePage = () => {
       </main>
 
       <SiteFooter />
+    </div>
+  );
+};
+
+/**
+ * Carrousel horizontal swipeable pour mobile.
+ * Snap horizontal natif (CSS), pages PDF rendues à la demande via IntersectionObserver
+ * pour limiter la mémoire (seules les pages voisines sont rendues).
+ */
+const MobileCatalogueCarousel = ({
+  numPages,
+  onPageChange,
+}: {
+  numPages: number;
+  onPageChange: (idx: number) => void;
+}) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [pageWidth, setPageWidth] = useState(360);
+
+  useEffect(() => {
+    const update = () => {
+      const vw = window.innerWidth;
+      setPageWidth(Math.min(vw - 24, 720));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+    const slides = Array.from(root.querySelectorAll<HTMLElement>("[data-cat-page]"));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        const idx = Number((visible.target as HTMLElement).dataset.catPage ?? "0");
+        if (!Number.isNaN(idx)) {
+          setActiveIdx(idx);
+          onPageChange(idx);
+        }
+      },
+      { root, threshold: [0.5, 0.75, 1] },
+    );
+    slides.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, [numPages, onPageChange]);
+
+  const RENDER_RADIUS = 1; // pages voisines à rendre
+
+  return (
+    <div className="relative">
+      <div
+        ref={containerRef}
+        className="flex w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth pb-3"
+        style={{ scrollbarWidth: "none" }}
+        aria-label="Pages du catalogue"
+      >
+        <style>{`
+          [data-cat-carousel]::-webkit-scrollbar { display: none; }
+        `}</style>
+        {Array.from({ length: numPages }, (_, i) => {
+          const distance = Math.abs(i - activeIdx);
+          const shouldRender = distance <= RENDER_RADIUS;
+          return (
+            <div
+              key={i}
+              data-cat-page={i}
+              className="shrink-0 snap-center overflow-hidden rounded-lg bg-white shadow-card"
+              style={{ width: pageWidth }}
+            >
+              {shouldRender ? (
+                <Page
+                  pageNumber={i + 1}
+                  width={pageWidth}
+                  renderAnnotationLayer={false}
+                  renderTextLayer={false}
+                  loading={
+                    <div
+                      className="flex items-center justify-center bg-muted"
+                      style={{ width: pageWidth, height: pageWidth * 1.414 }}
+                    >
+                      <Loader2 className="h-5 w-5 animate-spin text-foreground/50" />
+                    </div>
+                  }
+                />
+              ) : (
+                <div
+                  className="flex items-center justify-center bg-muted text-xs text-muted-foreground"
+                  style={{ width: pageWidth, height: pageWidth * 1.414 }}
+                >
+                  Page {i + 1}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {/* Compteur sticky bas */}
+      <div className="pointer-events-none sticky bottom-2 z-10 mx-auto mt-2 inline-flex w-full justify-center">
+        <span className="rounded-full bg-foreground/85 px-3 py-1 text-xs font-semibold tabular-nums text-background backdrop-blur">
+          {activeIdx + 1} / {numPages}
+        </span>
+      </div>
     </div>
   );
 };

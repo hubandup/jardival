@@ -112,19 +112,24 @@ export function directionsUrl(store: Store) {
 // users can pick their preferred navigation app.
 export type DirectionsProvider = "google" | "apple" | "waze" | "osm";
 
-export function directionsUrlFor(store: Store, provider: DirectionsProvider) {
+export function directionsUrlFor(
+  store: Store,
+  provider: DirectionsProvider,
+  origin?: [number, number] | null,
+) {
   const [lat, lon] = store.coords;
   const label = encodeURIComponent(`${store.name} — ${store.city}`);
+  const o = origin ? `${origin[0]},${origin[1]}` : null;
   switch (provider) {
     case "google":
-      return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&destination_place_id=${label}`;
+      return `https://www.google.com/maps/dir/?api=1${o ? `&origin=${o}` : ""}&destination=${lat},${lon}&destination_place_id=${label}`;
     case "apple":
-      return `https://maps.apple.com/?daddr=${lat},${lon}&q=${label}`;
+      return `https://maps.apple.com/?${o ? `saddr=${o}&` : ""}daddr=${lat},${lon}&q=${label}`;
     case "waze":
-      return `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`;
+      return `https://waze.com/ul?ll=${lat},${lon}&navigate=yes${o ? `&from=ll.${o}` : ""}`;
     case "osm":
     default:
-      return `https://www.openstreetmap.org/directions?to=${lat}%2C${lon}`;
+      return `https://www.openstreetmap.org/directions?${o ? `from=${origin![0]}%2C${origin![1]}&` : ""}to=${lat}%2C${lon}`;
   }
 }
 

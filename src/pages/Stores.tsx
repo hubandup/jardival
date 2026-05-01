@@ -1,13 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { StoresMap } from "@/components/StoresMap";
 import { NearestStore } from "@/components/NearestStore";
-import { DEPARTMENTS, Store } from "@/data/stores";
+import { DEPARTMENTS, Store, distanceKm } from "@/data/stores";
 import { useStores } from "@/hooks/useStores";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { useSeo } from "@/hooks/useSeo";
-import { Loader2 } from "lucide-react";
+import { Loader2, Compass } from "lucide-react";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
 import { MapPin, Search, Phone, Clock } from "lucide-react";
 import {
@@ -20,11 +21,15 @@ import {
 } from "@/components/ui/breadcrumb";
 
 const Stores = () => {
+  const [searchParams] = useSearchParams();
+  const autoGeo = searchParams.get("geo") === "1";
   const [query, setQuery] = useState("");
   const [dept, setDept] = useState<string>("Tous");
   const [activeId, setActiveId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const { data: stores = [], isLoading } = useStores();
+  const { state: geoState } = useGeolocation(autoGeo);
+  const userPos = geoState.status === "ready" ? geoState.position : null;
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -70,10 +75,10 @@ const Stores = () => {
   }, [stores]);
 
   const filtered = useMemo(() => {
-    return stores.filter((s) => {
+    const q = query.toLowerCase();
+    const deptFiltered = stores.filter((s) => {
       if (dept !== "Tous" && s.department !== dept) return false;
-      if (!query) return true;
-      const q = query.toLowerCase();
+      if (!q) return true;
       return (
         s.city.toLowerCase().includes(q) ||
         s.name.toLowerCase().includes(q) ||
@@ -81,7 +86,14 @@ const Stores = () => {
         s.department.includes(q)
       );
     });
-  }, [stores, query, dept]);
+
+    if (userPos) {
+      return deptFiltered
+        .map((s) => ({ ...s, distance: distanceKm(userPos, s.coords) }))
+        .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+    }
+    return deptFiltered.map((s) => ({ ...s, distance: undefined as number | undefined }));
+  }, [stores, query, dept, userPos]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,6 +206,8 @@ const Stores = () => {
                 >
                   <StoreCard
                     store={s}
+                    distance={s.distance}
+                    userPos={userPos}
                     active={activeId === s.id}
                     onHover={() => setActiveId(s.id)}
                   />
@@ -209,7 +223,19 @@ const Stores = () => {
   );
 };
 
-const StoreCard = ({ store, active, onHover }: { store: Store; active?: boolean; onHover?: () => void }) => (
+const StoreCard = ({
+  store,
+  active,
+  onHover,
+  distance,
+  userPos,
+}: {
+  store: Store;
+  active?: boolean;
+  onHover?: () => void;
+  distance?: number;
+  userPos?: [number, number] | null;
+}) => (
   <article
     onMouseEnter={onHover}
     className={`group flex h-full flex-col gap-4 rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-card ${
@@ -236,6 +262,12 @@ const StoreCard = ({ store, active, onHover }: { store: Store; active?: boolean;
         {store.postalCode ? `${store.postalCode} ` : ""}
         {store.city.toUpperCase()}
       </p>
+      {typeof distance === "number" && (
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
+          <Compass className="h-3 w-3" />
+          À {distance.toFixed(1)} km
+        </p>
+      )}
     </div>
 
     <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -252,7 +284,7 @@ const StoreCard = ({ store, active, onHover }: { store: Store; active?: boolean;
         Voir le magasin
       </Link>
       <div className="flex gap-2">
-        <DirectionsMenu store={store} variant="outline" className="flex-1" />
+        <DirectionsMenu store={store} variant="outline" className="flex-1" origin={userPos} />
         <a
           href="tel:+33000000000"
           className="inline-flex items-center justify-center rounded-full border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-secondary"

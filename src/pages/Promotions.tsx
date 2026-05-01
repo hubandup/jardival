@@ -3,11 +3,13 @@ import { useSearchParams } from "react-router-dom";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ProductCard } from "@/components/ProductCard";
+import { MobilePromoReels } from "@/components/MobilePromoReels";
 import { Tag, Loader2, X, Search } from "lucide-react";
 import { usePromotions, useCatalogues, type PromotionRow } from "@/hooks/usePromotions";
 import { useStores } from "@/hooks/useStores";
 import { promotionToProduct } from "@/lib/promotion";
 import { useSeo } from "@/hooks/useSeo";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
@@ -22,6 +24,7 @@ const SITE_URL = "https://jardival.lovable.app";
 const ALL = "__all__";
 
 const Promotions = () => {
+  const isMobile = useIsMobile();
   const { data: dbPromos = [], isLoading } = usePromotions();
   const { data: catalogues } = useCatalogues();
   const { data: stores = [] } = useStores();
@@ -81,6 +84,15 @@ const Promotions = () => {
       "Découvrez toutes les promotions Jardival du catalogue Jardinales : jardin, plein air, mobilier, plantes et accessoires à prix réduits.",
     canonical: SITE_URL + "/promotions",
   });
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <MobilePromoReels />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
