@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { pdfjs } from "react-pdf";
+import { FileText } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Worker (même version que react-pdf)
 if (typeof window !== "undefined" && !pdfjs.GlobalWorkerOptions.workerSrc) {
