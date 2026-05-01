@@ -91,7 +91,8 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
       const results = await cropAndUploadPromoImages(
         new URL(catalogue.pdf_url, window.location.origin).toString(),
         tasks,
-        (done, total) => setImgProgress({ done, total })
+        (done, total) => setImgProgress({ done, total }),
+        { scale: parseInt(cropScale, 10), format: cropFormat, quality: 0.92 }
       );
       // Indexe par filename (qui contient l'idx)
       const byFilename = new Map(results.map((r) => [r.filename, r.publicUrl]));
