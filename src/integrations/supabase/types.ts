@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           display_order: number
           ends_at: string | null
+          hero_colors: Json | null
           id: string
           pdf_url: string | null
           starts_at: string | null
@@ -33,6 +34,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           ends_at?: string | null
+          hero_colors?: Json | null
           id?: string
           pdf_url?: string | null
           starts_at?: string | null
@@ -45,6 +47,7 @@ export type Database = {
           created_at?: string
           display_order?: number
           ends_at?: string | null
+          hero_colors?: Json | null
           id?: string
           pdf_url?: string | null
           starts_at?: string | null
