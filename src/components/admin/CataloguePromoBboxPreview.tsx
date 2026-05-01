@@ -167,6 +167,7 @@ export default function CataloguePromoBboxPreview({
                   onToggleBox={onToggleBox}
                   onDeleteBox={onDeleteBox}
                   onUpdateBbox={onUpdateBbox}
+                  onUpdateText={onUpdateText}
                   onAddBox={
                     onAddBox
                       ? (bb) => {
