@@ -80,6 +80,7 @@ export default function CataloguePromoBboxPreview({
   onUpdateBbox,
   onAddBox,
   onUpdateText,
+  onSwapText,
 }: Props) {
   const [show, setShow] = useState(true);
   const [loading, setLoading] = useState(false);
