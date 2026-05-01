@@ -75,10 +75,10 @@ const Stores = () => {
   }, [stores]);
 
   const filtered = useMemo(() => {
-    const base = stores.filter((s) => {
-      if (dept !== "Tous" && s.department !== dept) return true && false;
-      if (!query) return true;
-      const q = query.toLowerCase();
+    const q = query.toLowerCase();
+    const deptFiltered = stores.filter((s) => {
+      if (dept !== "Tous" && s.department !== dept) return false;
+      if (!q) return true;
       return (
         s.city.toLowerCase().includes(q) ||
         s.name.toLowerCase().includes(q) ||
@@ -86,13 +86,11 @@ const Stores = () => {
         s.department.includes(q)
       );
     });
-    // Re-apply dept filter properly (the inline `return true && false` above was a guard)
-    const deptFiltered = base.filter((s) => dept === "Tous" || s.department === dept);
 
     if (userPos) {
       return deptFiltered
         .map((s) => ({ ...s, distance: distanceKm(userPos, s.coords) }))
-        .sort((a, b) => a.distance - b.distance);
+        .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
     }
     return deptFiltered.map((s) => ({ ...s, distance: undefined as number | undefined }));
   }, [stores, query, dept, userPos]);
