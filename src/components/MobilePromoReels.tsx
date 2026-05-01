@@ -140,9 +140,11 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
         </div>
       </div>
 
-      {/* Indicateur swipe (1ère slide uniquement) */}
+      {/* Indicateur swipe (1ère slide uniquement, en pause si interruption) */}
       {idx === 0 && total > 1 && (
-        <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 animate-bounce text-white/70">
+        <div
+          className={`pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 text-white/70 ${paused ? "" : "animate-bounce"}`}
+        >
           <ChevronUp className="h-5 w-5 rotate-180" />
         </div>
       )}
