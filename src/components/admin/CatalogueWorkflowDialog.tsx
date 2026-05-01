@@ -731,6 +731,12 @@ function ZonesStep({
   };
 
   const selectedWithBbox = promos.filter((p) => p.selected !== false && p.bbox_2d).length;
+  const selectedNeedingCrop = promos.filter(
+    (p) => p.selected !== false && p.bbox_2d && !p.image_cutout_url
+  ).length;
+  const hasCroppedImages = promos.some(
+    (p) => p.selected !== false && p.image_cutout_url
+  );
 
   return (
     <div className="space-y-4">
