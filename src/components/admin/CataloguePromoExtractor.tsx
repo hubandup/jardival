@@ -36,6 +36,8 @@ interface ExtractedPromo {
   discount_percent?: number | null;
   category?: string | null;
   page_number?: number | null;
+  bbox_2d?: [number, number, number, number] | null;
+  image_url?: string | null;
   selected?: boolean;
 }
 
