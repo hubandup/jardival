@@ -487,42 +487,84 @@ function PageEditor({
           )}
         </svg>
 
-        {/* Cartes d'info HTML positionnées au-dessus de chaque bbox (pour vérifier le texte associé) */}
+        {/* Cartes d'info HTML : uniquement pour la zone actuellement sélectionnée pour édition. */}
         {boxes.map((b) => {
+          const i0 = b.index - 1;
+          const isActive = activeIndex === i0;
           const [ymin, xmin, ymax, xmax] = b.bbox;
           const top = (ymax / 1000) * 100;
           const left = (xmin / 1000) * 100;
           const width = ((xmax - xmin) / 1000) * 100;
-          const i0 = b.index - 1;
+
+          // Cas non actif : on n'affiche QUE le badge titre minimal flottant en haut de la box.
+          if (!isActive) {
+            const topTitle = (ymin / 1000) * 100;
+            return (
+              <div
+                key={`tag-${b.index}`}
+                className="absolute z-[5] pointer-events-none"
+                style={{
+                  top: `calc(${topTitle}% - 22px)`,
+                  left: `${left}%`,
+                  maxWidth: `${Math.max(width, 25)}%`,
+                }}
+              >
+                <div
+                  className={
+                    "truncate text-[10px] font-medium px-1.5 py-0.5 rounded shadow-sm " +
+                    (b.selected
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground border border-border")
+                  }
+                  title={b.label}
+                >
+                  #{b.index} · {b.label}
+                </div>
+              </div>
+            );
+          }
+
+          // Cas actif : carte d'édition complète sous la box.
+          const inputBase =
+            "bg-background border rounded outline-none px-1.5 py-1 text-xs transition-colors focus:ring-2 focus:ring-primary/30";
+          const inputSel = b.selected
+            ? "border-primary text-foreground focus:border-primary"
+            : "border-muted-foreground/30 text-muted-foreground focus:border-muted-foreground";
           return (
             <div
               key={`info-${b.index}`}
-              className="absolute z-10"
+              className="absolute z-20"
               style={{
-                top: `calc(${top}% + 4px)`,
+                top: `calc(${top}% + 6px)`,
                 left: `${left}%`,
-                width: `${Math.max(width, 18)}%`,
+                width: `${Math.max(width, 22)}%`,
+                minWidth: 240,
                 pointerEvents: "auto",
               }}
               data-bbox
               onMouseDown={(e) => e.stopPropagation()}
             >
-              <div className="bg-background/95 backdrop-blur border rounded shadow-sm p-1.5 text-[10px] leading-tight space-y-1">
-                <div className="flex items-start gap-1">
+              <div
+                className={
+                  "bg-background/95 backdrop-blur rounded-md shadow-lg p-2 text-xs space-y-1.5 border-2 " +
+                  (b.selected ? "border-primary" : "border-muted-foreground/40")
+                }
+              >
+                <div className="flex items-start gap-1.5">
                   <Badge
                     variant={b.selected ? "default" : "secondary"}
-                    className="h-4 px-1 text-[9px] shrink-0"
+                    className="h-5 px-1.5 text-[10px] shrink-0"
                   >
                     #{b.index}
                   </Badge>
-                  {onUpdateText && b.selected ? (
+                  {onUpdateText ? (
                     <input
                       type="text"
                       value={b.label}
                       onChange={(e) => onUpdateText(i0, { title: e.target.value })}
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
-                      className="flex-1 min-w-0 bg-transparent border-b border-border focus:border-primary outline-none font-medium text-[10px] py-0.5"
+                      className={`flex-1 min-w-0 font-medium ${inputBase} ${inputSel}`}
                       placeholder="Titre du produit"
                     />
                   ) : (
@@ -531,147 +573,49 @@ function PageEditor({
                   {onDeleteBox && (
                     <button
                       type="button"
-                      className="text-destructive hover:opacity-70 shrink-0"
+                      className="text-destructive hover:opacity-70 shrink-0 p-1"
                       title="Supprimer cette zone"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDeleteBox(i0);
+                        setActiveIndex(null);
                       }}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
-                </div>
-                {onUpdateText && b.selected ? (
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={b.price ?? ""}
-                      onChange={(e) =>
-                        onUpdateText(i0, {
-                          price: e.target.value ? parseFloat(e.target.value) : null,
-                        })
-                      }
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="Prix"
-                      className="w-14 bg-transparent border-b border-border focus:border-primary outline-none text-[10px] py-0.5"
-                    />
-                    <span className="text-muted-foreground">€ /</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={b.originalPrice ?? ""}
-                      onChange={(e) =>
-                        onUpdateText(i0, {
-                          original_price: e.target.value ? parseFloat(e.target.value) : null,
-                        })
-                      }
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="Avant"
-                      className="w-14 bg-transparent border-b border-border focus:border-primary outline-none text-[10px] py-0.5 text-muted-foreground"
-                    />
-                    <span className="text-muted-foreground">€</span>
-                  </div>
-                ) : (
-                  b.subLabel && (
-                    <div className="text-muted-foreground line-clamp-1">{b.subLabel}</div>
-                  )
-                )}
-                {/* Indicateur d'association image + bouton Réassocier */}
-                <div className="flex items-center gap-1 pt-0.5 border-t border-dashed">
-                  {b.imageUrl ? (
-                    <>
-                      <img
-                        src={b.imageUrl}
-                        alt=""
-                        className="h-6 w-6 rounded object-cover border border-primary/40"
-                      />
-                      <span className="text-[9px] text-primary font-medium flex items-center gap-0.5">
-                        <Check className="h-3 w-3" /> image liée
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-[9px] text-muted-foreground flex items-center gap-1">
-                      <ImageIcon className="h-3 w-3" /> pas d'image extraite
-                    </span>
-                  )}
-                  {onSwapText && allBoxes.length > 1 && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className="ml-auto text-[9px] text-primary hover:underline flex items-center gap-0.5"
-                          onClick={(e) => e.stopPropagation()}
-                          title="Échanger le texte avec une autre zone"
-                        >
-                          <ArrowLeftRight className="h-3 w-3" /> Réassocier
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-64 p-2 max-h-72 overflow-y-auto"
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
-                        <p className="text-xs font-medium mb-2">
-                          Échanger le texte de #{b.index} avec :
-                        </p>
-                        <div className="space-y-1">
-                          {allBoxes
-                            .filter((other) => other.index !== b.index)
-                            .map((other) => {
-                              const j0 = other.index - 1;
-                              return (
-                                <button
-                                  key={other.index}
-                                  type="button"
-                                  className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-accent text-left"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onSwapText(i0, j0);
-                                  }}
-                                >
-                                  {other.imageUrl ? (
-                                    <img
-                                      src={other.imageUrl}
-                                      alt=""
-                                      className="h-8 w-8 rounded object-cover border shrink-0"
-                                    />
-                                  ) : (
-                                    <div className="h-8 w-8 rounded border border-dashed flex items-center justify-center shrink-0">
-                                      <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                  <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-medium truncate">
-                                      #{other.index} · {other.label}
-                                    </div>
-                                    <div className="text-[10px] text-muted-foreground truncate">
-                                      p.{other.pageNumber}
-                                      {other.price != null ? ` · ${other.price} €` : ""}
-                                    </div>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  )}
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground p-1"
+                    title="Fermer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveIndex(null);
+                    }}
+                  >
+                    ✕
+                  </button>
                 </div>
                 {onToggleBox && (
                   <button
                     type="button"
-                    className="text-[9px] text-primary hover:underline"
+                    className={
+                      "w-full text-[10px] py-1 rounded font-medium transition-colors " +
+                      (b.selected
+                        ? "bg-primary/10 text-primary hover:bg-primary/20"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80")
+                    }
                     onClick={(e) => {
                       e.stopPropagation();
                       onToggleBox(i0);
                     }}
                   >
-                    {b.selected ? "Désélectionner" : "Sélectionner"}
+                    {b.selected ? "✓ Sélectionnée — cliquer pour exclure" : "Cliquer pour sélectionner"}
                   </button>
                 )}
+                <p className="text-[10px] text-muted-foreground italic">
+                  Le détail (prix, description, image) est éditable dans le tableau de l'étape 3.
+                </p>
               </div>
             </div>
           );
@@ -680,3 +624,4 @@ function PageEditor({
     </div>
   );
 }
+
