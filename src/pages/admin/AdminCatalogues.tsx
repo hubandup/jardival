@@ -160,10 +160,9 @@ export default function AdminCatalogues() {
                   <TableCell className="font-medium">
                     <button
                       type="button"
-                      onClick={() => c.pdf_url && setExtractFor(c)}
-                      disabled={!c.pdf_url}
-                      className="text-left hover:text-primary hover:underline disabled:no-underline disabled:cursor-not-allowed disabled:hover:text-foreground"
-                      title={c.pdf_url ? "Ouvrir l'extracteur de promotions" : "Aucun PDF associé"}
+                      onClick={() => openCatalogue(c)}
+                      className="text-left hover:text-primary hover:underline"
+                      title="Ouvrir le workflow d'extraction"
                     >
                       {c.title}
                     </button>
@@ -187,9 +186,8 @@ export default function AdminCatalogues() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      title="Extraire les promotions du PDF"
-                      onClick={() => setExtractFor(c)}
-                      disabled={!c.pdf_url}
+                      title="Workflow d'extraction"
+                      onClick={() => openCatalogue(c)}
                     >
                       <Sparkles className="h-4 w-4" />
                     </Button>
