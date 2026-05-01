@@ -12,6 +12,13 @@ interface ExtractRequest {
   pdf_url: string;
   starts_at?: string | null;
   ends_at?: string | null;
+  // Bboxes ajustées par l'utilisateur lors d'une précédente extraction du MÊME catalogue.
+  // Servent d'exemples concrets pour guider la nouvelle détection.
+  previous_boxes?: Array<{
+    page_number?: number | null;
+    bbox_2d?: [number, number, number, number] | null;
+    title?: string;
+  }> | null;
 }
 
 interface ExtractedPromo {
