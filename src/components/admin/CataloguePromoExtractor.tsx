@@ -24,10 +24,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Sparkles, Trash2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cropAndUploadPromoImages } from "@/lib/pdfImageCrop";
+import CataloguePromoBboxPreview, { type PreviewBox } from "./CataloguePromoBboxPreview";
 
 interface ExtractedPromo {
   title: string;
