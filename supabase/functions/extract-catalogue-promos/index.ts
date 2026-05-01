@@ -241,6 +241,7 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
         discount_percent: discount,
         category: p.category ?? null,
         page_number: p.page_number ?? null,
+        bbox_2d: Array.isArray(p.bbox_2d) && p.bbox_2d.length === 4 ? p.bbox_2d : null,
       };
     }).filter((p) => p.title.length > 0);
 
