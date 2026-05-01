@@ -326,6 +326,7 @@ export const MobilePromoReels = () => {
             total={promos.length}
             validityLabel={validityLabel}
             priority={priority}
+            paused={isPaused}
           />
         );
       })}
