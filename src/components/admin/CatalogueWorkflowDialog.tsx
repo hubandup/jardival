@@ -840,7 +840,7 @@ function ZonesStep({
           <Button
             variant="outline"
             onClick={handleCropImages}
-            disabled={croppingImages || selectedWithBbox === 0}
+            disabled={croppingImages || selectedNeedingCrop === 0}
           >
             {croppingImages ? (
               <>
@@ -850,7 +850,7 @@ function ZonesStep({
             ) : (
               <>
                 <ImageIcon className="h-4 w-4" />
-                Extraire les images ({selectedWithBbox})
+                Extraire les images ({selectedNeedingCrop})
               </>
             )}
           </Button>
@@ -859,8 +859,8 @@ function ZonesStep({
             disabled={
               promos.length === 0 ||
               croppingImages ||
-              selectedWithBbox > 0 ||
-              !promos.some((p) => p.selected !== false && p.image_cutout_url)
+              selectedNeedingCrop > 0 ||
+              !hasCroppedImages
             }
           >
             Étape suivante <ChevronRight className="h-4 w-4" />
