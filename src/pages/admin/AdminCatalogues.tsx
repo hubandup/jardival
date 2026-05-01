@@ -9,8 +9,9 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import CataloguePromoExtractor from "@/components/admin/CataloguePromoExtractor";
 
 interface CatalogueRow {
   id: string;
@@ -40,6 +41,7 @@ export default function AdminCatalogues() {
   const [uploadingImg, setUploadingImg] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(false);
+  const [extractFor, setExtractFor] = useState<CatalogueRow | null>(null);
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["admin-catalogues"],
@@ -117,7 +119,7 @@ export default function AdminCatalogues() {
                 <TableHead>Validité</TableHead>
                 <TableHead>PDF</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead className="w-24"></TableHead>
+                <TableHead className="w-36">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -141,6 +143,15 @@ export default function AdminCatalogues() {
                     </span>
                   </TableCell>
                   <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Extraire les promotions du PDF"
+                      onClick={() => setExtractFor(c)}
+                      disabled={!c.pdf_url}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => setEditing(c)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -223,6 +234,14 @@ export default function AdminCatalogues() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {extractFor && (
+        <CataloguePromoExtractor
+          catalogue={extractFor}
+          open={!!extractFor}
+          onOpenChange={(o) => !o && setExtractFor(null)}
+        />
+      )}
     </div>
   );
 }
