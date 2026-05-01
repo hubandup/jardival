@@ -639,9 +639,28 @@ function ZonesStep({
       );
 
       // Pipeline natif : extraction des images PDF en qualité d'origine + matching
-      // par position. Bascule en fallback rasterize+crop si aucune image native.
-      setExtractProgress({ value: 95, label: "Association des images natives..." });
-      const orchestrated = await extractPromoImages(absoluteUrl, rawList);
+      // par position. Bascule en fallback rasterize+crop si aucune image native, ou
+      // complète au crop pour les promos non couvertes (timeout partiel).
+      setExtractProgress({ value: 90, label: "Association des images aux promotions..." });
+      const orchestrated = await extractPromoImages(
+        absoluteUrl,
+        rawList,
+        undefined,
+        (phase) => {
+          if (phase === "native-extracting") {
+            setExtractProgress({ value: 90, label: "Lecture des images natives du PDF..." });
+          } else if (phase === "native-matching") {
+            setExtractProgress({ value: 92, label: "Association des images aux promotions..." });
+          } else if (phase === "partial-fallback-cropping") {
+            setExtractProgress({
+              value: 94,
+              label: "Extraction native partielle, utilisation du crop pour les images manquantes...",
+            });
+          } else if (phase === "fallback-cropping") {
+            setExtractProgress({ value: 94, label: "Crop des images depuis le PDF..." });
+          }
+        }
+      );
 
       const list: WorkflowPromo[] = rawList.map((p, i) => {
         const out = orchestrated.outputs[i];

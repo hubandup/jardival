@@ -29,8 +29,10 @@ export interface PromoImageOutput {
 
 export interface ExtractPromoImagesResult {
   outputs: PromoImageOutput[];
-  /** true si le pipeline a basculé en fallback (rasterize+crop) sur l'ensemble. */
+  /** true si au moins une partie du pipeline a utilisé le fallback rasterize+crop. */
   usedFallback: boolean;
+  /** true si la pipeline native a renvoyé partiellement (timeout global avant la fin). */
+  nativePartial: boolean;
   /** Stats utiles pour log/UI : combien d'images natives matchées, combien manquées. */
   stats: {
     promosTotal: number;
@@ -39,6 +41,12 @@ export interface ExtractPromoImagesResult {
     failed: number;
   };
 }
+
+export type ExtractPhase =
+  | "native-extracting"
+  | "native-matching"
+  | "fallback-cropping"
+  | "partial-fallback-cropping";
 
 // =============================================
 // Position 3×3 → bbox grossière dans le repère 0..1000 utilisé par les bboxes
@@ -85,7 +93,8 @@ async function uploadNativeImage(
 export async function extractPromoImages(
   pdfAbsoluteUrl: string,
   promos: WorkflowPromo[],
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number, total: number) => void,
+  onPhase?: (phase: ExtractPhase) => void
 ): Promise<ExtractPromoImagesResult> {
   const outputs: PromoImageOutput[] = promos.map((_, i) => ({
     promoIndex: i,
@@ -94,6 +103,7 @@ export async function extractPromoImages(
   }));
 
   // === Tentative 1 : images natives ===
+  onPhase?.("native-extracting");
   let native: Awaited<ReturnType<typeof extractNativeImages>> | null = null;
   try {
     native = await extractNativeImages(pdfAbsoluteUrl);
@@ -101,10 +111,13 @@ export async function extractPromoImages(
     console.warn("[extractPromoImages] extractNativeImages a échoué, bascule fallback", e);
   }
 
-  let usedFallback = !native || native.shouldFallback;
+  const nativePartial = !!native?.timedOut;
   let matchedNative = 0;
 
-  if (!usedFallback && native) {
+  // Toujours tenter le matching si on a au moins une image native — même en
+  // cas de timeout partiel, on utilise ce qu'on a et on complète au fallback.
+  if (native && native.images.length > 0) {
+    onPhase?.("native-matching");
     const result = matchImagesToPromos(promos, native.images, native.pageDimensions);
     let done = 0;
     const total = result.matches.filter((m) => m.imageIndex !== null).length;
@@ -126,21 +139,21 @@ export async function extractPromoImages(
       done++;
       onProgress?.(done, total);
     }
-
-    // Si AUCUNE promo n'a été matchée (positions toutes vides ou pages sans images),
-    // on bascule quand même en fallback pour ne pas livrer un résultat vide.
-    if (matchedNative === 0) {
-      console.warn("[extractPromoImages] 0 match natif → bascule fallback rasterize+crop");
-      usedFallback = true;
-    }
   }
 
-  // === Tentative 2 : fallback rasterize + crop sur bbox dérivée de la position ===
+  // === Tentative 2 : fallback rasterize + crop pour les promos sans image ===
+  // Couvre 3 cas : (1) PDF entièrement rasterisé (0 image native), (2) timeout
+  // partiel (certaines pages traitées, d'autres non), (3) promos avec position
+  // mais sans image native isolable sur leur page.
   let fallbackCropped = 0;
-  if (usedFallback) {
-    const tasks = promos
-      .map((p, idx) => {
-        // Si la promo a une bbox manuelle, on la respecte ; sinon on dérive de la position.
+  const promosNeedingFallback = promos
+    .map((p, idx) => ({ p, idx }))
+    .filter(({ idx }) => outputs[idx].imageUrl === null);
+
+  if (promosNeedingFallback.length > 0) {
+    onPhase?.(nativePartial && matchedNative > 0 ? "partial-fallback-cropping" : "fallback-cropping");
+    const tasks = promosNeedingFallback
+      .map(({ p, idx }) => {
         const bbox = p.bbox_2d ?? bboxFromPosition(p.position);
         if (!bbox || !p.page_number) return null;
         return {
@@ -182,10 +195,12 @@ export async function extractPromoImages(
   }
 
   const failed = outputs.filter((o) => o.imageUrl === null).length;
+  const usedFallback = fallbackCropped > 0;
 
   return {
     outputs,
     usedFallback,
+    nativePartial,
     stats: {
       promosTotal: promos.length,
       matchedNative,

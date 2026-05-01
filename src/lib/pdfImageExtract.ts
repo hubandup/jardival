@@ -41,6 +41,10 @@ export interface ExtractNativeImagesResult {
   emptyPages: number[];
   /** true si aucune image n'a pu être extraite — caller doit fallback rasterize+crop. */
   shouldFallback: boolean;
+  /** true si l'extraction globale a dépassé le timeout (extraction partielle). */
+  timedOut: boolean;
+  /** Nombre d'images skippées à cause du per-image timeout (XObjects pathologiques). */
+  perImageTimeouts: number;
 }
 
 // =============================================
@@ -123,6 +127,41 @@ function fetchObj(page: pdfjsLib.PDFPageProxy, objId: string): Promise<unknown> 
   return new Promise((resolve) => objs.get(objId, resolve));
 }
 
+// Wraps fetchObj with a per-image timeout. Certains XObjects (JBIG2, JPX,
+// color-managed) ne se résolvent jamais avec le worker pdfjs en mode browser,
+// ce qui bloque la pipeline entière. Mieux vaut skipper cette image.
+function fetchObjWithTimeout(
+  page: pdfjsLib.PDFPageProxy,
+  objId: string,
+  timeoutMs: number
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const t = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`per-image timeout (${timeoutMs}ms) for objId=${objId}`));
+    }, timeoutMs);
+    fetchObj(page, objId).then(
+      (v) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+}
+
+const PER_IMAGE_TIMEOUT_MS = 5_000;
+const GLOBAL_TIMEOUT_MS = 30_000;
+
 // =============================================
 // Extraction principale
 // =============================================
@@ -138,8 +177,19 @@ export async function extractNativeImages(
   const countsByPage: Record<number, number> = {};
   const emptyPages: number[] = [];
   const pageDimensions: Record<number, { width: number; height: number }> = {};
+  const startedAt = Date.now();
+  let timedOut = false;
+  let perImageTimeouts = 0;
+  const isGloballyTimedOut = () => Date.now() - startedAt > GLOBAL_TIMEOUT_MS;
 
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+  pageLoop: for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    if (isGloballyTimedOut()) {
+      timedOut = true;
+      console.warn(
+        `[pdfImageExtract] timeout global (${GLOBAL_TIMEOUT_MS}ms) atteint avant la page ${pageNumber}, retour partiel`
+      );
+      break;
+    }
     const page = await pdf.getPage(pageNumber);
     const viewport = page.getViewport({ scale: 1 });
     const pageHeight = viewport.height;
@@ -163,6 +213,15 @@ export async function extractNativeImages(
     const seenObjIds = new Set<string>(); // évite de ré-extraire le même XObject plusieurs fois pour la même page
 
     for (let i = 0; i < fnArray.length && pageImageCount < maxPerPage; i++) {
+      if (isGloballyTimedOut()) {
+        timedOut = true;
+        console.warn(
+          `[pdfImageExtract] timeout global (${GLOBAL_TIMEOUT_MS}ms) atteint sur page ${pageNumber} (op ${i}/${fnArray.length}), retour partiel`
+        );
+        countsByPage[pageNumber] = pageImageCount;
+        if (pageImageCount === 0) emptyPages.push(pageNumber);
+        break pageLoop;
+      }
       const op = fnArray[i];
       const args = argsArray[i];
 
@@ -208,17 +267,29 @@ export async function extractNativeImages(
         // Skip les images dégénérées (bbox vide ou < 5 pt).
         if (widthPx < 5 || heightPx < 5) continue;
 
-        // Récupère le bitmap.
+        // Récupère le bitmap, avec timeout par image (5s) pour skipper les
+        // XObjects pathologiques (JBIG2 / JPX / color-managed) qui peuvent
+        // bloquer la promise indéfiniment.
         let imgObj: unknown = null;
         try {
           if (isXObject && objId) {
-            imgObj = await fetchObj(page, objId);
+            imgObj = await fetchObjWithTimeout(page, objId, PER_IMAGE_TIMEOUT_MS);
           } else {
             // Inline image : args[0] contient { width, height, data, kind, ... } directement.
             imgObj = args?.[0] ?? null;
           }
         } catch (e) {
-          console.warn(`[pdfImageExtract] page ${pageNumber} : récupération image ${objId ?? "(inline)"} échouée`, e);
+          if (e instanceof Error && e.message.startsWith("per-image timeout")) {
+            perImageTimeouts++;
+            console.warn(
+              `[pdfImageExtract] page ${pageNumber} : skip objId=${objId} (timeout ${PER_IMAGE_TIMEOUT_MS}ms)`
+            );
+          } else {
+            console.warn(
+              `[pdfImageExtract] page ${pageNumber} : récupération image ${objId ?? "(inline)"} échouée`,
+              e
+            );
+          }
           continue;
         }
 
@@ -263,7 +334,10 @@ export async function extractNativeImages(
     if (pageImageCount === 0) emptyPages.push(pageNumber);
   }
 
-  const shouldFallback = images.length === 0;
+  // shouldFallback est vrai si :
+  //   - aucune image n'a été extraite (PDF entièrement rasterisé), OU
+  //   - le timeout global a été atteint (extraction partielle → on complète au crop).
+  const shouldFallback = images.length === 0 || timedOut;
 
   // Diagnostic : utile pour l'instrumentation pendant les tests sur PDF réels.
   console.info("[pdfImageExtract] résumé", {
@@ -271,7 +345,18 @@ export async function extractNativeImages(
     countsByPage,
     emptyPages,
     shouldFallback,
+    timedOut,
+    perImageTimeouts,
+    durationMs: Date.now() - startedAt,
   });
 
-  return { images, pageDimensions, countsByPage, emptyPages, shouldFallback };
+  return {
+    images,
+    pageDimensions,
+    countsByPage,
+    emptyPages,
+    shouldFallback,
+    timedOut,
+    perImageTimeouts,
+  };
 }
