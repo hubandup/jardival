@@ -54,7 +54,7 @@ export default function AdminCatalogues() {
   const [uploadingImg, setUploadingImg] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(false);
-  const [extractFor, setExtractFor] = useState<CatalogueRow | null>(null);
+  
   const [resumeMenu, setResumeMenu] = useState<{ catalogue: CatalogueRow; hasDraft: boolean } | null>(null);
   const [workflowFor, setWorkflowFor] = useState<{ catalogue: CatalogueRow; step?: WorkflowStep } | null>(null);
 
