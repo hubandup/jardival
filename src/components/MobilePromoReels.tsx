@@ -4,6 +4,7 @@ import { Loader2, Tag, MapPin, ChevronUp } from "lucide-react";
 import { usePromotions, useCatalogues } from "@/hooks/usePromotions";
 import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
 import { promotionToProduct } from "@/lib/promotion";
+import { useCoverPalette } from "@/hooks/useCoverPalette";
 import type { Product } from "@/types/product";
 
 const formatPrice = (price?: number | null) => {
@@ -13,6 +14,131 @@ const formatPrice = (price?: number | null) => {
     currency: "EUR",
     minimumFractionDigits: 2,
   }).format(price);
+};
+
+interface ReelSlideProps {
+  promo: Product;
+  index: number;
+  total: number;
+  validityLabel: string | null;
+}
+
+const ReelSlide = ({ promo: p, index: idx, total, validityLabel }: ReelSlideProps) => {
+  const palette = useCoverPalette(p.image);
+  const price = formatPrice(p.price);
+  const oldPrice = formatPrice(p.oldPrice);
+  const slug = (p as Product & { slug?: string }).slug;
+  const link = slug ? `/promotions/${slug}` : `/promotions`;
+
+  // Fond adapté à la couleur dominante (fallback sombre).
+  const bgStyle = palette
+    ? { backgroundColor: `hsl(${palette.primary})` }
+    : { backgroundColor: "hsl(var(--muted))" };
+
+  return (
+    <article
+      className="reels-scroll relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col overflow-hidden"
+      style={bgStyle}
+    >
+      {/* Image centrée, max 700px */}
+      <div className="absolute inset-0 flex items-center justify-center p-4 pb-44">
+        {p.image ? (
+          <img
+            src={p.image}
+            alt={p.name}
+            className="max-h-full w-auto max-w-full object-contain"
+            style={{ maxWidth: "min(100%, 700px)" }}
+            loading={idx < 2 ? "eager" : "lazy"}
+          />
+        ) : (
+          <div className="h-full w-full max-w-[700px] rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30" />
+        )}
+      </div>
+
+      {/* Voile pour la lisibilité du bloc d'infos */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5"
+        style={{
+          background:
+            "linear-gradient(180deg, hsl(0 0% 0% / 0) 0%, hsl(0 0% 0% / 0.55) 60%, hsl(0 0% 0% / 0.85) 100%)",
+        }}
+        aria-hidden
+      />
+
+      {/* Badges en haut */}
+      <div className="relative z-10 flex items-start justify-between gap-2 p-4">
+        {validityLabel && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground backdrop-blur">
+            <Tag className="h-3 w-3" />
+            {validityLabel}
+          </span>
+        )}
+        {p.discount > 0 && (
+          <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-bold text-accent-foreground shadow-card">
+            -{p.discount}%
+          </span>
+        )}
+      </div>
+
+      {/* Compteur position */}
+      <div className="relative z-10 mx-auto -mt-2 inline-flex rounded-full bg-black/40 px-2.5 py-0.5 text-[10px] font-medium text-white/80 backdrop-blur">
+        {idx + 1} / {total}
+      </div>
+
+      <div className="flex-1" />
+
+      {/* Bloc d'infos en bas */}
+      <div className="relative z-10 space-y-3 p-5 pb-8 text-white">
+        {p.category && (
+          <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
+            {p.category}
+          </span>
+        )}
+        <h2 className="font-display text-2xl font-semibold leading-tight">
+          {p.name}
+        </h2>
+        {(p as Product & { description?: string }).description && (
+          <p className="line-clamp-2 text-sm text-white/80">
+            {(p as Product & { description?: string }).description}
+          </p>
+        )}
+
+        <div className="flex items-end gap-3 pt-1">
+          {price && (
+            <span className="font-display text-3xl font-bold">{price}</span>
+          )}
+          {oldPrice && (
+            <span className="pb-1 text-sm text-white/60 line-through">
+              {oldPrice}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2 pt-2">
+          <Link
+            to={link}
+            className="inline-flex flex-1 items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-foreground shadow-card transition-transform active:scale-95"
+          >
+            Voir l'offre
+          </Link>
+          <Link
+            to="/magasins"
+            aria-label="Trouver un magasin"
+            className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition-transform active:scale-95"
+          >
+            <MapPin className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Indicateur swipe (1ère slide uniquement) */}
+      {idx === 0 && total > 1 && (
+        <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 animate-bounce text-white/70">
+          <ChevronUp className="h-5 w-5 rotate-180" />
+        </div>
+      )}
+    </article>
+  );
 };
 
 /**
@@ -53,114 +179,15 @@ export const MobilePromoReels = () => {
         .reels-scroll::-webkit-scrollbar { display: none; }
       `}</style>
 
-      {promos.map((p, idx) => {
-        const price = formatPrice(p.price);
-        const oldPrice = formatPrice(p.oldPrice);
-        const slug = (p as Product & { slug?: string }).slug;
-        const link = slug ? `/promotions/${slug}` : `/promotions`;
-
-        return (
-          <article
-            key={`${p.id}-${idx}`}
-            className="reels-scroll relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col overflow-hidden bg-black"
-          >
-            {/* Image plein écran */}
-            {p.image ? (
-              <img
-                src={p.image}
-                alt={p.name}
-                className="absolute inset-0 h-full w-full object-cover"
-                loading={idx < 2 ? "eager" : "lazy"}
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30" />
-            )}
-
-            {/* Voile pour la lisibilité */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(180deg, hsl(0 0% 0% / 0.15) 0%, hsl(0 0% 0% / 0) 25%, hsl(0 0% 0% / 0) 50%, hsl(0 0% 0% / 0.85) 100%)",
-              }}
-              aria-hidden
-            />
-
-            {/* Badges en haut */}
-            <div className="relative z-10 flex items-start justify-between gap-2 p-4">
-              {validityLabel && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground backdrop-blur">
-                  <Tag className="h-3 w-3" />
-                  {validityLabel}
-                </span>
-              )}
-              {p.discount > 0 && (
-                <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-sm font-bold text-accent-foreground shadow-card">
-                  -{p.discount}%
-                </span>
-              )}
-            </div>
-
-            {/* Compteur position */}
-            <div className="relative z-10 mx-auto -mt-2 inline-flex rounded-full bg-black/40 px-2.5 py-0.5 text-[10px] font-medium text-white/80 backdrop-blur">
-              {idx + 1} / {promos.length}
-            </div>
-
-            <div className="flex-1" />
-
-            {/* Bloc d'infos en bas */}
-            <div className="relative z-10 space-y-3 p-5 pb-8 text-white">
-              {p.category && (
-                <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
-                  {p.category}
-                </span>
-              )}
-              <h2 className="font-display text-2xl font-semibold leading-tight">
-                {p.name}
-              </h2>
-              {(p as Product & { description?: string }).description && (
-                <p className="line-clamp-2 text-sm text-white/80">
-                  {(p as Product & { description?: string }).description}
-                </p>
-              )}
-
-              <div className="flex items-end gap-3 pt-1">
-                {price && (
-                  <span className="font-display text-3xl font-bold">{price}</span>
-                )}
-                {oldPrice && (
-                  <span className="pb-1 text-sm text-white/60 line-through">
-                    {oldPrice}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-2 pt-2">
-                <Link
-                  to={link}
-                  className="inline-flex flex-1 items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-foreground shadow-card transition-transform active:scale-95"
-                >
-                  Voir l'offre
-                </Link>
-                <Link
-                  to="/magasins"
-                  aria-label="Trouver un magasin"
-                  className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition-transform active:scale-95"
-                >
-                  <MapPin className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Indicateur swipe (1ère slide uniquement) */}
-            {idx === 0 && promos.length > 1 && (
-              <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 animate-bounce text-white/70">
-                <ChevronUp className="h-5 w-5 rotate-180" />
-              </div>
-            )}
-          </article>
-        );
-      })}
+      {promos.map((p, idx) => (
+        <ReelSlide
+          key={`${p.id}-${idx}`}
+          promo={p}
+          index={idx}
+          total={promos.length}
+          validityLabel={validityLabel}
+        />
+      ))}
 
       {/* Slide finale : voir toutes les promos */}
       <div className="relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col items-center justify-center gap-6 bg-gradient-to-br from-primary to-accent p-6 text-center text-primary-foreground">
