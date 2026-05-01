@@ -206,6 +206,8 @@ const Stores = () => {
                 >
                   <StoreCard
                     store={s}
+                    distance={s.distance}
+                    userPos={userPos}
                     active={activeId === s.id}
                     onHover={() => setActiveId(s.id)}
                   />
