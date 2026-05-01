@@ -480,17 +480,58 @@ function ZonesStep({
     setExtracting(true);
     try {
       const absoluteUrl = new URL(pdfUrl, window.location.origin).toString();
+      // Apprentissage local : si on a déjà des bboxes ajustées, on les renvoie comme exemples.
+      const previous_boxes = promos
+        .filter((p) => p.bbox_2d && p.page_number)
+        .map((p) => ({
+          page_number: p.page_number,
+          bbox_2d: p.bbox_2d,
+          title: p.title,
+        }));
       const { data, error } = await supabase.functions.invoke("extract-catalogue-promos", {
-        body: { pdf_url: absoluteUrl, starts_at: catalogue.starts_at, ends_at: catalogue.ends_at },
+        body: {
+          pdf_url: absoluteUrl,
+          starts_at: catalogue.starts_at,
+          ends_at: catalogue.ends_at,
+          previous_boxes: previous_boxes.length ? previous_boxes : undefined,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      const list: WorkflowPromo[] = (data?.promotions ?? []).map((p: WorkflowPromo) => ({
+      let list: WorkflowPromo[] = (data?.promotions ?? []).map((p: WorkflowPromo) => ({
         ...p,
         selected: true,
       }));
+
+      // Filtrage : supprimer les bboxes qui ne contiennent qu'un fragment d'image en bord (<5%).
+      const candidates = list
+        .map((p, idx) => ({ idx, pageNumber: p.page_number ?? 0, bbox: p.bbox_2d }))
+        .filter((c) => c.bbox && c.pageNumber > 0) as Array<{
+          idx: number;
+          pageNumber: number;
+          bbox: [number, number, number, number];
+        }>;
+      let droppedCount = 0;
+      try {
+        const dropIdxs = await detectEdgeOnlyBboxes(
+          absoluteUrl,
+          candidates.map((c) => ({ pageNumber: c.pageNumber, bbox: c.bbox }))
+        );
+        if (dropIdxs.length) {
+          const dropPromoIdx = new Set(dropIdxs.map((i) => candidates[i].idx));
+          droppedCount = dropPromoIdx.size;
+          list = list.filter((_, i) => !dropPromoIdx.has(i));
+        }
+      } catch (e) {
+        console.warn("Filtre edge-only échoué (ignoré)", e);
+      }
+
       updatePromos(() => list);
-      toast.success(`${list.length} zones détectées par l'IA`);
+      toast.success(
+        droppedCount > 0
+          ? `${list.length} zones détectées (${droppedCount} parasites filtrées)`
+          : `${list.length} zones détectées par l'IA`
+      );
     } catch (e) {
       console.error(e);
       toast.error(e instanceof Error ? e.message : "Erreur extraction IA");
