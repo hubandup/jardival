@@ -256,7 +256,26 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                     </span>
                   )}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Select value={cropScale} onValueChange={(v) => setCropScale(v as typeof cropScale)}>
+                    <SelectTrigger className="h-9 w-[150px]" title="Résolution du rendu PDF">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">Standard (2×)</SelectItem>
+                      <SelectItem value="3">Haute (3×)</SelectItem>
+                      <SelectItem value="4">Très haute (4×)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={cropFormat} onValueChange={(v) => setCropFormat(v as typeof cropFormat)}>
+                    <SelectTrigger className="h-9 w-[120px]" title="Format de sortie des images">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="jpeg">JPG (léger)</SelectItem>
+                      <SelectItem value="png">PNG (sans perte)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button
                     variant="outline"
                     size="sm"
@@ -281,6 +300,26 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                   </Button>
                 </div>
               </div>
+
+              {catalogue.pdf_url && (
+                <CataloguePromoBboxPreview
+                  pdfUrl={new URL(catalogue.pdf_url, window.location.origin).toString()}
+                  boxes={promos
+                    .map((p, idx): PreviewBox | null =>
+                      p.bbox_2d && p.page_number
+                        ? {
+                            pageNumber: p.page_number,
+                            bbox: p.bbox_2d,
+                            index: idx + 1,
+                            label: p.title,
+                            selected: p.selected !== false,
+                          }
+                        : null
+                    )
+                    .filter((b): b is PreviewBox => b !== null)}
+                  onToggleBox={(i) => updatePromo(i, { selected: !promos[i].selected })}
+                />
+              )}
 
               <div className="border rounded-md max-h-[50vh] overflow-y-auto">
                 <Table>
