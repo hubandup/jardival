@@ -18,7 +18,12 @@ const FALLBACK_PALETTE: HeroPalette = {
   foreground: "20 14% 12%",
 };
 
-export const CatalogueBanner = () => {
+interface CatalogueBannerProps {
+  /** Si true : affiche un seul CTA "Voir le catalogue" qui ouvre le viewer (utilisé sur mobile). */
+  simplified?: boolean;
+}
+
+export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {}) => {
   const { data: catalogues } = useCatalogues();
   const active = catalogues?.[0];
 
