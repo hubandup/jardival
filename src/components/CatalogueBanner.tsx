@@ -20,11 +20,16 @@ const FALLBACK_PALETTE: HeroPalette = {
 };
 
 interface CatalogueBannerProps {
-  /** Si true : affiche un seul CTA "Voir le catalogue" qui ouvre le viewer (utilisé sur mobile). */
+  /** Si true : affiche un seul CTA "Voir le catalogue" qui ouvre le PDF (utilisé sur mobile). */
   simplified?: boolean;
+  /** Cible d'ouverture du PDF en mode simplifié. "_self" = même onglet, "_blank" = nouvel onglet. Défaut : "_self". */
+  pdfTarget?: "_self" | "_blank";
 }
 
-export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {}) => {
+export const CatalogueBanner = ({
+  simplified = false,
+  pdfTarget = "_self",
+}: CatalogueBannerProps = {}) => {
   const { data: catalogues } = useCatalogues();
   const active = catalogues?.[0];
 
@@ -178,8 +183,8 @@ export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {
             {simplified ? (
               <a
                 href={pdfUrl}
-                target="_blank"
-                rel="noreferrer"
+                target={pdfTarget}
+                rel={pdfTarget === "_blank" ? "noreferrer" : undefined}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-card transition-all hover:scale-[1.02] hover:shadow-glow"
                 style={{
                   background: "hsl(var(--hero-fg))",
