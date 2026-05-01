@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalogue_extractions: {
+        Row: {
+          catalogue_id: string
+          created_at: string
+          ends_at: string | null
+          id: string
+          promos: Json
+          starts_at: string | null
+          status: string
+          step: string
+          updated_at: string
+        }
+        Insert: {
+          catalogue_id: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          promos?: Json
+          starts_at?: string | null
+          status?: string
+          step?: string
+          updated_at?: string
+        }
+        Update: {
+          catalogue_id?: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          promos?: Json
+          starts_at?: string | null
+          status?: string
+          step?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       catalogues: {
         Row: {
           active: boolean

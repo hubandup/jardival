@@ -11,7 +11,17 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon, Sparkles, Palette, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import CataloguePromoExtractor from "@/components/admin/CataloguePromoExtractor";
+import CatalogueWorkflowDialog, { type WorkflowStep } from "@/components/admin/CatalogueWorkflowDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { extractCoverPalette, type HeroPalette } from "@/lib/coverPalette";
 
 interface CatalogueRow {
@@ -44,7 +54,24 @@ export default function AdminCatalogues() {
   const [uploadingImg, setUploadingImg] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(false);
-  const [extractFor, setExtractFor] = useState<CatalogueRow | null>(null);
+  
+  const [resumeMenu, setResumeMenu] = useState<{ catalogue: CatalogueRow; hasDraft: boolean } | null>(null);
+  const [workflowFor, setWorkflowFor] = useState<{ catalogue: CatalogueRow; step?: WorkflowStep } | null>(null);
+
+  const openCatalogue = async (c: CatalogueRow) => {
+    // Vérifie s'il existe un brouillon pour proposer Reprendre/Recommencer
+    const { data } = await supabase
+      .from("catalogue_extractions")
+      .select("id")
+      .eq("catalogue_id", c.id)
+      .maybeSingle();
+    if (data) {
+      setResumeMenu({ catalogue: c, hasDraft: true });
+    } else {
+      // Pas de brouillon : ouvre directement à l'étape Zones (ou Upload si pas de PDF)
+      setWorkflowFor({ catalogue: c, step: c.pdf_url ? "zones" : "upload" });
+    }
+  };
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["admin-catalogues"],
@@ -133,10 +160,9 @@ export default function AdminCatalogues() {
                   <TableCell className="font-medium">
                     <button
                       type="button"
-                      onClick={() => c.pdf_url && setExtractFor(c)}
-                      disabled={!c.pdf_url}
-                      className="text-left hover:text-primary hover:underline disabled:no-underline disabled:cursor-not-allowed disabled:hover:text-foreground"
-                      title={c.pdf_url ? "Ouvrir l'extracteur de promotions" : "Aucun PDF associé"}
+                      onClick={() => openCatalogue(c)}
+                      className="text-left hover:text-primary hover:underline"
+                      title="Ouvrir le workflow d'extraction"
                     >
                       {c.title}
                     </button>
@@ -160,9 +186,8 @@ export default function AdminCatalogues() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      title="Extraire les promotions du PDF"
-                      onClick={() => setExtractFor(c)}
-                      disabled={!c.pdf_url}
+                      title="Workflow d'extraction"
+                      onClick={() => openCatalogue(c)}
                     >
                       <Sparkles className="h-4 w-4" />
                     </Button>
@@ -256,11 +281,45 @@ export default function AdminCatalogues() {
         </DialogContent>
       </Dialog>
 
-      {extractFor && (
-        <CataloguePromoExtractor
-          catalogue={extractFor}
-          open={!!extractFor}
-          onOpenChange={(o) => !o && setExtractFor(null)}
+      {/* Menu Reprendre / Recommencer (si un brouillon existe) */}
+      <AlertDialog open={!!resumeMenu} onOpenChange={(o) => !o && setResumeMenu(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Brouillon existant</AlertDialogTitle>
+            <AlertDialogDescription>
+              Un brouillon d'extraction existe déjà pour « {resumeMenu?.catalogue.title} ». Souhaitez-vous reprendre où vous en étiez, ou recommencer depuis l'étape « Zones » ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (resumeMenu) setWorkflowFor({ catalogue: resumeMenu.catalogue, step: "zones" });
+                setResumeMenu(null);
+              }}
+            >
+              Recommencer
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                if (resumeMenu) setWorkflowFor({ catalogue: resumeMenu.catalogue });
+                setResumeMenu(null);
+              }}
+            >
+              Reprendre
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {workflowFor && (
+        <CatalogueWorkflowDialog
+          catalogue={workflowFor.catalogue}
+          initialStep={workflowFor.step}
+          open={!!workflowFor}
+          onOpenChange={(o) => !o && setWorkflowFor(null)}
+          onCompleted={() => qc.invalidateQueries({ queryKey: ["admin-catalogues"] })}
         />
       )}
     </div>
