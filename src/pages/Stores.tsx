@@ -1,13 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { StoresMap } from "@/components/StoresMap";
 import { NearestStore } from "@/components/NearestStore";
-import { DEPARTMENTS, Store } from "@/data/stores";
+import { DEPARTMENTS, Store, distanceKm } from "@/data/stores";
 import { useStores } from "@/hooks/useStores";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { useSeo } from "@/hooks/useSeo";
-import { Loader2 } from "lucide-react";
+import { Loader2, Compass } from "lucide-react";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
 import { MapPin, Search, Phone, Clock } from "lucide-react";
 import {
