@@ -23,7 +23,11 @@ export const CatalogueBanner = () => {
   const active = catalogues?.[0];
 
   const pdfUrl = active?.pdf_url ?? FALLBACK_PDF_URL;
-  const coverImg = active?.cover_image ?? cover;
+  // Stratégie : cover_image admin > rendu auto de la 1re page du PDF > image fallback statique.
+  const hasExplicitCover = !!active?.cover_image;
+  const hasPdf = !!active?.pdf_url;
+  const [pdfCoverDataUrl, setPdfCoverDataUrl] = useState<string | null>(null);
+  const coverImg = active?.cover_image ?? pdfCoverDataUrl ?? cover;
   const title = active?.title ?? "Jardinales";
   const validity = active?.ends_at
     ? `Jusqu'au ${new Date(active.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
