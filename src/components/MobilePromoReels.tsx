@@ -168,6 +168,63 @@ export const MobilePromoReels = () => {
     ? `Jusqu'au ${new Date(activeCatalogue.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
     : null;
 
+  // Slide actuellement visible : on l'utilise pour calculer une fenêtre de préchargement.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Distance de préchargement (slides avant/après la slide active rendues + priorisées).
+  const PRELOAD_RADIUS = 2;
+
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+    const slides = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-reel-index]"),
+    );
+    if (slides.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Choisit l'entrée la plus visible.
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        const idx = Number(
+          (visible.target as HTMLElement).dataset.reelIndex ?? "0",
+        );
+        if (!Number.isNaN(idx)) setActiveIndex(idx);
+      },
+      { root, threshold: [0.5, 0.75, 1] },
+    );
+
+    slides.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, [promos.length]);
+
+  // Préchargement explicite via <link rel="preload"> pour les voisines hors fenêtre de rendu.
+  useEffect(() => {
+    const urls = new Set<string>();
+    for (let d = 1; d <= PRELOAD_RADIUS + 1; d++) {
+      [activeIndex + d, activeIndex - d].forEach((i) => {
+        const img = promos[i]?.image;
+        if (img) urls.add(img);
+      });
+    }
+    const links: HTMLLinkElement[] = [];
+    urls.forEach((href) => {
+      const link = document.createElement("link");
+      link.rel = "preload";
+      link.as = "image";
+      link.href = href;
+      document.head.appendChild(link);
+      links.push(link);
+    });
+    return () => {
+      links.forEach((l) => l.remove());
+    };
+  }, [activeIndex, promos]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center text-muted-foreground">
@@ -178,6 +235,7 @@ export const MobilePromoReels = () => {
 
   return (
     <div
+      ref={containerRef}
       className="relative h-[calc(100dvh-4rem)] snap-y snap-mandatory overflow-y-scroll overscroll-contain scroll-smooth"
       style={{ scrollbarWidth: "none" }}
       aria-label="Promotions Jardival"
@@ -186,15 +244,26 @@ export const MobilePromoReels = () => {
         .reels-scroll::-webkit-scrollbar { display: none; }
       `}</style>
 
-      {promos.map((p, idx) => (
-        <ReelSlide
-          key={`${p.id}-${idx}`}
-          promo={p}
-          index={idx}
-          total={promos.length}
-          validityLabel={validityLabel}
-        />
-      ))}
+      {promos.map((p, idx) => {
+        const distance = Math.abs(idx - activeIndex);
+        const priority: "high" | "low" | "off" =
+          distance === 0
+            ? "high"
+            : distance <= PRELOAD_RADIUS
+              ? "low"
+              : "off";
+        return (
+          <div key={`${p.id}-${idx}`} data-reel-index={idx} className="contents">
+            <ReelSlide
+              promo={p}
+              index={idx}
+              total={promos.length}
+              validityLabel={validityLabel}
+              priority={priority}
+            />
+          </div>
+        );
+      })}
 
       {/* Slide finale : voir toutes les promos */}
       <div className="relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col items-center justify-center gap-6 bg-gradient-to-br from-primary to-accent p-6 text-center text-primary-foreground">
