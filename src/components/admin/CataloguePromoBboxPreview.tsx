@@ -32,6 +32,7 @@ export interface PreviewBox {
   price?: number | null;
   originalPrice?: number | null;
   description?: string | null;
+  imageUrl?: string | null; // image extraite (pour indicateur visuel)
 }
 
 export interface PreviewTextPatch {
@@ -49,6 +50,7 @@ interface Props {
   onUpdateBbox?: (i: number, bbox: Bbox) => void;
   onAddBox?: (pageNumber: number, bbox: Bbox) => void;
   onUpdateText?: (i: number, patch: PreviewTextPatch) => void;
+  onSwapText?: (i: number, j: number) => void; // échange titre/prix/description entre deux promos
 }
 
 type DragState =
