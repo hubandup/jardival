@@ -164,7 +164,7 @@ export default function CatalogueWorkflowDialog({
       };
       const { data, error } = await supabase
         .from("catalogue_extractions")
-        .upsert(payload, { onConflict: "catalogue_id" })
+        .upsert([payload], { onConflict: "catalogue_id" })
         .select("id")
         .maybeSingle();
       if (error) {
