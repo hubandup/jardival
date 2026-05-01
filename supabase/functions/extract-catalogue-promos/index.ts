@@ -108,6 +108,49 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- Apprentissage : agrégats sur les extractions validées passées ---
+    let learnedHints = "";
+    try {
+      const { data: stats } = await supabase
+        .from("catalogue_extraction_stats")
+        .select("bbox_width,bbox_height,aspect_ratio,had_price,had_original_price")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (stats && stats.length >= 5) {
+        const widths = stats.map((s: any) => Number(s.bbox_width)).filter((n: number) => Number.isFinite(n) && n > 0);
+        const heights = stats.map((s: any) => Number(s.bbox_height)).filter((n: number) => Number.isFinite(n) && n > 0);
+        const ratios = stats.map((s: any) => Number(s.aspect_ratio)).filter((n: number) => Number.isFinite(n) && n > 0);
+        const avg = (xs: number[]) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+        const med = (xs: number[]) => {
+          if (!xs.length) return 0;
+          const s = [...xs].sort((a, b) => a - b);
+          return s[Math.floor(s.length / 2)];
+        };
+        const priceRate = stats.filter((s: any) => s.had_price).length / stats.length;
+        learnedHints = `\n\nHISTORIQUE D'APPRENTISSAGE (${stats.length} promotions précédemment validées par l'admin) :
+- Largeur médiane d'une zone produit : ~${Math.round(med(widths))}/1000 (moyenne ${Math.round(avg(widths))})
+- Hauteur médiane d'une zone produit : ~${Math.round(med(heights))}/1000 (moyenne ${Math.round(avg(heights))})
+- Ratio largeur/hauteur médian : ~${med(ratios).toFixed(2)}
+- ${Math.round(priceRate * 100)}% des promotions validées avaient un prix unitaire affiché
+Vise des bboxes proches de ces dimensions et évite les zones nettement plus petites (probables fragments parasites).`;
+      }
+    } catch (e) {
+      console.warn("Lecture stats apprentissage échouée", e);
+    }
+
+    // --- Exemples concrets fournis par le client (ré-extraction du même catalogue) ---
+    let previousExamples = "";
+    if (Array.isArray(body.previous_boxes) && body.previous_boxes.length) {
+      const sample = body.previous_boxes
+        .filter((b) => b.bbox_2d && Array.isArray(b.bbox_2d) && b.bbox_2d.length === 4)
+        .slice(0, 20)
+        .map((b) => `  · page ${b.page_number ?? "?"} → bbox [${b.bbox_2d!.join(", ")}]${b.title ? ` (${b.title})` : ""}`)
+        .join("\n");
+      if (sample) {
+        previousExamples = `\n\nEXEMPLES DE BBOXES VALIDÉES SUR CE MÊME CATALOGUE (à reproduire pour les autres pages) :\n${sample}`;
+      }
+    }
+
     const systemPrompt = `Tu es un assistant qui extrait les promotions d'un prospectus PDF de jardinerie.
 Pour chaque produit en promotion visible, retourne :
 - title : nom du produit (concis, ex "Barbecue Charbon Serena")
@@ -119,7 +162,12 @@ Pour chaque produit en promotion visible, retourne :
 - page_number : numéro de page où le produit apparaît (commence à 1)
 - bbox_2d : la zone qui contient l'IMAGE (la photo) du produit, au format [ymin, xmin, ymax, xmax] avec des entiers normalisés entre 0 et 1000 (0,0 = coin haut-gauche de la page ; 1000,1000 = coin bas-droit). Cible précisément le visuel produit, PAS le bloc texte/prix associé. Si plusieurs produits partagent une même photo de famille, donne la même bbox.
 
-N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les promotions distinctes.`;
+RÈGLES IMPORTANTES :
+- Une bbox doit ENTIÈREMENT contenir la photo du produit, pas seulement un bord ou un coin.
+- Évite les bboxes qui ne touchent qu'un fragment d'image en bord (moins de 5% de la zone) : elles seront filtrées et perdues.
+- Préfère élargir légèrement la zone pour inclure toute la photo plutôt que la couper.
+
+N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les promotions distinctes.${learnedHints}${previousExamples}`;
 
     // Timeout interne (plus court que la limite edge de 150s) pour pouvoir renvoyer une erreur propre
     const aiController = new AbortController();
