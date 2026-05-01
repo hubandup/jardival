@@ -3,11 +3,13 @@ import { useSearchParams } from "react-router-dom";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ProductCard } from "@/components/ProductCard";
+import { MobilePromoReels } from "@/components/MobilePromoReels";
 import { Tag, Loader2, X, Search } from "lucide-react";
 import { usePromotions, useCatalogues, type PromotionRow } from "@/hooks/usePromotions";
 import { useStores } from "@/hooks/useStores";
 import { promotionToProduct } from "@/lib/promotion";
 import { useSeo } from "@/hooks/useSeo";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
