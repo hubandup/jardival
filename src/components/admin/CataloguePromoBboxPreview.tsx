@@ -62,6 +62,7 @@ export default function CataloguePromoBboxPreview({
   onDeleteBox,
   onUpdateBbox,
   onAddBox,
+  onUpdateText,
 }: Props) {
   const [show, setShow] = useState(true);
   const [loading, setLoading] = useState(false);
