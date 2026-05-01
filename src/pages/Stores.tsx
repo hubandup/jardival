@@ -284,7 +284,7 @@ const StoreCard = ({
         Voir le magasin
       </Link>
       <div className="flex gap-2">
-        <DirectionsMenu store={store} variant="outline" className="flex-1" />
+        <DirectionsMenu store={store} variant="outline" className="flex-1" origin={userPos} />
         <a
           href="tel:+33000000000"
           className="inline-flex items-center justify-center rounded-full border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-secondary"
