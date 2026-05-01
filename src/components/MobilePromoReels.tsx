@@ -98,7 +98,7 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
       <div className="flex-1" />
 
       {/* Bloc d'infos en bas */}
-      <div className="relative z-10 space-y-3 p-5 pb-8 text-white">
+      <div className="relative z-10 space-y-3 p-5 pb-6 text-white">
         {p.category && (
           <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
             {p.category}
@@ -124,10 +124,20 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2 pt-2">
+        {/* CTA principal — pleine largeur */}
+        <Link
+          to={`/magasins?promo=${encodeURIComponent(slug ?? p.id)}&geo=1`}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3.5 text-sm font-bold text-accent-foreground shadow-card transition-transform active:scale-95"
+        >
+          <MapPin className="h-4 w-4" />
+          Trouver ce produit en magasin →
+        </Link>
+
+        {/* Actions secondaires */}
+        <div className="flex gap-2 pt-1">
           <Link
             to={link}
-            className="inline-flex flex-1 items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-foreground shadow-card transition-transform active:scale-95"
+            className="inline-flex flex-1 items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white backdrop-blur transition-transform active:scale-95"
           >
             Voir l'offre
           </Link>
@@ -150,7 +160,6 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
                 await navigator.clipboard.writeText(shareUrl);
                 toast({ title: "Lien copié", description: "Vous pouvez le partager où vous voulez." });
               } catch (err) {
-                // L'utilisateur a annulé le partage natif : on ignore silencieusement.
                 if ((err as Error)?.name === "AbortError") return;
                 try {
                   await navigator.clipboard.writeText(shareUrl);
@@ -161,17 +170,10 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
               }
             }}
             aria-label={`Partager ${p.name}`}
-            className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition-transform active:scale-95"
+            className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white backdrop-blur transition-transform active:scale-95"
           >
             <Share2 className="h-4 w-4" />
           </button>
-          <Link
-            to="/magasins"
-            aria-label="Trouver un magasin"
-            className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition-transform active:scale-95"
-          >
-            <MapPin className="h-4 w-4" />
-          </Link>
         </div>
       </div>
 
