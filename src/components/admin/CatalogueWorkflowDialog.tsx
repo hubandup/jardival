@@ -72,6 +72,10 @@ export interface CatalogueLite {
   pdf_url: string | null;
   starts_at: string | null;
   ends_at: string | null;
+  cover_image?: string | null;
+  display_order?: number | null;
+  active?: boolean | null;
+  hero_colors?: Record<string, string> | null;
 }
 
 interface Props {
