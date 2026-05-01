@@ -43,14 +43,20 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority }: Ree
     >
       {/* Image centrée, max 700px */}
       <div className="absolute inset-0 flex items-center justify-center p-4 pb-44">
-        {p.image ? (
+        {p.image && priority !== "off" ? (
           <img
             src={p.image}
             alt={p.name}
             className="max-h-full w-auto max-w-full object-contain"
             style={{ maxWidth: "min(100%, 700px)" }}
-            loading={idx < 2 ? "eager" : "lazy"}
+            loading={priority === "high" ? "eager" : "lazy"}
+            // @ts-expect-error fetchpriority est valide HTML mais pas encore typé partout
+            fetchpriority={priority === "high" ? "high" : "low"}
+            decoding="async"
           />
+        ) : p.image ? (
+          // Slide hors zone de préchargement : on garde un placeholder vide pour ne pas déclencher la requête.
+          <div className="h-full w-full max-w-[700px]" aria-hidden />
         ) : (
           <div className="h-full w-full max-w-[700px] rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30" />
         )}
