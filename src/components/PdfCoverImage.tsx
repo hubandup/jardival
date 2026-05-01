@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { pdfjs } from "react-pdf";
+import { FileText } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Worker (même version que react-pdf)
 if (typeof window !== "undefined" && !pdfjs.GlobalWorkerOptions.workerSrc) {
@@ -78,15 +80,31 @@ export const PdfCoverImage = ({
   if (!src) {
     return (
       <div
-        className={className}
+        className={cn(
+          "relative overflow-hidden bg-muted/60",
+          className,
+        )}
         style={{
           ...style,
-          background: "hsl(var(--muted))",
           aspectRatio: "1 / 1.414",
         }}
         aria-label={alt}
+        aria-busy="true"
         role="img"
-      />
+      >
+        {/* Shimmer */}
+        <div
+          className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite]"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.35), transparent)",
+          }}
+        />
+        {/* Icône centrée discrète */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <FileText className="h-8 w-8 text-foreground/30" aria-hidden />
+        </div>
+      </div>
     );
   }
 
