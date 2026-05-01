@@ -11,7 +11,17 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon, Sparkles, Palette, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import CataloguePromoExtractor from "@/components/admin/CataloguePromoExtractor";
+import CatalogueWorkflowDialog, { type WorkflowStep } from "@/components/admin/CatalogueWorkflowDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { extractCoverPalette, type HeroPalette } from "@/lib/coverPalette";
 
 interface CatalogueRow {
