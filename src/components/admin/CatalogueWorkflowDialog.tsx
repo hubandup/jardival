@@ -993,6 +993,7 @@ function ScheduleStep({
   onChangeEnds,
   onPrev,
   onValidated,
+  onCatalogueUpdated,
 }: {
   catalogue: CatalogueLite;
   promos: WorkflowPromo[];
@@ -1002,11 +1003,42 @@ function ScheduleStep({
   onChangeEnds: (v: string) => void;
   onPrev: () => void;
   onValidated: () => void | Promise<void>;
+  onCatalogueUpdated?: () => void;
 }) {
   const [publishing, setPublishing] = useState(false);
+  const [title, setTitle] = useState(catalogue.title || "");
+  const [coverImage, setCoverImage] = useState<string | null>(catalogue.cover_image ?? null);
+  const [displayOrder, setDisplayOrder] = useState<number>(catalogue.display_order ?? 0);
+  const [active, setActive] = useState<boolean>(catalogue.active ?? true);
+  const [heroColors, setHeroColors] = useState<Record<string, string> | null>(
+    catalogue.hero_colors ?? null
+  );
+  const [uploadingCover, setUploadingCover] = useState(false);
   const selected = useMemo(() => promos.filter((p) => p.selected !== false), [promos]);
 
+  const uploadCover = async (file: File) => {
+    setUploadingCover(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `cover-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("catalogues").upload(path, file);
+      if (error) throw error;
+      const { data } = supabase.storage.from("catalogues").getPublicUrl(path);
+      setCoverImage(data.publicUrl);
+      toast.success("Couverture uploadée");
+    } catch (e) {
+      console.error(e);
+      toast.error("Erreur upload couverture");
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
   const publish = async () => {
+    if (!title.trim()) {
+      toast.error("Le titre est requis");
+      return;
+    }
     if (!selected.length) {
       toast.error("Aucune promotion à publier");
       return;
@@ -1017,7 +1049,6 @@ function ScheduleStep({
     }
     setPublishing(true);
     try {
-      // Désactive les anciennes promos liées à ce catalogue
       await supabase
         .from("promotions")
         .update({ active: false })
@@ -1038,12 +1069,20 @@ function ScheduleStep({
       const { error } = await supabase.from("promotions").insert(rows);
       if (error) throw error;
 
-      // MAJ dates du catalogue
       await supabase
         .from("catalogues")
-        .update({ starts_at: startsAt, ends_at: endsAt })
+        .update({
+          title: title.trim(),
+          cover_image: coverImage,
+          starts_at: startsAt,
+          ends_at: endsAt,
+          display_order: displayOrder,
+          active,
+          hero_colors: heroColors as never,
+        })
         .eq("id", catalogue.id);
 
+      onCatalogueUpdated?.();
       toast.success(`${rows.length} promotions publiées`);
       await onValidated();
     } catch (e) {
@@ -1055,10 +1094,19 @@ function ScheduleStep({
   };
 
   return (
-    <div className="space-y-4 py-4">
-      <div className="grid grid-cols-2 gap-4 max-w-md">
+    <div className="space-y-5 py-4">
+      <div className="space-y-2">
+        <Label>Titre du catalogue *</Label>
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="ex. Catalogue printemps 2026"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <Label>Date d'activation</Label>
+          <Label>Date d'activation *</Label>
           <Input
             type="date"
             value={startsAt}
@@ -1066,9 +1114,47 @@ function ScheduleStep({
           />
         </div>
         <div className="space-y-1">
-          <Label>Date de fin</Label>
+          <Label>Date de fin *</Label>
           <Input type="date" value={endsAt} onChange={(e) => onChangeEnds(e.target.value)} />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label>Ordre d'affichage</Label>
+          <Input
+            type="number"
+            value={displayOrder}
+            onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Actif</Label>
+          <div className="flex items-center h-10">
+            <Checkbox checked={active} onCheckedChange={(v) => setActive(!!v)} />
+            <span className="ml-2 text-sm text-muted-foreground">
+              Visible publiquement
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Image de couverture</Label>
+        {coverImage && (
+          <img src={coverImage} alt="" className="h-32 rounded-md object-cover border" />
+        )}
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={(e) => e.target.files?.[0] && uploadCover(e.target.files[0])}
+          disabled={uploadingCover}
+        />
+        {uploadingCover && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" /> Envoi…
+          </div>
+        )}
       </div>
 
       <div className="rounded-md border p-4 bg-muted/30">
@@ -1100,7 +1186,10 @@ function ScheduleStep({
         <Button variant="outline" onClick={onPrev}>
           <ChevronLeft className="h-4 w-4" /> Précédent
         </Button>
-        <Button onClick={publish} disabled={publishing || !selected.length || !startsAt || !endsAt}>
+        <Button
+          onClick={publish}
+          disabled={publishing || !selected.length || !startsAt || !endsAt || !title.trim()}
+        >
           {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           Programmer & publier
         </Button>
