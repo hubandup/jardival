@@ -254,15 +254,14 @@ export const MobilePromoReels = () => {
               ? "low"
               : "off";
         return (
-          <div key={`${p.id}-${idx}`} data-reel-index={idx} className="contents">
-            <ReelSlide
-              promo={p}
-              index={idx}
-              total={promos.length}
-              validityLabel={validityLabel}
-              priority={priority}
-            />
-          </div>
+          <ReelSlide
+            key={`${p.id}-${idx}`}
+            promo={p}
+            index={idx}
+            total={promos.length}
+            validityLabel={validityLabel}
+            priority={priority}
+          />
         );
       })}
 
