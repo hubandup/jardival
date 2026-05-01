@@ -23,11 +23,17 @@ interface CropResult {
   error?: string;
 }
 
+export interface CropOptions {
+  scale?: number; // 1..4, défaut 2
+  format?: "jpeg" | "png"; // défaut jpeg
+  quality?: number; // 0..1, défaut 0.92 (jpeg uniquement)
+}
+
 // Cache du PDF chargé (évite de re-fetch pour chaque page)
 let cachedPdfUrl: string | null = null;
 let cachedPdfDoc: pdfjsLib.PDFDocumentProxy | null = null;
 
-async function loadPdf(pdfUrl: string) {
+export async function loadPdf(pdfUrl: string) {
   if (cachedPdfUrl === pdfUrl && cachedPdfDoc) return cachedPdfDoc;
   const loadingTask = pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false });
   cachedPdfDoc = await loadingTask.promise;
@@ -36,7 +42,7 @@ async function loadPdf(pdfUrl: string) {
 }
 
 // Rend une page entière en canvas (résolution suffisante pour les crops)
-async function renderPage(
+export async function renderPage(
   pdf: pdfjsLib.PDFDocumentProxy,
   pageNumber: number,
   scale = 2
@@ -51,10 +57,14 @@ async function renderPage(
   return canvas;
 }
 
-// Crope une zone (en coordonnées 0-1000) et retourne un blob PNG
-function cropToBlob(pageCanvas: HTMLCanvasElement, bbox: Bbox): Promise<Blob | null> {
+// Crope une zone (en coordonnées 0-1000) et retourne un blob (jpeg ou png)
+function cropToBlob(
+  pageCanvas: HTMLCanvasElement,
+  bbox: Bbox,
+  format: "jpeg" | "png",
+  quality: number
+): Promise<Blob | null> {
   const [ymin, xmin, ymax, xmax] = bbox;
-  // Garde-fous : valeurs dans [0..1000] et bbox d'aire raisonnable
   const y1 = Math.max(0, Math.min(1000, ymin));
   const x1 = Math.max(0, Math.min(1000, xmin));
   const y2 = Math.max(0, Math.min(1000, ymax));
@@ -70,10 +80,16 @@ function cropToBlob(pageCanvas: HTMLCanvasElement, bbox: Bbox): Promise<Blob | n
   out.width = sw;
   out.height = sh;
   const ctx = out.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(pageCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
   return new Promise((resolve) => {
-    out.toBlob((b) => resolve(b), "image/jpeg", 0.88);
+    if (format === "png") {
+      out.toBlob((b) => resolve(b), "image/png");
+    } else {
+      out.toBlob((b) => resolve(b), "image/jpeg", quality);
+    }
   });
 }
 
@@ -90,11 +106,17 @@ function slugify(s: string): string {
 export async function cropAndUploadPromoImages(
   pdfUrl: string,
   tasks: CropTask[],
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number, total: number) => void,
+  options: CropOptions = {}
 ): Promise<CropResult[]> {
+  const scale = Math.max(1, Math.min(4, options.scale ?? 2));
+  const format = options.format ?? "jpeg";
+  const quality = options.quality ?? 0.92;
+  const ext = format === "png" ? "png" : "jpg";
+  const contentType = format === "png" ? "image/png" : "image/jpeg";
+
   const pdf = await loadPdf(pdfUrl);
 
-  // Groupe par page pour ne rendre chaque page qu'une fois
   const byPage = new Map<number, CropTask[]>();
   for (const t of tasks) {
     if (!byPage.has(t.pageNumber)) byPage.set(t.pageNumber, []);
@@ -108,7 +130,7 @@ export async function cropAndUploadPromoImages(
   for (const [pageNumber, pageTasks] of byPage) {
     let pageCanvas: HTMLCanvasElement | null = null;
     try {
-      pageCanvas = await renderPage(pdf, pageNumber, 2);
+      pageCanvas = await renderPage(pdf, pageNumber, scale);
     } catch (e) {
       console.error(`Render page ${pageNumber} failed`, e);
       for (const t of pageTasks) {
@@ -121,14 +143,14 @@ export async function cropAndUploadPromoImages(
 
     for (const t of pageTasks) {
       try {
-        const blob = await cropToBlob(pageCanvas, t.bbox);
+        const blob = await cropToBlob(pageCanvas, t.bbox, format, quality);
         if (!blob) {
           results.push({ filename: t.filename, publicUrl: null, error: "Bbox invalide" });
         } else {
-          const path = `extracted/${Date.now()}-${slugify(t.filename)}.jpg`;
+          const path = `extracted/${Date.now()}-${slugify(t.filename)}.${ext}`;
           const { error: upErr } = await supabase.storage
             .from("promo-images")
-            .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+            .upload(path, blob, { contentType, upsert: false });
           if (upErr) {
             console.error("Upload error", upErr);
             results.push({ filename: t.filename, publicUrl: null, error: upErr.message });
