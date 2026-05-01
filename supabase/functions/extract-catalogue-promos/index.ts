@@ -109,7 +109,8 @@ Pour chaque produit en promotion visible, retourne :
 - original_price : prix barré/avant promo s'il est affiché, sinon null
 - discount_percent : pourcentage de remise affiché s'il est visible, sinon calcule-le si tu as price + original_price
 - category : famille produit (ex "Barbecue & Plancha", "Végétaux", "Animalerie")
-- page_number : numéro de page où le produit apparaît
+- page_number : numéro de page où le produit apparaît (commence à 1)
+- bbox_2d : la zone qui contient l'IMAGE (la photo) du produit, au format [ymin, xmin, ymax, xmax] avec des entiers normalisés entre 0 et 1000 (0,0 = coin haut-gauche de la page ; 1000,1000 = coin bas-droit). Cible précisément le visuel produit, PAS le bloc texte/prix associé. Si plusieurs produits partagent une même photo de famille, donne la même bbox.
 
 N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les promotions distinctes.`;
 
