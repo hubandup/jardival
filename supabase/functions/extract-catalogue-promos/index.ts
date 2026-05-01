@@ -114,14 +114,21 @@ Pour chaque produit en promotion visible, retourne :
 
 N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les promotions distinctes.`;
 
+    // Timeout interne (plus court que la limite edge de 150s) pour pouvoir renvoyer une erreur propre
+    const aiController = new AbortController();
+    const aiTimeout = setTimeout(() => aiController.abort(), 140_000);
+
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: aiController.signal,
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        // gemini-2.5-flash : 3-5× plus rapide que pro sur PDF multi-pages,
+        // qualité d'extraction structurée suffisante avec tool calling.
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           {
@@ -181,7 +188,7 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
         ],
         tool_choice: { type: "function", function: { name: "save_promotions" } },
       }),
-    });
+    }).finally(() => clearTimeout(aiTimeout));
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
@@ -251,9 +258,14 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
     );
   } catch (e) {
     console.error("extract-catalogue-promos error", e);
+    const isAbort = e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"));
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erreur inconnue" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: isAbort
+          ? "L'analyse IA du PDF a dépassé 140s. Essayez avec un PDF plus court ou réessayez."
+          : e instanceof Error ? e.message : "Erreur inconnue",
+      }),
+      { status: isAbort ? 504 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
