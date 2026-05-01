@@ -1,10 +1,21 @@
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
 import cover from "@/assets/catalogue-cover.jpg";
 import { Download, Sparkles, Calendar } from "lucide-react";
 import { useCatalogues } from "@/hooks/usePromotions";
+import { useCoverPalette } from "@/hooks/useCoverPalette";
+import type { HeroPalette } from "@/lib/coverPalette";
 
 const FALLBACK_PDF_URL = "/catalogue-jardival-jardinales.pdf";
 const VIEWER_URL = "/catalogue";
+
+// Palette par défaut (jaune Jardival) si aucune image / extraction échoue.
+const FALLBACK_PALETTE: HeroPalette = {
+  primary: "45 90% 55%",
+  secondary: "45 85% 52%",
+  accent: "40 85% 48%",
+  foreground: "20 14% 12%",
+};
 
 export const CatalogueBanner = () => {
   const { data: catalogues } = useCatalogues();
@@ -17,39 +28,98 @@ export const CatalogueBanner = () => {
     ? `Jusqu'au ${new Date(active.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
     : "Jusqu'au 16 mai 2026";
 
+  // Override admin (champ hero_colors sur le catalogue) > extraction auto > fallback.
+  const overrides = (active as { hero_colors?: Partial<HeroPalette> | null } | undefined)
+    ?.hero_colors;
+  const auto = useCoverPalette(coverImg);
+
+  const palette: HeroPalette = useMemo(
+    () => ({
+      primary: overrides?.primary ?? auto?.primary ?? FALLBACK_PALETTE.primary,
+      secondary:
+        overrides?.secondary ?? auto?.secondary ?? FALLBACK_PALETTE.secondary,
+      accent: overrides?.accent ?? auto?.accent ?? FALLBACK_PALETTE.accent,
+      foreground:
+        overrides?.foreground ?? auto?.foreground ?? FALLBACK_PALETTE.foreground,
+    }),
+    [overrides, auto],
+  );
+
+  // Variables CSS scopées à la section uniquement.
+  const styleVars = {
+    "--hero-primary": palette.primary,
+    "--hero-secondary": palette.secondary,
+    "--hero-accent": palette.accent,
+    "--hero-fg": palette.foreground,
+    background: `linear-gradient(135deg, hsl(var(--hero-primary)), hsl(var(--hero-secondary)) 50%, hsl(var(--hero-accent)))`,
+  } as React.CSSProperties;
+
   return (
-    <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-[hsl(45,90%,55%)] via-[hsl(45,85%,52%)] to-[hsl(40,85%,48%)]">
-      <div className="absolute inset-0 opacity-20" aria-hidden>
-        <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-white blur-3xl" />
-        <div className="absolute -right-10 bottom-0 h-72 w-72 rounded-full bg-primary blur-3xl" />
+    <section
+      className="relative overflow-hidden border-b border-border transition-colors duration-700"
+      style={styleVars}
+    >
+      <div className="absolute inset-0 opacity-25" aria-hidden>
+        <div
+          className="absolute -left-20 top-0 h-72 w-72 rounded-full blur-3xl"
+          style={{ background: "hsl(var(--hero-secondary))" }}
+        />
+        <div
+          className="absolute -right-10 bottom-0 h-72 w-72 rounded-full blur-3xl"
+          style={{ background: "hsl(var(--hero-accent))" }}
+        />
       </div>
 
-      <div className="container-px relative mx-auto flex max-w-7xl flex-col items-center gap-8 py-10 md:flex-row md:gap-12 md:py-12">
+      <div
+        className="container-px relative mx-auto flex max-w-7xl flex-col items-center gap-8 py-10 md:flex-row md:gap-12 md:py-12"
+        style={{ color: "hsl(var(--hero-fg))" }}
+      >
         <Link
           to={VIEWER_URL}
           className="group relative shrink-0"
           aria-label={`Feuilleter le catalogue ${title} en ligne`}
         >
-          <div className="absolute -inset-2 rounded-xl bg-foreground/10 blur-xl transition-opacity group-hover:opacity-70" />
+          <div
+            className="absolute -inset-2 rounded-xl blur-xl transition-opacity group-hover:opacity-70"
+            style={{ background: "hsl(var(--hero-fg) / 0.1)" }}
+          />
           <img
             src={coverImg}
             alt={`Catalogue ${title} Jardival`}
-            className="relative h-44 w-auto rounded-lg shadow-glow ring-1 ring-foreground/10 transition-transform group-hover:-rotate-2 group-hover:scale-105 md:h-52"
+            className="relative h-44 w-auto rounded-lg shadow-glow ring-1 transition-transform group-hover:-rotate-2 group-hover:scale-105 md:h-52"
+            style={{
+              boxShadow: `0 25px 50px -12px hsl(var(--hero-fg) / 0.35)`,
+            }}
             loading="eager"
           />
-          <span className="absolute -right-3 -top-3 inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground shadow-card">
+          <span
+            className="absolute -right-3 -top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-card"
+            style={{
+              background: "hsl(var(--hero-accent))",
+              color: "hsl(var(--hero-fg))",
+            }}
+          >
             <Sparkles className="h-3 w-3" /> Nouveau
           </span>
         </Link>
 
         <div className="flex-1 text-center md:text-left">
-          <span className="inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-foreground/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground">
+          <span
+            className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wider"
+            style={{
+              borderColor: "hsl(var(--hero-fg) / 0.2)",
+              background: "hsl(var(--hero-fg) / 0.05)",
+            }}
+          >
             <Calendar className="h-3.5 w-3.5" /> {validity}
           </span>
-          <h2 className="mt-3 font-display text-3xl font-semibold leading-tight text-foreground md:text-4xl lg:text-5xl">
+          <h2 className="mt-3 font-display text-3xl font-semibold leading-tight md:text-4xl lg:text-5xl">
             Le catalogue <span className="italic">{title}</span> est arrivé
           </h2>
-          <p className="mt-3 max-w-xl text-foreground/75 md:text-lg">
+          <p
+            className="mt-3 max-w-xl md:text-lg"
+            style={{ color: "hsl(var(--hero-fg) / 0.75)" }}
+          >
             Retrouvez toutes les promotions du moment dans votre magasin Jardival : barbecues, mobilier, plantes et accessoires de jardin.
           </p>
 
@@ -57,14 +127,25 @@ export const CatalogueBanner = () => {
             <a
               href={pdfUrl}
               download
-              className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background shadow-card transition-all hover:scale-[1.02] hover:shadow-glow"
+              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-card transition-all hover:scale-[1.02] hover:shadow-glow"
+              style={{
+                background: "hsl(var(--hero-fg))",
+                color: palette.foreground.startsWith("0 0%")
+                  ? "hsl(var(--hero-primary))"
+                  : "hsl(0 0% 98%)",
+              }}
             >
               <Download className="h-4 w-4" />
               Télécharger le catalogue
             </a>
             <Link
               to={VIEWER_URL}
-              className="inline-flex items-center gap-2 rounded-full border border-foreground/30 bg-background/30 px-6 py-3 text-sm font-semibold text-foreground backdrop-blur transition-colors hover:bg-background/60"
+              className="inline-flex items-center gap-2 rounded-full border px-6 py-3 text-sm font-semibold backdrop-blur transition-colors"
+              style={{
+                borderColor: "hsl(var(--hero-fg) / 0.3)",
+                background: "hsl(var(--hero-fg) / 0.08)",
+                color: "hsl(var(--hero-fg))",
+              }}
             >
               Feuilleter en ligne
             </Link>
