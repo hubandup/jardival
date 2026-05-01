@@ -276,24 +276,36 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                       <SelectItem value="png">PNG (sans perte)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExtractImages}
-                    disabled={extractingImages || extracting}
-                    title="Découpe les photos produits depuis le PDF"
-                  >
-                    {extractingImages ? (
+                  {(() => {
+                    const selectedWithBbox = promos.filter(
+                      (p) => p.selected !== false && p.bbox_2d && p.page_number
+                    ).length;
+                    const hasAnyImage = promos.some((p) => p.image_url);
+                    return (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Images {imgProgress ? `${imgProgress.done}/${imgProgress.total}` : ""}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleExtractImages}
+                          disabled={extractingImages || extracting || selectedWithBbox === 0}
+                          title="Découpe les photos produits depuis le PDF (toutes les promos sélectionnées)"
+                        >
+                          {extractingImages ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Images {imgProgress ? `${imgProgress.done}/${imgProgress.total}` : ""}
+                            </>
+                          ) : (
+                            <>
+                              <ImageIcon className="h-4 w-4" />
+                              {hasAnyImage ? "Recalculer les images" : "Extraire les images"}
+                              {selectedWithBbox > 0 && ` (${selectedWithBbox})`}
+                            </>
+                          )}
+                        </Button>
                       </>
-                    ) : (
-                      <>
-                        <ImageIcon className="h-4 w-4" /> Extraire les images
-                      </>
-                    )}
-                  </Button>
+                    );
+                  })()}
                   <Button variant="outline" size="sm" onClick={handleExtract} disabled={extracting}>
                     {extracting && <Loader2 className="h-4 w-4 animate-spin" />}
                     Relancer
