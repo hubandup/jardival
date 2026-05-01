@@ -6,6 +6,7 @@ import { useCatalogues } from "@/hooks/usePromotions";
 import { useCoverPalette } from "@/hooks/useCoverPalette";
 import type { HeroPalette } from "@/lib/coverPalette";
 import { PdfCoverImage } from "@/components/PdfCoverImage";
+import { getCachedPdfCover, renderPdfCover } from "@/lib/pdfCover";
 
 const FALLBACK_PDF_URL = "/catalogue-jardival-jardinales.pdf";
 const VIEWER_URL = "/catalogue";
