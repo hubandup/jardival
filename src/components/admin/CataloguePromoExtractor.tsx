@@ -324,12 +324,32 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                             bbox: p.bbox_2d,
                             index: idx + 1,
                             label: p.title,
+                            subLabel: [
+                              p.price != null ? `${p.price} €` : null,
+                              p.original_price != null ? `au lieu de ${p.original_price} €` : null,
+                              p.discount_percent ? `-${p.discount_percent}%` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · "),
                             selected: p.selected !== false,
                           }
                         : null
                     )
                     .filter((b): b is PreviewBox => b !== null)}
                   onToggleBox={(i) => updatePromo(i, { selected: !promos[i].selected })}
+                  onDeleteBox={(i) => removePromo(i)}
+                  onUpdateBbox={(i, bbox) => updatePromo(i, { bbox_2d: bbox })}
+                  onAddBox={(pageNumber, bbox) =>
+                    setPromos((prev) => [
+                      ...prev,
+                      {
+                        title: `Nouvelle zone (page ${pageNumber})`,
+                        page_number: pageNumber,
+                        bbox_2d: bbox,
+                        selected: true,
+                      },
+                    ])
+                  }
                 />
               )}
 
