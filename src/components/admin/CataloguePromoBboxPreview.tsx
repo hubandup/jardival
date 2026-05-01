@@ -87,6 +87,7 @@ export default function CataloguePromoBboxPreview({
   const [pageImages, setPageImages] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null); // index 0-based de la promo actuellement sélectionnée pour édition
 
   // Pages présentes dans les bboxes OU pages dans lesquelles on veut ajouter (toutes les pages connues).
   const pages = useMemo(() => {
