@@ -241,14 +241,39 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
 
           {promos.length > 0 && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <p className="text-sm text-muted-foreground">
                   {selectedCount} / {promos.length} promotions sélectionnées
+                  {promos.some((p) => p.image_url) && (
+                    <span className="ml-2">
+                      · {promos.filter((p) => p.image_url).length} avec image
+                    </span>
+                  )}
                 </p>
-                <Button variant="outline" size="sm" onClick={handleExtract} disabled={extracting}>
-                  {extracting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Relancer l'extraction
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExtractImages}
+                    disabled={extractingImages || extracting}
+                    title="Découpe les photos produits depuis le PDF"
+                  >
+                    {extractingImages ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Images {imgProgress ? `${imgProgress.done}/${imgProgress.total}` : ""}
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="h-4 w-4" /> Extraire les images
+                      </>
+                    )}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleExtract} disabled={extracting}>
+                    {extracting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Relancer
+                  </Button>
+                </div>
               </div>
 
               <div className="border rounded-md max-h-[50vh] overflow-y-auto">
@@ -256,6 +281,7 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10"></TableHead>
+                      <TableHead className="w-16">Image</TableHead>
                       <TableHead>Titre</TableHead>
                       <TableHead>Catégorie</TableHead>
                       <TableHead className="w-24">Prix</TableHead>
