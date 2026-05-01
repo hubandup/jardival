@@ -59,7 +59,7 @@ export const DirectionsMenu = ({
         {PROVIDERS.map((p) => (
           <DropdownMenuItem key={p.id} asChild>
             <a
-              href={directionsUrlFor(store, p.id)}
+              href={directionsUrlFor(store, p.id, origin)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex cursor-pointer items-center gap-3 px-2 py-2"
