@@ -4,7 +4,7 @@ import { Loader2, Tag, MapPin, ChevronUp, Share2 } from "lucide-react";
 import { usePromotions, useCatalogues } from "@/hooks/usePromotions";
 import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
 import { promotionToProduct } from "@/lib/promotion";
-import { useCoverPalette } from "@/hooks/useCoverPalette";
+
 import { toast } from "@/hooks/use-toast";
 import type { Product } from "@/types/product";
 
