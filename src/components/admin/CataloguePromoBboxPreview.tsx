@@ -52,7 +52,7 @@ export default function CataloguePromoBboxPreview({
   onUpdateBbox,
   onAddBox,
 }: Props) {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(true);
   const [loading, setLoading] = useState(false);
   const [pageImages, setPageImages] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
