@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import cover from "@/assets/catalogue-cover.jpg";
 import { Download, Sparkles, Calendar } from "lucide-react";
 import { useCatalogues } from "@/hooks/usePromotions";
 import { useCoverPalette } from "@/hooks/useCoverPalette";
 import type { HeroPalette } from "@/lib/coverPalette";
 import { PdfCoverImage } from "@/components/PdfCoverImage";
+import { getCachedPdfCover, renderPdfCover } from "@/lib/pdfCover";
 
 const FALLBACK_PDF_URL = "/catalogue-jardival-jardinales.pdf";
 const VIEWER_URL = "/catalogue";
@@ -31,7 +32,29 @@ export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {
   // Stratégie : cover_image admin > rendu auto de la 1re page du PDF > image fallback statique.
   const hasExplicitCover = !!active?.cover_image;
   const hasPdf = !!active?.pdf_url;
-  const [pdfCoverDataUrl, setPdfCoverDataUrl] = useState<string | null>(null);
+  // Initialisation synchrone depuis le cache global pdfCover : si la 1re page du PDF
+  // a déjà été rendue (par PdfCoverImage ou un précédent montage), on l'a tout de suite,
+  // ce qui évite un 1er rendu sur la couverture jaune statique.
+  const [pdfCoverDataUrl, setPdfCoverDataUrl] = useState<string | null>(() =>
+    getCachedPdfCover(pdfUrl),
+  );
+
+  // Forçage de l'extraction PDF dès qu'on connaît l'URL et qu'aucune cover_image n'est fournie.
+  // Indispensable côté mobile/simplified : on n'utilise pas <PdfCoverImage>, donc personne
+  // d'autre ne déclenche le rendu canvas du PDF.
+  useEffect(() => {
+    if (active?.cover_image) return; // cover_image fournie : palette extraite directement de l'image
+    if (!pdfUrl) return;
+    if (pdfCoverDataUrl) return;
+    let cancelled = false;
+    renderPdfCover(pdfUrl).then((dataUrl) => {
+      if (!cancelled && dataUrl) setPdfCoverDataUrl(dataUrl);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [active?.cover_image, pdfUrl, pdfCoverDataUrl]);
+
   const coverImg = active?.cover_image ?? pdfCoverDataUrl ?? cover;
   // Image utilisée pour extraire la palette : on attend la vraie couverture du catalogue
   // (cover_image admin ou rendu PDF) avant d'extraire les couleurs, sinon on extrairait

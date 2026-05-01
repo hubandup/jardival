@@ -1,15 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { pdfjs } from "react-pdf";
 import { FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Worker (même version que react-pdf)
-if (typeof window !== "undefined" && !pdfjs.GlobalWorkerOptions.workerSrc) {
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-}
-
-// Cache global pour ne pas re-rendre la même page à chaque montage.
-const cache = new Map<string, string>();
+import { getCachedPdfCover, renderPdfCover } from "@/lib/pdfCover";
 
 type Props = {
   pdfUrl: string;
@@ -23,6 +15,7 @@ type Props = {
 
 /**
  * Rend la première page d'un PDF comme image (fallback couverture).
+ * Utilise le cache partagé `pdfCover` pour éviter le double rendu.
  */
 export const PdfCoverImage = ({
   pdfUrl,
@@ -32,12 +25,12 @@ export const PdfCoverImage = ({
   width = 600,
   onReady,
 }: Props) => {
-  const [src, setSrc] = useState<string | null>(() => cache.get(pdfUrl) ?? null);
+  const [src, setSrc] = useState<string | null>(() => getCachedPdfCover(pdfUrl));
   const cancelled = useRef(false);
 
   useEffect(() => {
     cancelled.current = false;
-    const cached = cache.get(pdfUrl);
+    const cached = getCachedPdfCover(pdfUrl);
     if (cached) {
       setSrc(cached);
       onReady?.(cached);
@@ -45,32 +38,11 @@ export const PdfCoverImage = ({
     }
     setSrc(null);
 
-    (async () => {
-      try {
-        const loadingTask = pdfjs.getDocument(pdfUrl);
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
-        const baseViewport = page.getViewport({ scale: 1 });
-        const scale = width / baseViewport.width;
-        const viewport = page.getViewport({ scale });
-
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-        cache.set(pdfUrl, dataUrl);
-        if (!cancelled.current) {
-          setSrc(dataUrl);
-          onReady?.(dataUrl);
-        }
-      } catch (err) {
-        console.warn("[PdfCoverImage] Échec rendu 1re page", err);
-      }
-    })();
+    renderPdfCover(pdfUrl, width).then((dataUrl) => {
+      if (cancelled.current || !dataUrl) return;
+      setSrc(dataUrl);
+      onReady?.(dataUrl);
+    });
 
     return () => {
       cancelled.current = true;
