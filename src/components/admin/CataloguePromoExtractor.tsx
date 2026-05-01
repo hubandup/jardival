@@ -24,9 +24,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Loader2, Sparkles, Trash2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { cropAndUploadPromoImages } from "@/lib/pdfImageCrop";
 
 interface ExtractedPromo {
   title: string;
@@ -36,6 +37,8 @@ interface ExtractedPromo {
   discount_percent?: number | null;
   category?: string | null;
   page_number?: number | null;
+  bbox_2d?: [number, number, number, number] | null;
+  image_url?: string | null;
   selected?: boolean;
 }
 
@@ -58,6 +61,53 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
   const [mode, setMode] = useState<"replace" | "deactivate">("deactivate");
   const [importing, setImporting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [extractingImages, setExtractingImages] = useState(false);
+  const [imgProgress, setImgProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const handleExtractImages = async () => {
+    if (!catalogue.pdf_url) {
+      toast.error("Pas de PDF associé");
+      return;
+    }
+    const tasks = promos
+      .map((p, idx) => ({ p, idx }))
+      .filter(({ p }) => p.bbox_2d && p.page_number && p.selected !== false)
+      .map(({ p, idx }) => ({
+        pageNumber: p.page_number!,
+        bbox: p.bbox_2d!,
+        filename: `${idx}-${p.title}`,
+      }));
+    if (!tasks.length) {
+      toast.error("Aucune zone d'image détectée par l'IA");
+      return;
+    }
+    setExtractingImages(true);
+    setImgProgress({ done: 0, total: tasks.length });
+    try {
+      const results = await cropAndUploadPromoImages(
+        catalogue.pdf_url,
+        tasks,
+        (done, total) => setImgProgress({ done, total })
+      );
+      // Indexe par filename (qui contient l'idx)
+      const byFilename = new Map(results.map((r) => [r.filename, r.publicUrl]));
+      setPromos((prev) =>
+        prev.map((p, idx) => {
+          const key = `${idx}-${p.title}`;
+          const url = byFilename.get(key);
+          return url ? { ...p, image_url: url } : p;
+        })
+      );
+      const ok = results.filter((r) => r.publicUrl).length;
+      const fail = results.length - ok;
+      toast.success(`${ok} images extraites${fail ? ` (${fail} échec${fail > 1 ? "s" : ""})` : ""}`);
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Erreur extraction images");
+    } finally {
+      setExtractingImages(false);
+    }
+  };
 
   const handleExtract = async () => {
     if (!catalogue.pdf_url) {
@@ -130,6 +180,7 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
         description: p.description ?? p.category ?? null,
         price: p.price ?? 0,
         original_price: p.original_price ?? null,
+        image: p.image_url ?? null,
         starts_at: catalogue.starts_at,
         ends_at: catalogue.ends_at,
         active: true,
@@ -190,14 +241,39 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
 
           {promos.length > 0 && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <p className="text-sm text-muted-foreground">
                   {selectedCount} / {promos.length} promotions sélectionnées
+                  {promos.some((p) => p.image_url) && (
+                    <span className="ml-2">
+                      · {promos.filter((p) => p.image_url).length} avec image
+                    </span>
+                  )}
                 </p>
-                <Button variant="outline" size="sm" onClick={handleExtract} disabled={extracting}>
-                  {extracting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Relancer l'extraction
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExtractImages}
+                    disabled={extractingImages || extracting}
+                    title="Découpe les photos produits depuis le PDF"
+                  >
+                    {extractingImages ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Images {imgProgress ? `${imgProgress.done}/${imgProgress.total}` : ""}
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="h-4 w-4" /> Extraire les images
+                      </>
+                    )}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleExtract} disabled={extracting}>
+                    {extracting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Relancer
+                  </Button>
+                </div>
               </div>
 
               <div className="border rounded-md max-h-[50vh] overflow-y-auto">
@@ -205,6 +281,7 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10"></TableHead>
+                      <TableHead className="w-16">Image</TableHead>
                       <TableHead>Titre</TableHead>
                       <TableHead>Catégorie</TableHead>
                       <TableHead className="w-24">Prix</TableHead>
@@ -222,6 +299,24 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                             checked={p.selected}
                             onCheckedChange={(v) => updatePromo(i, { selected: !!v })}
                           />
+                        </TableCell>
+                        <TableCell>
+                          {p.image_url ? (
+                            <img
+                              src={p.image_url}
+                              alt=""
+                              className="h-10 w-10 rounded object-cover border"
+                            />
+                          ) : p.bbox_2d ? (
+                            <div
+                              className="h-10 w-10 rounded border border-dashed flex items-center justify-center text-muted-foreground"
+                              title="Zone détectée, image non encore extraite"
+                            >
+                              <ImageIcon className="h-4 w-4" />
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Input

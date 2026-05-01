@@ -22,6 +22,8 @@ interface ExtractedPromo {
   discount_percent?: number | null;
   category?: string | null;
   page_number?: number | null;
+  // Bounding box au format Gemini : [ymin, xmin, ymax, xmax] normalisé 0-1000
+  bbox_2d?: [number, number, number, number] | null;
 }
 
 Deno.serve(async (req) => {
@@ -107,7 +109,8 @@ Pour chaque produit en promotion visible, retourne :
 - original_price : prix barré/avant promo s'il est affiché, sinon null
 - discount_percent : pourcentage de remise affiché s'il est visible, sinon calcule-le si tu as price + original_price
 - category : famille produit (ex "Barbecue & Plancha", "Végétaux", "Animalerie")
-- page_number : numéro de page où le produit apparaît
+- page_number : numéro de page où le produit apparaît (commence à 1)
+- bbox_2d : la zone qui contient l'IMAGE (la photo) du produit, au format [ymin, xmin, ymax, xmax] avec des entiers normalisés entre 0 et 1000 (0,0 = coin haut-gauche de la page ; 1000,1000 = coin bas-droit). Cible précisément le visuel produit, PAS le bloc texte/prix associé. Si plusieurs produits partagent une même photo de famille, donne la même bbox.
 
 N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les promotions distinctes.`;
 
@@ -159,6 +162,13 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
                         discount_percent: { type: "number" },
                         category: { type: "string" },
                         page_number: { type: "number" },
+                        bbox_2d: {
+                          type: "array",
+                          description: "Bounding box de l'image produit : [ymin, xmin, ymax, xmax] normalisé 0-1000",
+                          items: { type: "number" },
+                          minItems: 4,
+                          maxItems: 4,
+                        },
                       },
                       required: ["title"],
                     },
@@ -231,6 +241,7 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
         discount_percent: discount,
         category: p.category ?? null,
         page_number: p.page_number ?? null,
+        bbox_2d: Array.isArray(p.bbox_2d) && p.bbox_2d.length === 4 ? p.bbox_2d : null,
       };
     }).filter((p) => p.title.length > 0);
 
