@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalogue_extraction_stats: {
+        Row: {
+          aspect_ratio: number | null
+          bbox_height: number | null
+          bbox_width: number | null
+          bbox_xmax: number
+          bbox_xmin: number
+          bbox_ymax: number
+          bbox_ymin: number
+          catalogue_id: string | null
+          category: string | null
+          created_at: string
+          had_original_price: boolean
+          had_price: boolean
+          id: string
+          page_number: number | null
+        }
+        Insert: {
+          aspect_ratio?: number | null
+          bbox_height?: number | null
+          bbox_width?: number | null
+          bbox_xmax: number
+          bbox_xmin: number
+          bbox_ymax: number
+          bbox_ymin: number
+          catalogue_id?: string | null
+          category?: string | null
+          created_at?: string
+          had_original_price?: boolean
+          had_price?: boolean
+          id?: string
+          page_number?: number | null
+        }
+        Update: {
+          aspect_ratio?: number | null
+          bbox_height?: number | null
+          bbox_width?: number | null
+          bbox_xmax?: number
+          bbox_xmin?: number
+          bbox_ymax?: number
+          bbox_ymin?: number
+          catalogue_id?: string | null
+          category?: string | null
+          created_at?: string
+          had_original_price?: boolean
+          had_price?: boolean
+          id?: string
+          page_number?: number | null
+        }
+        Relationships: []
+      }
       catalogue_extractions: {
         Row: {
           catalogue_id: string
