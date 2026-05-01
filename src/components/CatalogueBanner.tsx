@@ -33,6 +33,10 @@ export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {
   const hasPdf = !!active?.pdf_url;
   const [pdfCoverDataUrl, setPdfCoverDataUrl] = useState<string | null>(null);
   const coverImg = active?.cover_image ?? pdfCoverDataUrl ?? cover;
+  // Image utilisée pour extraire la palette : on attend la vraie couverture du catalogue
+  // (cover_image admin ou rendu PDF) avant d'extraire les couleurs, sinon on extrairait
+  // celles de l'image statique de fallback (jaune Jardival), qui ne reflètent pas le catalogue.
+  const paletteSource = active?.cover_image ?? pdfCoverDataUrl ?? null;
   const title = active?.title ?? "Jardinales";
   const validity = active?.ends_at
     ? `Jusqu'au ${new Date(active.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
@@ -41,7 +45,7 @@ export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {
   // Override admin (champ hero_colors sur le catalogue) > extraction auto > fallback.
   const overrides = (active as { hero_colors?: Partial<HeroPalette> | null } | undefined)
     ?.hero_colors;
-  const auto = useCoverPalette(coverImg);
+  const auto = useCoverPalette(paletteSource);
 
   const palette: HeroPalette = useMemo(
     () => ({
