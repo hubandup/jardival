@@ -16,6 +16,7 @@ interface Props {
   size?: "default" | "sm";
   className?: string;
   label?: string;
+  origin?: [number, number] | null;
 }
 
 const PROVIDERS: { id: DirectionsProvider; name: string; emoji: string; hint: string }[] = [
