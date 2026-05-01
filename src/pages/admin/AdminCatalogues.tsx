@@ -9,9 +9,10 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon, Sparkles, Palette, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import CataloguePromoExtractor from "@/components/admin/CataloguePromoExtractor";
+import { extractCoverPalette, type HeroPalette } from "@/lib/coverPalette";
 
 interface CatalogueRow {
   id: string;
@@ -22,6 +23,7 @@ interface CatalogueRow {
   ends_at: string | null;
   display_order: number;
   active: boolean;
+  hero_colors: Partial<HeroPalette> | null;
 }
 
 const empty = (): Omit<CatalogueRow, "id"> => ({
@@ -32,6 +34,7 @@ const empty = (): Omit<CatalogueRow, "id"> => ({
   ends_at: null,
   display_order: 0,
   active: true,
+  hero_colors: null,
 });
 
 export default function AdminCatalogues() {
