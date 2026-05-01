@@ -65,6 +65,8 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [extractingImages, setExtractingImages] = useState(false);
   const [imgProgress, setImgProgress] = useState<{ done: number; total: number } | null>(null);
+  const [cropScale, setCropScale] = useState<"2" | "3" | "4">("3");
+  const [cropFormat, setCropFormat] = useState<"jpeg" | "png">("jpeg");
 
   const handleExtractImages = async () => {
     if (!catalogue.pdf_url) {
