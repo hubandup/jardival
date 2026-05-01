@@ -22,6 +22,8 @@ interface ExtractedPromo {
   discount_percent?: number | null;
   category?: string | null;
   page_number?: number | null;
+  // Bounding box au format Gemini : [ymin, xmin, ymax, xmax] normalisé 0-1000
+  bbox_2d?: [number, number, number, number] | null;
 }
 
 Deno.serve(async (req) => {
