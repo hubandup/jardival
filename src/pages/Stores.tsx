@@ -21,11 +21,15 @@ import {
 } from "@/components/ui/breadcrumb";
 
 const Stores = () => {
+  const [searchParams] = useSearchParams();
+  const autoGeo = searchParams.get("geo") === "1";
   const [query, setQuery] = useState("");
   const [dept, setDept] = useState<string>("Tous");
   const [activeId, setActiveId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const { data: stores = [], isLoading } = useStores();
+  const { state: geoState, request: requestGeo } = useGeolocation(autoGeo);
+  const userPos = geoState.status === "ready" ? geoState.position : null;
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
