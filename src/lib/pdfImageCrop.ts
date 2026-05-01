@@ -179,3 +179,102 @@ export function clearPdfCache() {
   cachedPdfDoc = null;
   cachedPdfUrl = null;
 }
+
+/**
+ * Analyse les pixels d'une bbox pour déterminer si son contenu non-blanc
+ * est concentré sur une bande de bord ≤ `edgeFraction` (5% par défaut).
+ */
+function analyseBboxEdges(
+  pageCanvas: HTMLCanvasElement,
+  bbox: Bbox,
+  edgeFraction = 0.05
+): { isEdgeOnly: boolean; totalNonWhiteRatio: number; innerShare: number } {
+  const [ymin, xmin, ymax, xmax] = bbox;
+  const sx = Math.max(0, Math.floor((xmin / 1000) * pageCanvas.width));
+  const sy = Math.max(0, Math.floor((ymin / 1000) * pageCanvas.height));
+  const sw = Math.max(1, Math.ceil(((xmax - xmin) / 1000) * pageCanvas.width));
+  const sh = Math.max(1, Math.ceil(((ymax - ymin) / 1000) * pageCanvas.height));
+
+  const ctx = pageCanvas.getContext("2d");
+  if (!ctx) return { isEdgeOnly: false, totalNonWhiteRatio: 1, innerShare: 1 };
+
+  let imgData: ImageData;
+  try {
+    imgData = ctx.getImageData(sx, sy, sw, sh);
+  } catch {
+    return { isEdgeOnly: false, totalNonWhiteRatio: 1, innerShare: 1 };
+  }
+  const data = imgData.data;
+
+  const step = Math.max(1, Math.floor(Math.min(sw, sh) / 80));
+  const innerXmin = Math.floor(sw * edgeFraction);
+  const innerXmax = sw - innerXmin;
+  const innerYmin = Math.floor(sh * edgeFraction);
+  const innerYmax = sh - innerYmin;
+
+  let total = 0;
+  let nonWhiteTotal = 0;
+  let nonWhiteInner = 0;
+
+  for (let y = 0; y < sh; y += step) {
+    for (let x = 0; x < sw; x += step) {
+      const i = (y * sw + x) * 4;
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const isNonWhite = r < 240 || g < 240 || b < 240;
+      total++;
+      if (isNonWhite) {
+        nonWhiteTotal++;
+        if (x >= innerXmin && x < innerXmax && y >= innerYmin && y < innerYmax) {
+          nonWhiteInner++;
+        }
+      }
+    }
+  }
+
+  const totalNonWhiteRatio = total > 0 ? nonWhiteTotal / total : 0;
+  const innerShare = nonWhiteTotal > 0 ? nonWhiteInner / nonWhiteTotal : 1;
+
+  // La bbox est "vide à l'intérieur" : très peu de contenu non-blanc,
+  // et ce contenu est presque exclusivement collé aux bords.
+  const isEdgeOnly =
+    nonWhiteTotal > 0 && totalNonWhiteRatio < 0.05 && innerShare < 0.15;
+
+  return { isEdgeOnly, totalNonWhiteRatio, innerShare };
+}
+
+/**
+ * Pour une liste de bboxes, retourne les indices dont la zone ne contient
+ * qu'un fragment d'image en bord (< 5%). Ces zones doivent être supprimées.
+ */
+export async function detectEdgeOnlyBboxes(
+  pdfUrl: string,
+  items: Array<{ pageNumber: number; bbox: Bbox }>
+): Promise<number[]> {
+  if (!items.length) return [];
+  const pdf = await loadPdf(pdfUrl);
+  const byPage = new Map<number, number[]>();
+  items.forEach((it, idx) => {
+    if (!byPage.has(it.pageNumber)) byPage.set(it.pageNumber, []);
+    byPage.get(it.pageNumber)!.push(idx);
+  });
+
+  const toDrop: number[] = [];
+  for (const [pageNumber, idxs] of byPage) {
+    let pageCanvas: HTMLCanvasElement;
+    try {
+      pageCanvas = await renderPage(pdf, pageNumber, 1.5);
+    } catch (e) {
+      console.warn(`Render page ${pageNumber} skipped`, e);
+      continue;
+    }
+    for (const idx of idxs) {
+      try {
+        const r = analyseBboxEdges(pageCanvas, items[idx].bbox, 0.05);
+        if (r.isEdgeOnly) toDrop.push(idx);
+      } catch (e) {
+        console.warn("analyseBboxEdges error", e);
+      }
+    }
+  }
+  return toDrop;
+}

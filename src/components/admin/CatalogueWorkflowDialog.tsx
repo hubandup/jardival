@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { cropAndUploadPromoImages } from "@/lib/pdfImageCrop";
+import { cropAndUploadPromoImages, detectEdgeOnlyBboxes } from "@/lib/pdfImageCrop";
 import CataloguePromoBboxPreview, { type PreviewBox } from "./CataloguePromoBboxPreview";
 
 export type WorkflowStep = "upload" | "zones" | "tableau" | "programmation";
@@ -480,17 +480,58 @@ function ZonesStep({
     setExtracting(true);
     try {
       const absoluteUrl = new URL(pdfUrl, window.location.origin).toString();
+      // Apprentissage local : si on a déjà des bboxes ajustées, on les renvoie comme exemples.
+      const previous_boxes = promos
+        .filter((p) => p.bbox_2d && p.page_number)
+        .map((p) => ({
+          page_number: p.page_number,
+          bbox_2d: p.bbox_2d,
+          title: p.title,
+        }));
       const { data, error } = await supabase.functions.invoke("extract-catalogue-promos", {
-        body: { pdf_url: absoluteUrl, starts_at: catalogue.starts_at, ends_at: catalogue.ends_at },
+        body: {
+          pdf_url: absoluteUrl,
+          starts_at: catalogue.starts_at,
+          ends_at: catalogue.ends_at,
+          previous_boxes: previous_boxes.length ? previous_boxes : undefined,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      const list: WorkflowPromo[] = (data?.promotions ?? []).map((p: WorkflowPromo) => ({
+      let list: WorkflowPromo[] = (data?.promotions ?? []).map((p: WorkflowPromo) => ({
         ...p,
         selected: true,
       }));
+
+      // Filtrage : supprimer les bboxes qui ne contiennent qu'un fragment d'image en bord (<5%).
+      const candidates = list
+        .map((p, idx) => ({ idx, pageNumber: p.page_number ?? 0, bbox: p.bbox_2d }))
+        .filter((c) => c.bbox && c.pageNumber > 0) as Array<{
+          idx: number;
+          pageNumber: number;
+          bbox: [number, number, number, number];
+        }>;
+      let droppedCount = 0;
+      try {
+        const dropIdxs = await detectEdgeOnlyBboxes(
+          absoluteUrl,
+          candidates.map((c) => ({ pageNumber: c.pageNumber, bbox: c.bbox }))
+        );
+        if (dropIdxs.length) {
+          const dropPromoIdx = new Set(dropIdxs.map((i) => candidates[i].idx));
+          droppedCount = dropPromoIdx.size;
+          list = list.filter((_, i) => !dropPromoIdx.has(i));
+        }
+      } catch (e) {
+        console.warn("Filtre edge-only échoué (ignoré)", e);
+      }
+
       updatePromos(() => list);
-      toast.success(`${list.length} zones détectées par l'IA`);
+      toast.success(
+        droppedCount > 0
+          ? `${list.length} zones détectées (${droppedCount} parasites filtrées)`
+          : `${list.length} zones détectées par l'IA`
+      );
     } catch (e) {
       console.error(e);
       toast.error(e instanceof Error ? e.message : "Erreur extraction IA");
@@ -1068,6 +1109,30 @@ function ScheduleStep({
       }));
       const { error } = await supabase.from("promotions").insert(rows);
       if (error) throw error;
+
+      // Apprentissage : enregistrer les caractéristiques des promos validées (avec bbox).
+      const statsRows = selected
+        .filter((p) => Array.isArray(p.bbox_2d) && p.bbox_2d.length === 4)
+        .map((p) => {
+          const [ymin, xmin, ymax, xmax] = p.bbox_2d as [number, number, number, number];
+          return {
+            catalogue_id: catalogue.id,
+            page_number: p.page_number ?? null,
+            bbox_ymin: Math.round(ymin),
+            bbox_xmin: Math.round(xmin),
+            bbox_ymax: Math.round(ymax),
+            bbox_xmax: Math.round(xmax),
+            had_price: !!(p.price && p.price > 0),
+            had_original_price: !!(p.original_price && p.original_price > 0),
+            category: p.category ?? null,
+          };
+        });
+      if (statsRows.length) {
+        const { error: statsErr } = await supabase
+          .from("catalogue_extraction_stats")
+          .insert(statsRows);
+        if (statsErr) console.warn("Stats apprentissage non enregistrées", statsErr);
+      }
 
       await supabase
         .from("catalogues")
