@@ -181,11 +181,13 @@ export default function CataloguePromoBboxPreview({
                   pageNumber={pageNumber}
                   src={src}
                   boxes={pageBoxes}
+                  allBoxes={boxes}
                   creating={creating}
                   onToggleBox={onToggleBox}
                   onDeleteBox={onDeleteBox}
                   onUpdateBbox={onUpdateBbox}
                   onUpdateText={onUpdateText}
+                  onSwapText={onSwapText}
                   onAddBox={
                     onAddBox
                       ? (bb) => {
