@@ -198,6 +198,7 @@ function PageEditor({
   onDeleteBox,
   onUpdateBbox,
   onAddBox,
+  onUpdateText,
 }: {
   pageNumber: number;
   src?: string;
@@ -207,6 +208,7 @@ function PageEditor({
   onDeleteBox?: (i: number) => void;
   onUpdateBbox?: (i: number, bbox: Bbox) => void;
   onAddBox?: (bbox: Bbox) => void;
+  onUpdateText?: (i: number, patch: PreviewTextPatch) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState>(null);
