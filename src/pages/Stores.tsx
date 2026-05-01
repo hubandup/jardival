@@ -223,7 +223,19 @@ const Stores = () => {
   );
 };
 
-const StoreCard = ({ store, active, onHover }: { store: Store; active?: boolean; onHover?: () => void }) => (
+const StoreCard = ({
+  store,
+  active,
+  onHover,
+  distance,
+  userPos,
+}: {
+  store: Store;
+  active?: boolean;
+  onHover?: () => void;
+  distance?: number;
+  userPos?: [number, number] | null;
+}) => (
   <article
     onMouseEnter={onHover}
     className={`group flex h-full flex-col gap-4 rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-card ${
@@ -250,6 +262,12 @@ const StoreCard = ({ store, active, onHover }: { store: Store; active?: boolean;
         {store.postalCode ? `${store.postalCode} ` : ""}
         {store.city.toUpperCase()}
       </p>
+      {typeof distance === "number" && (
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
+          <Compass className="h-3 w-3" />
+          À {distance.toFixed(1)} km
+        </p>
+      )}
     </div>
 
     <div className="flex items-center gap-4 text-xs text-muted-foreground">
