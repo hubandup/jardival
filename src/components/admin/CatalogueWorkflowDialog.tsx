@@ -1110,6 +1110,30 @@ function ScheduleStep({
       const { error } = await supabase.from("promotions").insert(rows);
       if (error) throw error;
 
+      // Apprentissage : enregistrer les caractéristiques des promos validées (avec bbox).
+      const statsRows = selected
+        .filter((p) => Array.isArray(p.bbox_2d) && p.bbox_2d.length === 4)
+        .map((p) => {
+          const [ymin, xmin, ymax, xmax] = p.bbox_2d as [number, number, number, number];
+          return {
+            catalogue_id: catalogue.id,
+            page_number: p.page_number ?? null,
+            bbox_ymin: Math.round(ymin),
+            bbox_xmin: Math.round(xmin),
+            bbox_ymax: Math.round(ymax),
+            bbox_xmax: Math.round(xmax),
+            had_price: !!(p.price && p.price > 0),
+            had_original_price: !!(p.original_price && p.original_price > 0),
+            category: p.category ?? null,
+          };
+        });
+      if (statsRows.length) {
+        const { error: statsErr } = await supabase
+          .from("catalogue_extraction_stats")
+          .insert(statsRows);
+        if (statsErr) console.warn("Stats apprentissage non enregistrées", statsErr);
+      }
+
       await supabase
         .from("catalogues")
         .update({
