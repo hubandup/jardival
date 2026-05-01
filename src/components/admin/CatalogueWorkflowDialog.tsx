@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { cropAndUploadPromoImages } from "@/lib/pdfImageCrop";
+import { cropAndUploadPromoImages, detectEdgeOnlyBboxes } from "@/lib/pdfImageCrop";
 import CataloguePromoBboxPreview, { type PreviewBox } from "./CataloguePromoBboxPreview";
 
 export type WorkflowStep = "upload" | "zones" | "tableau" | "programmation";
