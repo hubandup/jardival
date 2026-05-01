@@ -287,8 +287,10 @@ export default function CatalogueWorkflowDialog({
                   markDirty();
                 }}
                 onPrev={() => setStep("tableau")}
+                onCatalogueUpdated={() => {
+                  qc.invalidateQueries({ queryKey: ["admin-catalogues"] });
+                }}
                 onValidated={async () => {
-                  // Marque le brouillon comme validé
                   if (extractionId) {
                     await supabase
                       .from("catalogue_extractions")
