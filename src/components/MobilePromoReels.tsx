@@ -4,7 +4,7 @@ import { Loader2, Tag, MapPin, ChevronUp } from "lucide-react";
 import { usePromotions, useCatalogues } from "@/hooks/usePromotions";
 import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
 import { promotionToProduct } from "@/lib/promotion";
-import type { Product } from "@/data/products";
+import type { Product } from "@/types/product";
 
 const formatPrice = (price?: number | null) => {
   if (price === null || price === undefined) return null;
