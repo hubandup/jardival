@@ -56,9 +56,9 @@ const Index = () => {
         <CatalogueBanner />
         <main>
           <Hero products={products} />
+          <Catalogue products={products} />
           <PromoSection />
           <DriveToStoreBanner />
-          <Catalogue products={products} />
         </main>
         <SiteFooter />
       </div>
