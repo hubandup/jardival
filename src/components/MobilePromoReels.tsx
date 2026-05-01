@@ -118,8 +118,10 @@ export const MobilePromoReels = () => {
               <h2 className="font-display text-2xl font-semibold leading-tight">
                 {p.name}
               </h2>
-              {p.description && (
-                <p className="line-clamp-2 text-sm text-white/80">{p.description}</p>
+              {(p as Product & { description?: string }).description && (
+                <p className="line-clamp-2 text-sm text-white/80">
+                  {(p as Product & { description?: string }).description}
+                </p>
               )}
 
               <div className="flex items-end gap-3 pt-1">
