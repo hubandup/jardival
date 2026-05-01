@@ -22,9 +22,10 @@ interface ReelSlideProps {
   total: number;
   validityLabel: string | null;
   priority: "high" | "low" | "off";
+  paused: boolean;
 }
 
-const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority }: ReelSlideProps) => {
+const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, paused }: ReelSlideProps) => {
   const palette = useCoverPalette(p.image);
   const price = formatPrice(p.price);
   const oldPrice = formatPrice(p.oldPrice);
@@ -139,9 +140,11 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority }: Ree
         </div>
       </div>
 
-      {/* Indicateur swipe (1ère slide uniquement) */}
+      {/* Indicateur swipe (1ère slide uniquement, en pause si interruption) */}
       {idx === 0 && total > 1 && (
-        <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 animate-bounce text-white/70">
+        <div
+          className={`pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 text-white/70 ${paused ? "" : "animate-bounce"}`}
+        >
           <ChevronUp className="h-5 w-5 rotate-180" />
         </div>
       )}
@@ -173,8 +176,68 @@ export const MobilePromoReels = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  // Pause : interruption (onglet caché, blur, appel/clavier) OU inactivité (>1.5s sans interaction).
+  const [isInteracting, setIsInteracting] = useState(false);
+  const [isVisible, setIsVisible] = useState(
+    typeof document !== "undefined" ? !document.hidden : true,
+  );
+  const [isFocused, setIsFocused] = useState(
+    typeof document !== "undefined" ? document.hasFocus() : true,
+  );
+  const isPaused = !isVisible || !isFocused || !isInteracting;
+
   // Distance de préchargement (slides avant/après la slide active rendues + priorisées).
   const PRELOAD_RADIUS = 2;
+
+  // Détection des interruptions système (onglet caché = appel téléphonique, app en arrière-plan…)
+  // et perte de focus (clavier virtuel, autre appli, alerte).
+  useEffect(() => {
+    const onVisibility = () => setIsVisible(!document.hidden);
+    const onFocus = () => setIsFocused(true);
+    const onBlur = () => setIsFocused(false);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("pagehide", onBlur);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("pagehide", onBlur);
+    };
+  }, []);
+
+  // Détection d'activité de swipe : on considère "actif" tant qu'on touche / scroll,
+  // puis on retombe en pause après une courte inactivité.
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const wake = () => {
+      setIsInteracting(true);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setIsInteracting(false), 1500);
+    };
+    const sleep = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setIsInteracting(false), 600);
+    };
+    root.addEventListener("scroll", wake, { passive: true });
+    root.addEventListener("touchstart", wake, { passive: true });
+    root.addEventListener("touchmove", wake, { passive: true });
+    root.addEventListener("touchend", sleep, { passive: true });
+    root.addEventListener("pointerdown", wake);
+    root.addEventListener("wheel", wake, { passive: true });
+    return () => {
+      if (timer) clearTimeout(timer);
+      root.removeEventListener("scroll", wake);
+      root.removeEventListener("touchstart", wake);
+      root.removeEventListener("touchmove", wake);
+      root.removeEventListener("touchend", sleep);
+      root.removeEventListener("pointerdown", wake);
+      root.removeEventListener("wheel", wake);
+    };
+  }, []);
 
   useEffect(() => {
     const root = containerRef.current;
@@ -204,7 +267,9 @@ export const MobilePromoReels = () => {
   }, [promos.length]);
 
   // Préchargement explicite via <link rel="preload"> pour les voisines hors fenêtre de rendu.
+  // On le suspend en cas de pause (interruption ou inactivité) pour économiser bande passante / CPU.
   useEffect(() => {
+    if (isPaused) return;
     const urls = new Set<string>();
     for (let d = 1; d <= PRELOAD_RADIUS + 1; d++) {
       [activeIndex + d, activeIndex - d].forEach((i) => {
@@ -224,7 +289,7 @@ export const MobilePromoReels = () => {
     return () => {
       links.forEach((l) => l.remove());
     };
-  }, [activeIndex, promos]);
+  }, [activeIndex, promos, isPaused]);
 
   if (isLoading) {
     return (
@@ -261,6 +326,7 @@ export const MobilePromoReels = () => {
             total={promos.length}
             validityLabel={validityLabel}
             priority={priority}
+            paused={isPaused}
           />
         );
       })}
