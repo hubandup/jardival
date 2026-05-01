@@ -47,23 +47,34 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { cropAndUploadPromoImages, detectEdgeOnlyBboxes } from "@/lib/pdfImageCrop";
-import CataloguePromoBboxPreview, { type PreviewBox } from "./CataloguePromoBboxPreview";
+import { cropAndUploadPromoImages, detectEdgeOnlyBboxes, clearPdfCache } from "@/lib/pdfImageCrop";
+import CataloguePromoBboxPreview from "./CataloguePromoBboxPreview";
+import type { PreviewBox, WorkflowPromo } from "@/types/catalogue";
 
 export type WorkflowStep = "upload" | "zones" | "tableau" | "programmation";
 
-export interface WorkflowPromo {
-  title: string;
-  description?: string | null;
-  price?: number | null;
-  original_price?: number | null;
-  discount_percent?: number | null;
-  category?: string | null;
-  page_number?: number | null;
-  bbox_2d?: [number, number, number, number] | null;
-  image_url?: string | null;
-  image_cutout_url?: string | null;
-  selected?: boolean;
+type UpdatePromos = (u: (p: WorkflowPromo[]) => WorkflowPromo[]) => void;
+type PatchPromo = (index: number, patch: Partial<WorkflowPromo>) => void;
+
+const makePatchPromo =
+  (updatePromos: UpdatePromos): PatchPromo =>
+  (index, patch) =>
+    updatePromos((prev) =>
+      prev.map((x, i) => (i === index ? { ...x, ...patch } : x))
+    );
+
+async function uploadAndGetUrl(
+  bucket: string,
+  path: string,
+  file: File,
+  options?: { contentType?: string }
+): Promise<string> {
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, options?.contentType ? { contentType: options.contentType } : undefined);
+  if (error) throw error;
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export interface CatalogueLite {
@@ -196,6 +207,21 @@ export default function CatalogueWorkflowDialog({
     []
   );
 
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) clearPdfCache();
+      onOpenChange(next);
+    },
+    [onOpenChange]
+  );
+
+  // Filet de sécurité : libère le cache PDF si le composant est démonté.
+  useEffect(() => {
+    return () => {
+      clearPdfCache();
+    };
+  }, []);
+
   const reset = () => {
     if (!confirm("Recommencer entièrement ce catalogue ? Le brouillon sera effacé.")) return;
     setPromos([]);
@@ -211,18 +237,19 @@ export default function CatalogueWorkflowDialog({
       toast.error("Merci de fournir un fichier PDF");
       return;
     }
-    const path = `pdf-${Date.now()}.pdf`;
-    const { error } = await supabase.storage
-      .from("catalogues")
-      .upload(path, file, { contentType: "application/pdf" });
-    if (error) {
+    let publicUrl: string;
+    try {
+      publicUrl = await uploadAndGetUrl("catalogues", `pdf-${Date.now()}.pdf`, file, {
+        contentType: "application/pdf",
+      });
+    } catch (e) {
+      console.error(e);
       toast.error("Erreur upload PDF");
       return;
     }
-    const { data } = supabase.storage.from("catalogues").getPublicUrl(path);
-    setPdfUrl(data.publicUrl);
+    setPdfUrl(publicUrl);
     // On met à jour aussi le catalogue
-    await supabase.from("catalogues").update({ pdf_url: data.publicUrl }).eq("id", catalogue.id);
+    await supabase.from("catalogues").update({ pdf_url: publicUrl }).eq("id", catalogue.id);
     qc.invalidateQueries({ queryKey: ["admin-catalogues"] });
     toast.success("PDF uploadé");
     markDirty();
@@ -230,7 +257,7 @@ export default function CatalogueWorkflowDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-[95vw] w-[95vw] max-h-[96vh] h-[96vh] overflow-y-auto flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -302,7 +329,7 @@ export default function CatalogueWorkflowDialog({
                   qc.invalidateQueries({ queryKey: ["admin-promotions"] });
                   qc.invalidateQueries({ queryKey: ["hero_promos"] });
                   onCompleted?.();
-                  onOpenChange(false);
+                  handleOpenChange(false);
                 }}
               />
             )}
@@ -314,7 +341,7 @@ export default function CatalogueWorkflowDialog({
             <RefreshCcw className="h-4 w-4" />
             Recommencer
           </Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Fermer
           </Button>
         </DialogFooter>
@@ -455,7 +482,7 @@ function ZonesStep({
   pdfUrl: string | null;
   catalogue: CatalogueLite;
   promos: WorkflowPromo[];
-  updatePromos: (u: (p: WorkflowPromo[]) => WorkflowPromo[]) => void;
+  updatePromos: UpdatePromos;
   onPrev: () => void;
   onNext: () => void;
 }) {
@@ -704,13 +731,14 @@ function TableStep({
 }: {
   catalogue: CatalogueLite;
   promos: WorkflowPromo[];
-  updatePromos: (u: (p: WorkflowPromo[]) => WorkflowPromo[]) => void;
+  updatePromos: UpdatePromos;
   onPrev: () => void;
   onNext: () => void;
 }) {
   const [cuttingIdx, setCuttingIdx] = useState<number | null>(null);
   const [batchCutting, setBatchCutting] = useState(false);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const patchPromo = useMemo(() => makePatchPromo(updatePromos), [updatePromos]);
 
   const handleCutoutOne = async (i: number) => {
     const p = promos[i];
@@ -726,9 +754,7 @@ function TableStep({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (!data?.public_url) throw new Error("URL manquante");
-      updatePromos((prev) =>
-        prev.map((x, idx) => (idx === i ? { ...x, image_cutout_url: data.public_url } : x))
-      );
+      patchPromo(i, { image_cutout_url: data.public_url });
       toast.success("Image détourée");
     } catch (e) {
       console.error(e);
@@ -747,23 +773,25 @@ function TableStep({
       return;
     }
     setBatchCutting(true);
+    const CONCURRENCY = 3;
     let ok = 0;
     let fail = 0;
-    for (const { p, idx } of targets) {
+    const cutoutOne = async ({ p, idx }: { p: WorkflowPromo; idx: number }) => {
       try {
         const { data, error } = await supabase.functions.invoke("remove-bg-promo", {
           body: { image_url: p.image_url, filename: p.title },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        updatePromos((prev) =>
-          prev.map((x, j) => (j === idx ? { ...x, image_cutout_url: data.public_url } : x))
-        );
+        patchPromo(idx, { image_cutout_url: data.public_url });
         ok++;
       } catch (e) {
         console.error("cutout", idx, e);
         fail++;
       }
+    };
+    for (let i = 0; i < targets.length; i += CONCURRENCY) {
+      await Promise.all(targets.slice(i, i + CONCURRENCY).map(cutoutOne));
     }
     setBatchCutting(false);
     toast.success(`${ok} détourée(s)${fail ? ` · ${fail} échec(s)` : ""}`);
@@ -773,17 +801,13 @@ function TableStep({
     setUploadingIdx(i);
     try {
       const ext = file.name.split(".").pop() || "jpg";
-      const path = `manual/${Date.now()}-${i}.${ext}`;
-      const { error } = await supabase.storage
-        .from("promo-images")
-        .upload(path, file, { contentType: file.type || "image/jpeg" });
-      if (error) throw error;
-      const { data } = supabase.storage.from("promo-images").getPublicUrl(path);
-      updatePromos((prev) =>
-        prev.map((x, idx) =>
-          idx === i ? { ...x, image_url: data.publicUrl, image_cutout_url: null } : x
-        )
+      const publicUrl = await uploadAndGetUrl(
+        "promo-images",
+        `manual/${Date.now()}-${i}.${ext}`,
+        file,
+        { contentType: file.type || "image/jpeg" }
       );
+      patchPromo(i, { image_url: publicUrl, image_cutout_url: null });
       toast.success("Image remplacée");
     } catch (e) {
       console.error(e);
@@ -856,11 +880,7 @@ function TableStep({
                 <TableCell>
                   <Checkbox
                     checked={p.selected !== false}
-                    onCheckedChange={(v) =>
-                      updatePromos((prev) =>
-                        prev.map((x, idx) => (idx === i ? { ...x, selected: !!v } : x))
-                      )
-                    }
+                    onCheckedChange={(v) => patchPromo(i, { selected: !!v })}
                   />
                 </TableCell>
                 <TableCell>
@@ -889,24 +909,14 @@ function TableStep({
                 <TableCell>
                   <Input
                     value={p.title}
-                    onChange={(e) =>
-                      updatePromos((prev) =>
-                        prev.map((x, idx) => (idx === i ? { ...x, title: e.target.value } : x))
-                      )
-                    }
+                    onChange={(e) => patchPromo(i, { title: e.target.value })}
                     className="h-8 text-sm"
                   />
                 </TableCell>
                 <TableCell>
                   <Input
                     value={p.description ?? ""}
-                    onChange={(e) =>
-                      updatePromos((prev) =>
-                        prev.map((x, idx) =>
-                          idx === i ? { ...x, description: e.target.value } : x
-                        )
-                      )
-                    }
+                    onChange={(e) => patchPromo(i, { description: e.target.value })}
                     className="h-8 text-sm"
                     placeholder="Description"
                   />
@@ -917,13 +927,9 @@ function TableStep({
                     step="0.01"
                     value={p.price ?? ""}
                     onChange={(e) =>
-                      updatePromos((prev) =>
-                        prev.map((x, idx) =>
-                          idx === i
-                            ? { ...x, price: e.target.value ? parseFloat(e.target.value) : null }
-                            : x
-                        )
-                      )
+                      patchPromo(i, {
+                        price: e.target.value ? parseFloat(e.target.value) : null,
+                      })
                     }
                     className="h-8 text-sm"
                   />
@@ -934,18 +940,9 @@ function TableStep({
                     step="0.01"
                     value={p.original_price ?? ""}
                     onChange={(e) =>
-                      updatePromos((prev) =>
-                        prev.map((x, idx) =>
-                          idx === i
-                            ? {
-                                ...x,
-                                original_price: e.target.value
-                                  ? parseFloat(e.target.value)
-                                  : null,
-                              }
-                            : x
-                        )
-                      )
+                      patchPromo(i, {
+                        original_price: e.target.value ? parseFloat(e.target.value) : null,
+                      })
                     }
                     className="h-8 text-sm"
                   />
@@ -1061,11 +1058,8 @@ function ScheduleStep({
     setUploadingCover(true);
     try {
       const ext = file.name.split(".").pop() || "jpg";
-      const path = `cover-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("catalogues").upload(path, file);
-      if (error) throw error;
-      const { data } = supabase.storage.from("catalogues").getPublicUrl(path);
-      setCoverImage(data.publicUrl);
+      const publicUrl = await uploadAndGetUrl("catalogues", `cover-${Date.now()}.${ext}`, file);
+      setCoverImage(publicUrl);
       toast.success("Couverture uploadée");
     } catch (e) {
       console.error(e);

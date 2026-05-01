@@ -2,14 +2,13 @@
 // normalisé 0-1000) et upload l'image dans le bucket Supabase `promo-images`.
 import * as pdfjsLib from "pdfjs-dist";
 import { supabase } from "@/integrations/supabase/client";
+import type { Bbox } from "@/types/catalogue";
 
 // Worker pdfjs (déjà utilisé ailleurs dans le projet via react-pdf)
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url
 ).toString();
-
-export type Bbox = [number, number, number, number]; // [ymin, xmin, ymax, xmax] 0..1000
 
 interface CropTask {
   pageNumber: number;

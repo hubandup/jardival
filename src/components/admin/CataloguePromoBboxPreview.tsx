@@ -12,27 +12,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { loadPdf, renderPage, type Bbox } from "@/lib/pdfImageCrop";
-
-export interface PreviewBox {
-  pageNumber: number;
-  bbox: Bbox; // [ymin, xmin, ymax, xmax] 0..1000
-  index: number; // index humain (1-based)
-  label: string; // titre
-  subLabel?: string; // ex. "12,90 € · au lieu de 19,90 €"
-  selected: boolean;
-  price?: number | null;
-  originalPrice?: number | null;
-  description?: string | null;
-  imageUrl?: string | null; // image extraite (pour indicateur visuel)
-}
-
-export interface PreviewTextPatch {
-  title?: string;
-  price?: number | null;
-  original_price?: number | null;
-  description?: string | null;
-}
+import { loadPdf, renderPage } from "@/lib/pdfImageCrop";
+import type { Bbox, PreviewBox, PreviewTextPatch } from "@/types/catalogue";
 
 interface Props {
   pdfUrl: string;

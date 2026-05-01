@@ -1,6 +1,7 @@
 // Edge function: extrait des promotions structurées depuis un PDF de catalogue
 // via Lovable AI Gateway (Gemini 2.5 Pro, multimodal PDF support).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://esm.sh/zod@3.25.76";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,18 +9,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface ExtractRequest {
-  pdf_url: string;
-  starts_at?: string | null;
-  ends_at?: string | null;
+const bboxSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);
+
+const extractRequestSchema = z.object({
+  pdf_url: z.string().url("pdf_url doit être une URL valide"),
+  starts_at: z.string().nullish(),
+  ends_at: z.string().nullish(),
   // Bboxes ajustées par l'utilisateur lors d'une précédente extraction du MÊME catalogue.
   // Servent d'exemples concrets pour guider la nouvelle détection.
-  previous_boxes?: Array<{
-    page_number?: number | null;
-    bbox_2d?: [number, number, number, number] | null;
-    title?: string;
-  }> | null;
-}
+  previous_boxes: z
+    .array(
+      z.object({
+        page_number: z.number().int().nullish(),
+        bbox_2d: bboxSchema.nullish(),
+        title: z.string().optional(),
+      })
+    )
+    .nullish(),
+});
+
+type ExtractRequest = z.infer<typeof extractRequestSchema>;
 
 interface ExtractedPromo {
   title: string;
@@ -69,14 +78,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- Lecture du body ---
-    const body = (await req.json()) as ExtractRequest;
-    if (!body.pdf_url) {
-      return new Response(JSON.stringify({ error: "pdf_url manquant" }), {
+    // --- Lecture & validation du body ---
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Body JSON invalide" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const parsedBody = extractRequestSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      const issues = parsedBody.error.issues
+        .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+        .join(" ; ");
+      return new Response(
+        JSON.stringify({ error: `Paramètres invalides : ${issues}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const body: ExtractRequest = parsedBody.data;
 
     // --- Téléchargement du PDF ---
     const pdfResp = await fetch(body.pdf_url);
@@ -288,7 +310,8 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
     }
 
     // Normalisation : recalcule discount si manquant
-    const promotions = (parsed.promotions ?? []).map((p) => {
+    const rawList = parsed.promotions ?? [];
+    const promotions = rawList.map((p) => {
       const price = p.price ?? 0;
       const orig = p.original_price ?? null;
       let discount = p.discount_percent ?? null;
@@ -306,6 +329,23 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
         bbox_2d: Array.isArray(p.bbox_2d) && p.bbox_2d.length === 4 ? p.bbox_2d : null,
       };
     }).filter((p) => p.title.length > 0);
+
+    // Fallback explicite : Gemini a répondu mais aucune promo exploitable n'a été extraite.
+    // On renvoie une erreur claire au lieu d'un tableau vide silencieux.
+    if (promotions.length === 0) {
+      const reason = rawList.length === 0
+        ? "Le modèle n'a détecté aucune promotion dans ce PDF."
+        : `Le modèle a renvoyé ${rawList.length} entrée(s) mais aucune n'avait de titre exploitable.`;
+      console.warn("Extraction sans résultat", { rawCount: rawList.length });
+      return new Response(
+        JSON.stringify({
+          error: `${reason} Vérifiez que le PDF contient bien des produits en promotion lisibles, ou réessayez.`,
+          promotions: [],
+          count: 0,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
       JSON.stringify({ promotions, count: promotions.length }),
