@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import cover from "@/assets/catalogue-cover.jpg";
 import { Download, Sparkles, Calendar } from "lucide-react";
 import { useCatalogues } from "@/hooks/usePromotions";
