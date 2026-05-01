@@ -227,6 +227,7 @@ export type Database = {
       promotions: {
         Row: {
           active: boolean
+          catalogue_id: string | null
           created_at: string
           description: string | null
           display_order: number
@@ -244,6 +245,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          catalogue_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
@@ -261,6 +263,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          catalogue_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
@@ -276,7 +279,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "promotions_catalogue_id_fkey"
+            columns: ["catalogue_id"]
+            isOneToOne: false
+            referencedRelation: "catalogues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_settings: {
         Row: {
