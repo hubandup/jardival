@@ -119,7 +119,7 @@ export default function AdminCatalogues() {
                 <TableHead>Validité</TableHead>
                 <TableHead>PDF</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead className="w-24"></TableHead>
+                <TableHead className="w-36">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
