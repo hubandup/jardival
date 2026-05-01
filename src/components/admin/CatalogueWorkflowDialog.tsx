@@ -393,7 +393,7 @@ function UploadStep({
   };
 
   return (
-    <div className="py-6 space-y-4">
+    <div className="py-6">
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -405,48 +405,33 @@ function UploadStep({
           setDragActive(false);
           handleFiles(e.dataTransfer.files);
         }}
+        onClick={() => !uploading && document.getElementById("catalogue-pdf-input")?.click()}
         className={cn(
-          "border-2 border-dashed rounded-lg p-12 text-center transition",
-          dragActive ? "border-primary bg-primary/5" : "border-border bg-muted/30"
+          "border-2 border-dashed rounded-lg p-16 text-center transition cursor-pointer",
+          dragActive ? "border-primary bg-primary/5" : "border-border bg-muted/30 hover:bg-muted/50"
         )}
       >
-        <UploadCloud className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-        <p className="text-sm font-medium mb-1">
+        <UploadCloud className="h-14 w-14 mx-auto text-muted-foreground mb-4" />
+        <p className="text-base font-medium mb-1">
           Glissez-déposez votre catalogue PDF ici
         </p>
-        <p className="text-xs text-muted-foreground mb-4">
+        <p className="text-sm text-muted-foreground">
           ou cliquez pour sélectionner un fichier
         </p>
-        <Input
+        <input
+          id="catalogue-pdf-input"
           type="file"
           accept="application/pdf"
           onChange={(e) => handleFiles(e.target.files)}
           disabled={uploading}
-          className="max-w-xs mx-auto"
+          className="hidden"
         />
         {uploading && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Envoi en cours…
           </div>
         )}
       </div>
-
-      {currentPdfUrl && (
-        <div className="flex items-center justify-between p-3 border rounded-md bg-muted/30">
-          <a
-            href={currentPdfUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-2 text-sm text-primary hover:underline"
-          >
-            <FileText className="h-4 w-4" />
-            PDF actuel
-          </a>
-          <Button onClick={onNext}>
-            Étape suivante <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
