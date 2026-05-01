@@ -5,6 +5,7 @@ import { PromoSection } from "@/components/PromoSection";
 import { Catalogue } from "@/components/Catalogue";
 import { DriveToStoreBanner } from "@/components/DriveToStoreBanner";
 import { SiteFooter } from "@/components/SiteFooter";
+import { MobilePromoReels } from "@/components/MobilePromoReels";
 import { useProducts } from "@/hooks/useProducts";
 import { useSeo } from "@/hooks/useSeo";
 
