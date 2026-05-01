@@ -21,9 +21,10 @@ interface ReelSlideProps {
   index: number;
   total: number;
   validityLabel: string | null;
+  priority: "high" | "low" | "off";
 }
 
-const ReelSlide = ({ promo: p, index: idx, total, validityLabel }: ReelSlideProps) => {
+const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority }: ReelSlideProps) => {
   const palette = useCoverPalette(p.image);
   const price = formatPrice(p.price);
   const oldPrice = formatPrice(p.oldPrice);
