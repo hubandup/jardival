@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import cover from "@/assets/catalogue-cover.jpg";
 import { Download, Sparkles, Calendar } from "lucide-react";
 import { useCatalogues } from "@/hooks/usePromotions";
 import { useCoverPalette } from "@/hooks/useCoverPalette";
 import type { HeroPalette } from "@/lib/coverPalette";
+import { PdfCoverImage } from "@/components/PdfCoverImage";
 
 const FALLBACK_PDF_URL = "/catalogue-jardival-jardinales.pdf";
 const VIEWER_URL = "/catalogue";
