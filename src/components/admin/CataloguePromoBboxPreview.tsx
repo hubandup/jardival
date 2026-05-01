@@ -213,22 +213,26 @@ function PageEditor({
   pageNumber,
   src,
   boxes,
+  allBoxes,
   creating,
   onToggleBox,
   onDeleteBox,
   onUpdateBbox,
   onAddBox,
   onUpdateText,
+  onSwapText,
 }: {
   pageNumber: number;
   src?: string;
   boxes: PreviewBox[];
+  allBoxes: PreviewBox[];
   creating: boolean;
   onToggleBox?: (i: number) => void;
   onDeleteBox?: (i: number) => void;
   onUpdateBbox?: (i: number, bbox: Bbox) => void;
   onAddBox?: (bbox: Bbox) => void;
   onUpdateText?: (i: number, patch: PreviewTextPatch) => void;
+  onSwapText?: (i: number, j: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState>(null);
