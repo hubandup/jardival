@@ -14,6 +14,16 @@ export interface PreviewBox {
   label: string; // titre
   subLabel?: string; // ex. "12,90 € · au lieu de 19,90 €"
   selected: boolean;
+  price?: number | null;
+  originalPrice?: number | null;
+  description?: string | null;
+}
+
+export interface PreviewTextPatch {
+  title?: string;
+  price?: number | null;
+  original_price?: number | null;
+  description?: string | null;
 }
 
 interface Props {
@@ -23,6 +33,7 @@ interface Props {
   onDeleteBox?: (i: number) => void;
   onUpdateBbox?: (i: number, bbox: Bbox) => void;
   onAddBox?: (pageNumber: number, bbox: Bbox) => void;
+  onUpdateText?: (i: number, patch: PreviewTextPatch) => void;
 }
 
 type DragState =
@@ -51,6 +62,7 @@ export default function CataloguePromoBboxPreview({
   onDeleteBox,
   onUpdateBbox,
   onAddBox,
+  onUpdateText,
 }: Props) {
   const [show, setShow] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -155,6 +167,7 @@ export default function CataloguePromoBboxPreview({
                   onToggleBox={onToggleBox}
                   onDeleteBox={onDeleteBox}
                   onUpdateBbox={onUpdateBbox}
+                  onUpdateText={onUpdateText}
                   onAddBox={
                     onAddBox
                       ? (bb) => {
@@ -185,6 +198,7 @@ function PageEditor({
   onDeleteBox,
   onUpdateBbox,
   onAddBox,
+  onUpdateText,
 }: {
   pageNumber: number;
   src?: string;
@@ -194,6 +208,7 @@ function PageEditor({
   onDeleteBox?: (i: number) => void;
   onUpdateBbox?: (i: number, bbox: Bbox) => void;
   onAddBox?: (bbox: Bbox) => void;
+  onUpdateText?: (i: number, patch: PreviewTextPatch) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState>(null);
@@ -460,7 +475,7 @@ function PageEditor({
               data-bbox
               onMouseDown={(e) => e.stopPropagation()}
             >
-              <div className="bg-background/95 backdrop-blur border rounded shadow-sm p-1.5 text-[10px] leading-tight space-y-0.5">
+              <div className="bg-background/95 backdrop-blur border rounded shadow-sm p-1.5 text-[10px] leading-tight space-y-1">
                 <div className="flex items-start gap-1">
                   <Badge
                     variant={b.selected ? "default" : "secondary"}
@@ -468,7 +483,19 @@ function PageEditor({
                   >
                     #{b.index}
                   </Badge>
-                  <span className="font-medium line-clamp-2 flex-1">{b.label}</span>
+                  {onUpdateText && b.selected ? (
+                    <input
+                      type="text"
+                      value={b.label}
+                      onChange={(e) => onUpdateText(i0, { title: e.target.value })}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 min-w-0 bg-transparent border-b border-border focus:border-primary outline-none font-medium text-[10px] py-0.5"
+                      placeholder="Titre du produit"
+                    />
+                  ) : (
+                    <span className="font-medium line-clamp-2 flex-1">{b.label}</span>
+                  )}
                   {onDeleteBox && (
                     <button
                       type="button"
@@ -483,8 +510,43 @@ function PageEditor({
                     </button>
                   )}
                 </div>
-                {b.subLabel && (
-                  <div className="text-muted-foreground line-clamp-1">{b.subLabel}</div>
+                {onUpdateText && b.selected ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={b.price ?? ""}
+                      onChange={(e) =>
+                        onUpdateText(i0, {
+                          price: e.target.value ? parseFloat(e.target.value) : null,
+                        })
+                      }
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder="Prix"
+                      className="w-14 bg-transparent border-b border-border focus:border-primary outline-none text-[10px] py-0.5"
+                    />
+                    <span className="text-muted-foreground">€ /</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={b.originalPrice ?? ""}
+                      onChange={(e) =>
+                        onUpdateText(i0, {
+                          original_price: e.target.value ? parseFloat(e.target.value) : null,
+                        })
+                      }
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder="Avant"
+                      className="w-14 bg-transparent border-b border-border focus:border-primary outline-none text-[10px] py-0.5 text-muted-foreground"
+                    />
+                    <span className="text-muted-foreground">€</span>
+                  </div>
+                ) : (
+                  b.subLabel && (
+                    <div className="text-muted-foreground line-clamp-1">{b.subLabel}</div>
+                  )
                 )}
                 {onToggleBox && (
                   <button

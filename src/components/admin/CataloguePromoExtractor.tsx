@@ -332,6 +332,9 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                               .filter(Boolean)
                               .join(" · "),
                             selected: p.selected !== false,
+                            price: p.price,
+                            originalPrice: p.original_price,
+                            description: p.description,
                           }
                         : null
                     )
@@ -339,6 +342,15 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                   onToggleBox={(i) => updatePromo(i, { selected: !promos[i].selected })}
                   onDeleteBox={(i) => removePromo(i)}
                   onUpdateBbox={(i, bbox) => updatePromo(i, { bbox_2d: bbox })}
+                  onUpdateText={(i, patch) => {
+                    const mapped: Partial<ExtractedPromo> = {};
+                    if (patch.title !== undefined) mapped.title = patch.title;
+                    if (patch.price !== undefined) mapped.price = patch.price;
+                    if (patch.original_price !== undefined)
+                      mapped.original_price = patch.original_price;
+                    if (patch.description !== undefined) mapped.description = patch.description;
+                    updatePromo(i, mapped);
+                  }}
                   onAddBox={(pageNumber, bbox) =>
                     setPromos((prev) => [
                       ...prev,
