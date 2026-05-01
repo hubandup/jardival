@@ -1,75 +1,61 @@
 ## Objectif
 
-Quand vous uploadez un nouveau catalogue PDF dans l'admin, les promotions actuelles sont automatiquement remplacées par celles extraites du PDF (titre, prix, ancien prix, % remise, image, dates de validité).
+1. **Aperçu visuel** : avant import, afficher chaque page du PDF avec les bounding boxes détectées par l'IA superposées (numérotées et cliquables) pour valider rapidement la qualité de la détection.
+2. **Crops haute qualité** : permettre de choisir la résolution de rendu (scale 1×, 2×, 3×, 4×) et le format de sortie (JPG qualité 0.92 / PNG sans perte).
 
-## Comment ça marche
+---
 
-L'extraction depuis un PDF de prospectus n'est pas triviale (mise en page complexe, prix éclatés sur la page, images séparées du texte). On utilise donc une IA multimodale (Gemini 2.5 Pro via Lovable AI, sans clé API à fournir) qui "lit" chaque page du PDF comme un humain et renvoie une liste structurée de promotions.
+## 1. Aperçu PDF avec bounding boxes (`src/components/admin/CataloguePromoBboxPreview.tsx`)
 
-## Flux utilisateur
+Nouveau composant qui :
+- Reçoit `pdfUrl` + liste des `{ pageNumber, bbox, label, color, selected }`.
+- Rend chaque page concernée (uniquement celles avec au moins une promo) en canvas via pdfjs (réutilise `loadPdf` exporté depuis `pdfImageCrop.ts`).
+- Superpose un SVG aux dimensions du canvas avec, pour chaque bbox :
+  - rectangle coloré (couleur = vert si sélectionnée, gris si décochée)
+  - badge avec le n° d'index de la promo dans la table
+  - tooltip au survol avec le titre
+- Affiche les pages dans une zone scrollable (1 page = 1 carte), avec pagination simple si > 6 pages.
+- Boutons d'action sur chaque bbox : « Aller à la ligne » (scroll vers la ligne du tableau) + « Décocher ».
 
-1. Admin → page **Catalogues** → bouton **"Ajouter / Remplacer le catalogue"**
-2. Upload du PDF + saisie des dates de validité (début/fin)
-3. Cliquer **"Extraire les promotions du PDF"**
-   - Aperçu : tableau éditable des promos détectées (titre, prix, remise, image)
-   - Possibilité de cocher/décocher, corriger les prix, supprimer une ligne erronée
-4. Bouton **"Remplacer toutes les promotions"** :
-   - Confirmation explicite ("Cette action supprimera les X promotions actuelles")
-   - Désactive les anciennes promos (soft delete via `active=false`) ou les supprime
-   - Insère les nouvelles avec les dates de validité du catalogue
-5. Le site public affiche immédiatement les nouvelles promos (PromoSection, page /promotions, Hero)
+Intégration dans `CataloguePromoExtractor.tsx` :
+- Onglet ou section repliable « Aperçu » au-dessus de la table, visible dès que `promos.length > 0` et `bbox_2d` présents.
+- Bouton « Afficher l'aperçu » pour ne pas rendre les pages tant que l'utilisateur n'en a pas besoin (les rendus PDF sont coûteux).
 
-## Détails techniques
+## 2. Qualité des crops configurable
 
-### Edge function `extract-catalogue-promos`
-- Input : `{ pdf_url, starts_at, ends_at }`
-- Étapes :
-  1. Télécharge le PDF depuis le bucket `catalogues`
-  2. Convertit chaque page en image (via `pdfjs-dist` côté Deno ou en envoyant le PDF directement à Gemini qui supporte les PDF)
-  3. Appelle `google/gemini-2.5-pro` avec un prompt structuré demandant un JSON :
-     ```json
-     [{ "title", "description", "price", "original_price", "discount_percent", "category", "page_number" }]
-     ```
-  4. Renvoie la liste au client (pas d'écriture en base à ce stade)
-- Sécurité : `verify_jwt` + check `is_admin(auth.uid())`
+### Modifications de `src/lib/pdfImageCrop.ts`
 
-### Extraction des images des produits
-Option simple (recommandée pour démarrer) : pas d'extraction automatique d'images. L'admin associe les images via la médiathèque existante après import, OU on garde l'image actuelle si le titre matche (via `findCatalogueFallback` déjà en place).
+- Exporter `loadPdf` et `renderPage` (pour réutilisation par le composant d'aperçu).
+- Ajouter options à `cropAndUploadPromoImages` :
+  ```ts
+  interface CropOptions {
+    scale?: number;        // défaut 2 ; 1..4
+    format?: "jpeg" | "png"; // défaut "jpeg"
+    quality?: number;      // défaut 0.92 (jpeg uniquement)
+  }
+  ```
+- Choix de l'extension/contentType selon format.
+- Cache de page tenant compte du scale (un canvas par couple page+scale) pour éviter de re-rendre quand on change uniquement le format.
 
-Option avancée (phase 2) : `pdfimages` (poppler) pour extraire les images bitmap du PDF, puis Gemini associe chaque image au produit le plus proche sur la même page. À discuter selon résultat phase 1.
+### UI dans `CataloguePromoExtractor.tsx`
 
-### UI Admin
-- Nouveau composant `CataloguePromoExtractor.tsx` ouvert depuis la fiche catalogue
-- Aperçu en tableau avec checkboxes + édition inline
-- Deux modes de remplacement :
-  - **Remplacer** : `DELETE FROM promotions` puis insert (radical)
-  - **Désactiver + ajouter** : `UPDATE promotions SET active=false` puis insert (conserve l'historique)
+Ajouter une petite barre d'options à côté du bouton « Extraire les images » :
+- Select **Qualité** : Standard (2×) / Haute (3×) / Très haute (4×).
+- Select **Format** : JPG (plus léger) / PNG (sans perte).
+- Indicateur « Scale 3× ≈ images plus nettes mais upload plus long ».
 
-### Schéma DB
-- Ajout colonne `promotions.catalogue_id uuid` (nullable, ref `catalogues.id`) pour tracer la source
-- Permet plus tard de faire "supprimer toutes les promos issues de ce catalogue"
+Ces deux valeurs sont passées à `cropAndUploadPromoImages`.
 
-## Limites à connaître
+## 3. Détails techniques
 
-- L'IA peut se tromper sur certains prix/titres → l'écran d'aperçu éditable est indispensable
-- Les "remises catégorie" (ex: "-20% sur les géraniums") sans prix unitaire seront extraites avec `price=0` comme aujourd'hui
-- Coût : ~1 appel Gemini Pro par upload de catalogue (négligeable)
-- PDF > 50 pages : on traite par batch
+- Couleurs des bbox en HSL via tokens semantic : `hsl(var(--primary))` pour sélectionnée, `hsl(var(--muted-foreground))` pour décochée — pas de couleur hardcodée.
+- Le SVG d'overlay utilise `viewBox="0 0 1000 1000"` avec `preserveAspectRatio="none"` superposé en `position: absolute inset-0` sur le canvas, pour que les bbox normalisées 0-1000 s'affichent sans recalcul.
+- Le rendu d'aperçu utilise `scale = 1.2` (suffisant pour la pré-visualisation) afin de rester fluide ; le scale élevé n'est utilisé que pour les crops finaux.
+- Pour PNG, on utilise `canvas.toBlob(b, "image/png")` (pas de quality).
+- Aucun changement DB ni edge function nécessaire : tout est côté client.
 
-## Fichiers impactés
+## 4. Fichiers touchés
 
-- **Nouveau** : `supabase/functions/extract-catalogue-promos/index.ts`
-- **Nouveau** : `src/components/admin/CataloguePromoExtractor.tsx`
-- **Modifié** : `src/pages/admin/AdminCatalogues.tsx` (bouton "Extraire les promos")
-- **Migration** : ajout colonne `promotions.catalogue_id`
-
-## Question
-
-Avant de coder, une décision :
-
-**Mode de remplacement par défaut ?**
-- A) **Remplacement total** : les anciennes promos sont supprimées définitivement
-- B) **Désactivation + ajout** : les anciennes passent en `active=false` (réactivables, traçables)
-- C) **Au choix à chaque import** (toggle dans l'UI)
-
-Je recommande **C** pour la flexibilité. Validez ce plan et précisez votre préférence, je l'implémente ensuite.
+- **Créé** : `src/components/admin/CataloguePromoBboxPreview.tsx`
+- **Modifié** : `src/lib/pdfImageCrop.ts` (options scale/format, exports)
+- **Modifié** : `src/components/admin/CataloguePromoExtractor.tsx` (intégration aperçu + selects qualité/format)
