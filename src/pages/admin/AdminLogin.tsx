@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,14 @@ export default function AdminLogin() {
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Se connecter
             </Button>
+            <div className="text-center text-sm">
+              <Link
+                to="/admin/forgot-password"
+                className="text-muted-foreground hover:text-foreground underline"
+              >
+                Mot de passe oublié ?
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>
