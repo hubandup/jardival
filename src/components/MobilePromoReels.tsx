@@ -267,7 +267,9 @@ export const MobilePromoReels = () => {
   }, [promos.length]);
 
   // Préchargement explicite via <link rel="preload"> pour les voisines hors fenêtre de rendu.
+  // On le suspend en cas de pause (interruption ou inactivité) pour économiser bande passante / CPU.
   useEffect(() => {
+    if (isPaused) return;
     const urls = new Set<string>();
     for (let d = 1; d <= PRELOAD_RADIUS + 1; d++) {
       [activeIndex + d, activeIndex - d].forEach((i) => {
@@ -287,7 +289,7 @@ export const MobilePromoReels = () => {
     return () => {
       links.forEach((l) => l.remove());
     };
-  }, [activeIndex, promos]);
+  }, [activeIndex, promos, isPaused]);
 
   if (isLoading) {
     return (
