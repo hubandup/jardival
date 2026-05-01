@@ -236,7 +236,11 @@ export default function AdminCatalogues() {
                 )}
                 <Input type="file" accept="application/pdf" onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0], "pdf")} disabled={uploadingPdf} />
                 {uploadingPdf && <Loader2 className="h-4 w-4 animate-spin" />}
-              </div>
+              <HeroColorsEditor
+                coverImage={editing.cover_image ?? null}
+                value={editing.hero_colors ?? null}
+                onChange={(c) => setEditing({ ...editing, hero_colors: c })}
+              />
             </div>
           )}
           <DialogFooter>
