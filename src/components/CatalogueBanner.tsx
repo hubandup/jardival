@@ -20,11 +20,16 @@ const FALLBACK_PALETTE: HeroPalette = {
 };
 
 interface CatalogueBannerProps {
-  /** Si true : affiche un seul CTA "Voir le catalogue" qui ouvre le viewer (utilisé sur mobile). */
+  /** Si true : affiche un seul CTA "Voir le catalogue" qui ouvre le PDF (utilisé sur mobile). */
   simplified?: boolean;
+  /** Cible d'ouverture du PDF en mode simplifié. "_self" = même onglet, "_blank" = nouvel onglet. Défaut : "_self". */
+  pdfTarget?: "_self" | "_blank";
 }
 
-export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {}) => {
+export const CatalogueBanner = ({
+  simplified = false,
+  pdfTarget = "_self",
+}: CatalogueBannerProps = {}) => {
   const { data: catalogues } = useCatalogues();
   const active = catalogues?.[0];
 
