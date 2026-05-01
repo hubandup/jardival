@@ -55,6 +55,23 @@ export default function AdminCatalogues() {
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(false);
   const [extractFor, setExtractFor] = useState<CatalogueRow | null>(null);
+  const [resumeMenu, setResumeMenu] = useState<{ catalogue: CatalogueRow; hasDraft: boolean } | null>(null);
+  const [workflowFor, setWorkflowFor] = useState<{ catalogue: CatalogueRow; step?: WorkflowStep } | null>(null);
+
+  const openCatalogue = async (c: CatalogueRow) => {
+    // Vérifie s'il existe un brouillon pour proposer Reprendre/Recommencer
+    const { data } = await supabase
+      .from("catalogue_extractions")
+      .select("id")
+      .eq("catalogue_id", c.id)
+      .maybeSingle();
+    if (data) {
+      setResumeMenu({ catalogue: c, hasDraft: true });
+    } else {
+      // Pas de brouillon : ouvre directement à l'étape Zones (ou Upload si pas de PDF)
+      setWorkflowFor({ catalogue: c, step: c.pdf_url ? "zones" : "upload" });
+    }
+  };
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["admin-catalogues"],
