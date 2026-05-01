@@ -28,7 +28,7 @@ const Stores = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const { data: stores = [], isLoading } = useStores();
-  const { state: geoState, request: requestGeo } = useGeolocation(autoGeo);
+  const { state: geoState } = useGeolocation(autoGeo);
   const userPos = geoState.status === "ready" ? geoState.position : null;
 
   useEffect(() => {
