@@ -117,9 +117,10 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
     setExtracting(true);
     setPromos([]);
     try {
+      const absolutePdfUrl = new URL(catalogue.pdf_url, window.location.origin).toString();
       const { data, error } = await supabase.functions.invoke("extract-catalogue-promos", {
         body: {
-          pdf_url: catalogue.pdf_url,
+          pdf_url: absolutePdfUrl,
           starts_at: catalogue.starts_at,
           ends_at: catalogue.ends_at,
         },
