@@ -758,24 +758,6 @@ function ZonesStep({
               </p>
             </div>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCropImages}
-            disabled={croppingImages || selectedWithBbox === 0}
-          >
-            {croppingImages ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {cropProgress ? `${cropProgress.done}/${cropProgress.total}` : ""}
-              </>
-            ) : (
-              <>
-                <ImageIcon className="h-4 w-4" />
-                Extraire les images ({selectedWithBbox})
-              </>
-            )}
-          </Button>
         </div>
       </div>
 
