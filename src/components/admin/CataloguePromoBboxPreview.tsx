@@ -389,6 +389,7 @@ function PageEditor({
                   fill={fill}
                   stroke={stroke}
                   strokeWidth={3}
+                  strokeDasharray={b.selected && !b.imageUrl ? "8 4" : undefined}
                   vectorEffect="non-scaling-stroke"
                   style={{ cursor: "move" }}
                   onMouseDown={(e) => {
