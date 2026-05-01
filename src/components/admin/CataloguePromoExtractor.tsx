@@ -301,6 +301,24 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                           />
                         </TableCell>
                         <TableCell>
+                          {p.image_url ? (
+                            <img
+                              src={p.image_url}
+                              alt=""
+                              className="h-10 w-10 rounded object-cover border"
+                            />
+                          ) : p.bbox_2d ? (
+                            <div
+                              className="h-10 w-10 rounded border border-dashed flex items-center justify-center text-muted-foreground"
+                              title="Zone détectée, image non encore extraite"
+                            >
+                              <ImageIcon className="h-4 w-4" />
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <Input
                             value={p.title}
                             onChange={(e) => updatePromo(i, { title: e.target.value })}
