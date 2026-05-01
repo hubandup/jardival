@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Loader2, Tag, MapPin, ChevronUp } from "lucide-react";
 import { usePromotions, useCatalogues } from "@/hooks/usePromotions";
