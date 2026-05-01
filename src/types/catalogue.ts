@@ -2,6 +2,19 @@
 
 export type Bbox = [number, number, number, number]; // [ymin, xmin, ymax, xmax] 0..1000
 
+export const POSITION_ZONES = [
+  "haut-gauche",
+  "haut-centre",
+  "haut-droite",
+  "milieu-gauche",
+  "milieu-centre",
+  "milieu-droite",
+  "bas-gauche",
+  "bas-centre",
+  "bas-droite",
+] as const;
+export type PositionZone = (typeof POSITION_ZONES)[number];
+
 export interface WorkflowPromo {
   title: string;
   description?: string | null;
@@ -10,9 +23,15 @@ export interface WorkflowPromo {
   discount_percent?: number | null;
   category?: string | null;
   page_number?: number | null;
+  /** Zone de page renvoyée par Gemini (grille 3×3). Sert au matching avec les images natives. */
+  position?: PositionZone | null;
+  /** Bbox visuelle (legacy : utilisée pour le crop de fallback ou l'édition manuelle). */
   bbox_2d?: Bbox | null;
   image_url?: string | null;
   image_cutout_url?: string | null;
+  /** Provenance de l'image_url : "native" = image extraite directement du PDF (qualité HD),
+   *  "fallback-crop" = crop d'une page rasterisée, null = pas encore d'image. */
+  image_source?: "native" | "fallback-crop" | null;
   selected?: boolean;
 }
 

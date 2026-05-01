@@ -31,6 +31,24 @@ const extractRequestSchema = z.object({
 
 type ExtractRequest = z.infer<typeof extractRequestSchema>;
 
+// Les 9 zones de page utilisées en sortie. La nouvelle pipeline préfère une
+// position grossière (zone) à une bbox visuelle : Gemini est très bon pour
+// décrire textuellement la position d'un produit, mais beaucoup moins fiable
+// pour fournir des coordonnées pixel exactes. La position permet ensuite de
+// matcher chaque promo avec une image native extraite du PDF.
+const POSITION_VALUES = [
+  "haut-gauche",
+  "haut-centre",
+  "haut-droite",
+  "milieu-gauche",
+  "milieu-centre",
+  "milieu-droite",
+  "bas-gauche",
+  "bas-centre",
+  "bas-droite",
+] as const;
+type PositionZone = (typeof POSITION_VALUES)[number];
+
 interface ExtractedPromo {
   title: string;
   description?: string;
@@ -39,8 +57,7 @@ interface ExtractedPromo {
   discount_percent?: number | null;
   category?: string | null;
   page_number?: number | null;
-  // Bounding box au format Gemini : [ymin, xmin, ymax, xmax] normalisé 0-1000
-  bbox_2d?: [number, number, number, number] | null;
+  position?: PositionZone | null;
 }
 
 Deno.serve(async (req) => {
@@ -232,14 +249,15 @@ Pour chaque promotion, extrais précisément :
 - discount_percent : pourcentage de réduction AFFICHÉ s'il est visible (sinon calcule-le à partir de price + original_price)
 - category : famille produit (ex "Barbecue & Plancha", "Végétaux", "Animalerie")
 - page_number : numéro de page où le produit apparaît (commence à 1)
-- bbox_2d : la zone qui contient l'IMAGE (la photo) du produit, au format [ymin, xmin, ymax, xmax] avec des entiers normalisés entre 0 et 1000 (0,0 = coin haut-gauche de la page ; 1000,1000 = coin bas-droit). Cible précisément le visuel produit, PAS le bloc texte/prix associé. Si plusieurs produits partagent une même photo de famille, donne la même bbox.
+- position : zone de la page où le produit apparaît, parmi exactement ces 9 valeurs :
+  "haut-gauche" | "haut-centre" | "haut-droite"
+  | "milieu-gauche" | "milieu-centre" | "milieu-droite"
+  | "bas-gauche" | "bas-centre" | "bas-droite"
+  Découpe mentalement la page en grille 3×3 et choisis la zone qui contient l'IMAGE (la photo) du produit. Choisis UNE seule valeur, la plus représentative. Si l'image chevauche deux zones, prends celle qui contient le centre de l'image.
 
 RÈGLES IMPORTANTES :
-- UN PRODUIT = UNE BBOX. Chaque promotion doit correspondre à un seul produit. Ne fusionne JAMAIS plusieurs produits dans une même bbox, même s'ils sont visuellement proches.
-- La bbox doit englober uniquement le produit ciblé et son prix associé, PAS les produits adjacents. Laisse une marge minimale (5-10 px) autour du produit pour ne pas le couper, mais ne déborde pas sur le voisin.
-- Une bbox doit ENTIÈREMENT contenir la photo du produit, pas seulement un bord ou un coin.
-- Évite les bboxes qui ne touchent qu'un fragment d'image en bord (moins de 5% de la zone) : elles seront filtrées et perdues.
-- Préfère élargir légèrement la zone pour inclure toute la photo plutôt que la couper.
+- UN PRODUIT = UNE PROMO. Chaque promotion doit correspondre à un seul produit. Ne fusionne JAMAIS plusieurs produits dans une même entrée.
+- Pour chaque promotion, extraire : le nom EXACT du produit, la description courte, le prix promotionnel, le prix original barré (s'il existe), et le pourcentage de réduction (s'il est affiché).
 
 À IGNORER (NE PAS extraire ces éléments comme des promotions) :
 - En-têtes et pieds de page (titre du catalogue, numéro de page, dates)
@@ -305,12 +323,10 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
                         discount_percent: { type: "number" },
                         category: { type: "string" },
                         page_number: { type: "number" },
-                        bbox_2d: {
-                          type: "array",
-                          description: "Bounding box de l'image produit : [ymin, xmin, ymax, xmax] normalisé 0-1000",
-                          items: { type: "number" },
-                          minItems: 4,
-                          maxItems: 4,
+                        position: {
+                          type: "string",
+                          description: "Zone de la page (grille 3×3) où l'image du produit apparaît",
+                          enum: [...POSITION_VALUES],
                         },
                       },
                       required: ["title"],
@@ -370,6 +386,7 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
 
     // Normalisation : recalcule discount si manquant
     const rawList = parsed.promotions ?? [];
+    const validPositions = new Set<string>(POSITION_VALUES);
     const promotions = rawList.map((p) => {
       const price = p.price ?? 0;
       const orig = p.original_price ?? null;
@@ -377,6 +394,9 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
       if (!discount && orig && price && orig > price && price > 0) {
         discount = Math.round(((orig - price) / orig) * 100);
       }
+      const rawPos = typeof p.position === "string" ? p.position : null;
+      const position: PositionZone | null =
+        rawPos && validPositions.has(rawPos) ? (rawPos as PositionZone) : null;
       return {
         title: p.title?.trim() ?? "",
         description: p.description?.trim() || p.category || null,
@@ -385,7 +405,7 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
         discount_percent: discount,
         category: p.category ?? null,
         page_number: p.page_number ?? null,
-        bbox_2d: Array.isArray(p.bbox_2d) && p.bbox_2d.length === 4 ? p.bbox_2d : null,
+        position,
       };
     }).filter((p) => p.title.length > 0);
 

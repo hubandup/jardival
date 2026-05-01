@@ -179,6 +179,21 @@ describe("normalizePromos", () => {
     expect(result[1].bbox_2d).toBeNull();
     expect(result[2].bbox_2d).toEqual([10, 20, 30, 40]);
   });
+
+  it("accepte les positions valides et rejette les invalides", () => {
+    const result = normalizePromos([
+      { title: "A", position: "haut-gauche" },
+      { title: "B", position: "milieu-centre" },
+      { title: "C", position: "INVALID" },
+      { title: "D", position: 42 as unknown as string },
+      { title: "E" },
+    ]);
+    expect(result[0].position).toBe("haut-gauche");
+    expect(result[1].position).toBe("milieu-centre");
+    expect(result[2].position).toBeNull();
+    expect(result[3].position).toBeNull();
+    expect(result[4].position).toBeNull();
+  });
 });
 
 // =============================================

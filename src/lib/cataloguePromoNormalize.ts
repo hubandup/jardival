@@ -1,6 +1,6 @@
 // Normalisation pure des promotions retournées par Gemini.
 // Logique partagée pour permettre des tests unitaires sans dépendances Deno/Edge.
-import type { Bbox } from "@/types/catalogue";
+import { POSITION_ZONES, type Bbox, type PositionZone } from "@/types/catalogue";
 
 export interface RawExtractedPromo {
   title?: string | null;
@@ -10,6 +10,7 @@ export interface RawExtractedPromo {
   discount_percent?: number | null;
   category?: string | null;
   page_number?: number | null;
+  position?: unknown;
   bbox_2d?: unknown;
 }
 
@@ -21,6 +22,7 @@ export interface NormalizedPromo {
   discount_percent: number | null;
   category: string | null;
   page_number: number | null;
+  position: PositionZone | null;
   bbox_2d: Bbox | null;
 }
 
@@ -31,6 +33,8 @@ function isValidBbox(v: unknown): v is Bbox {
     v.every((n) => typeof n === "number" && Number.isFinite(n))
   );
 }
+
+const VALID_POSITIONS = new Set<string>(POSITION_ZONES);
 
 export function normalizePromos(raw: RawExtractedPromo[]): NormalizedPromo[] {
   return raw
@@ -44,6 +48,9 @@ export function normalizePromos(raw: RawExtractedPromo[]): NormalizedPromo[] {
       if (!discount && orig && price && orig > price && price > 0) {
         discount = Math.round(((orig - price) / orig) * 100);
       }
+      const rawPos = typeof p.position === "string" ? p.position : null;
+      const position: PositionZone | null =
+        rawPos && VALID_POSITIONS.has(rawPos) ? (rawPos as PositionZone) : null;
       return {
         title: (p.title ?? "").trim(),
         description: (p.description ?? "").trim() || p.category || null,
@@ -55,6 +62,7 @@ export function normalizePromos(raw: RawExtractedPromo[]): NormalizedPromo[] {
           typeof p.page_number === "number" && Number.isFinite(p.page_number)
             ? p.page_number
             : null,
+        position,
         bbox_2d: isValidBbox(p.bbox_2d) ? p.bbox_2d : null,
       };
     })

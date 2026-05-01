@@ -48,8 +48,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { cropAndUploadPromoImages, detectEdgeOnlyBboxes, clearPdfCache } from "@/lib/pdfImageCrop";
+import { clearPdfCache } from "@/lib/pdfImageCrop";
 import { uploadAndGetUrl } from "@/lib/storageUpload";
+import { extractPromoImages, bboxFromPosition } from "@/lib/extractPromoImages";
+import { Badge } from "@/components/ui/badge";
 import CataloguePromoBboxPreview from "./CataloguePromoBboxPreview";
 import type { PreviewBox, WorkflowPromo } from "@/types/catalogue";
 
@@ -101,36 +103,6 @@ function isTimeoutLikeError(err: unknown, dataError?: string | null): boolean {
   );
 }
 
-// Applique systématiquement le filtre edge-only sur une liste de promos issue d'une extraction IA.
-// Centralisé ici pour garantir qu'aucun chemin (premier extract / ré-extract) ne saute le filtre.
-async function filterEdgeOnlyPromos(
-  pdfAbsoluteUrl: string,
-  promos: WorkflowPromo[]
-): Promise<{ kept: WorkflowPromo[]; dropped: number }> {
-  const candidates = promos
-    .map((p, idx) => ({ idx, pageNumber: p.page_number ?? 0, bbox: p.bbox_2d }))
-    .filter((c) => c.bbox && c.pageNumber > 0) as Array<{
-      idx: number;
-      pageNumber: number;
-      bbox: [number, number, number, number];
-    }>;
-  if (!candidates.length) return { kept: promos, dropped: 0 };
-  try {
-    const dropIdxs = await detectEdgeOnlyBboxes(
-      pdfAbsoluteUrl,
-      candidates.map((c) => ({ pageNumber: c.pageNumber, bbox: c.bbox }))
-    );
-    if (!dropIdxs.length) return { kept: promos, dropped: 0 };
-    const dropPromoIdx = new Set(dropIdxs.map((i) => candidates[i].idx));
-    return {
-      kept: promos.filter((_, i) => !dropPromoIdx.has(i)),
-      dropped: dropPromoIdx.size,
-    };
-  } catch (e) {
-    console.warn("Filtre edge-only échoué (ignoré)", e);
-    return { kept: promos, dropped: 0 };
-  }
-}
 
 export interface CatalogueLite {
   id: string;
@@ -582,8 +554,6 @@ function ZonesStep({
 }) {
   const [extracting, setExtracting] = useState(false);
   const [extractProgress, setExtractProgress] = useState<{ value: number; label: string } | null>(null);
-  const [croppingImages, setCroppingImages] = useState(false);
-  const [cropProgress, setCropProgress] = useState<{ done: number; total: number } | null>(null);
 
   if (!pdfUrl) {
     return (
@@ -668,17 +638,32 @@ function ZonesStep({
         (p: WorkflowPromo) => ({ ...p, selected: true })
       );
 
-      // Filtre edge-only systématique : appliqué à CHAQUE extraction (premier appel ou ré-extraction).
-      const { kept: list, dropped: droppedCount } = await filterEdgeOnlyPromos(absoluteUrl, rawList);
+      // Pipeline natif : extraction des images PDF en qualité d'origine + matching
+      // par position. Bascule en fallback rasterize+crop si aucune image native.
+      setExtractProgress({ value: 95, label: "Association des images natives..." });
+      const orchestrated = await extractPromoImages(absoluteUrl, rawList);
+
+      const list: WorkflowPromo[] = rawList.map((p, i) => {
+        const out = orchestrated.outputs[i];
+        // Pour les natives : pas de bbox éditable (l'image est déjà propre).
+        // Pour les fallback : bbox dérivée de la position (modifiable par l'admin).
+        const isNative = out?.source === "native";
+        return {
+          ...p,
+          selected: true,
+          image_url: out?.imageUrl ?? null,
+          image_source: out?.source ?? null,
+          bbox_2d: isNative ? null : (p.bbox_2d ?? bboxFromPosition(p.position ?? null)),
+        };
+      });
 
       // Saut à 100% au retour effectif de l'API.
       setExtractProgress({ value: 100, label: "Terminé" });
 
       updatePromos(() => list);
+      const { matchedNative, fallbackCropped, failed } = orchestrated.stats;
       toast.success(
-        droppedCount > 0
-          ? `${list.length} zones détectées (${droppedCount} parasites filtrées)`
-          : `${list.length} zones détectées par l'IA`
+        `${list.length} promos · ${matchedNative} HD · ${fallbackCropped} crop${failed ? ` · ${failed} sans image` : ""}`
       );
     } catch (e) {
       console.error(e);
@@ -691,60 +676,14 @@ function ZonesStep({
     }
   };
 
-  const handleCropImages = async () => {
-    const tasks = promos
-      .map((p, idx) => ({ p, idx }))
-      .filter(({ p }) => p.bbox_2d && p.page_number && p.selected !== false)
-      .map(({ p, idx }) => ({
-        pageNumber: p.page_number!,
-        bbox: p.bbox_2d!,
-        filename: `${idx}-${p.title}`,
-      }));
-    if (!tasks.length) {
-      toast.error("Aucune zone à extraire");
-      return;
-    }
-    setCroppingImages(true);
-    setCropProgress({ done: 0, total: tasks.length });
-    try {
-      const results = await cropAndUploadPromoImages(
-        new URL(pdfUrl, window.location.origin).toString(),
-        tasks,
-        (done, total) => setCropProgress({ done, total }),
-        { scale: 3, format: "jpeg", quality: 0.92 }
-      );
-      const byFilename = new Map(results.map((r) => [r.filename, r.publicUrl]));
-      updatePromos((prev) =>
-        prev.map((p, idx) => {
-          const url = byFilename.get(`${idx}-${p.title}`);
-          return url ? { ...p, image_url: url, image_cutout_url: null } : p;
-        })
-      );
-      const ok = results.filter((r) => r.publicUrl).length;
-      toast.success(`${ok} images extraites`);
-    } catch (e) {
-      console.error(e);
-      toast.error(e instanceof Error ? e.message : "Erreur crop");
-    } finally {
-      setCroppingImages(false);
-    }
-  };
-
-  const selectedWithBbox = promos.filter((p) => p.selected !== false && p.bbox_2d).length;
-  const selectedNeedingCrop = promos.filter(
-    (p) => p.selected !== false && p.bbox_2d && !p.image_cutout_url
-  ).length;
-  const hasCroppedImages = promos.some(
-    (p) => p.selected !== false && p.image_cutout_url
-  );
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2 p-3 border rounded-md bg-muted/30">
         <div>
-          <p className="text-sm font-medium">Détection des zones de promotions</p>
+          <p className="text-sm font-medium">Extraction des promotions</p>
           <p className="text-xs text-muted-foreground">
-            L'IA propose les zones — vous pouvez ensuite les déplacer, redimensionner, supprimer ou en ajouter.
+            Un seul clic : Gemini lit le catalogue et chaque promo est associée à
+            son image native (HD) ou à un crop fallback si l'image n'est pas isolable.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -754,7 +693,7 @@ function ZonesStep({
             ) : (
               <Sparkles className="h-4 w-4" />
             )}
-            {promos.length ? "Relancer l'IA" : "Détecter avec l'IA"}
+            {promos.length ? "Relancer l'extraction" : "Extraire les promotions"}
           </Button>
           {extractProgress && (
             <div className="flex flex-col gap-1 min-w-[260px] flex-1">
@@ -772,7 +711,9 @@ function ZonesStep({
           pdfUrl={new URL(pdfUrl, window.location.origin).toString()}
           boxes={promos
             .map((p, idx): PreviewBox | null =>
-              p.bbox_2d && p.page_number
+              // Les promos `native` n'apparaissent pas comme bboxes éditables :
+              // l'image est déjà extraite proprement, pas besoin de cadrer.
+              p.image_source !== "native" && p.bbox_2d && p.page_number
                 ? {
                     pageNumber: p.page_number,
                     bbox: p.bbox_2d,
@@ -818,6 +759,7 @@ function ZonesStep({
                 title: `Nouvelle zone (page ${pageNumber})`,
                 page_number: pageNumber,
                 bbox_2d: bbox,
+                image_source: "fallback-crop",
                 selected: true,
               },
             ])
@@ -827,45 +769,18 @@ function ZonesStep({
         <div className="py-12 text-center border rounded-md bg-muted/20">
           <Sparkles className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground">
-            Lancez la détection IA pour proposer automatiquement les zones de promotions.
+            Lancez l'extraction pour identifier les promotions et leurs images.
           </p>
         </div>
       )}
 
-      <div className="flex justify-between items-center gap-2">
+      <div className="flex justify-between">
         <Button variant="outline" onClick={onPrev}>
           <ChevronLeft className="h-4 w-4" /> Précédent
         </Button>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={handleCropImages}
-            disabled={croppingImages || selectedNeedingCrop === 0}
-          >
-            {croppingImages ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {cropProgress ? `${cropProgress.done}/${cropProgress.total}` : ""}
-              </>
-            ) : (
-              <>
-                <ImageIcon className="h-4 w-4" />
-                Extraire les images ({selectedNeedingCrop})
-              </>
-            )}
-          </Button>
-          <Button
-            onClick={onNext}
-            disabled={
-              promos.length === 0 ||
-              croppingImages ||
-              selectedNeedingCrop > 0 ||
-              !hasCroppedImages
-            }
-          >
-            Étape suivante <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button onClick={onNext} disabled={promos.length === 0}>
+          Étape suivante <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
@@ -1037,27 +952,46 @@ function TableStep({
                   />
                 </TableCell>
                 <TableCell>
-                  {p.image_cutout_url || p.image_url ? (
-                    <div className="relative h-14 w-14">
-                      <img
-                        src={p.image_cutout_url ?? p.image_url ?? ""}
-                        alt=""
-                        className="h-14 w-14 rounded object-contain border bg-muted/30"
-                      />
-                      {p.image_cutout_url && (
-                        <span
-                          className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5"
-                          title="Détourée"
-                        >
-                          <Check className="h-2.5 w-2.5" />
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="h-14 w-14 rounded border border-dashed flex items-center justify-center text-muted-foreground">
-                      <ImageIcon className="h-4 w-4" />
-                    </div>
-                  )}
+                  <div className="flex items-start gap-2">
+                    {p.image_cutout_url || p.image_url ? (
+                      <div className="relative h-14 w-14 shrink-0">
+                        <img
+                          src={p.image_cutout_url ?? p.image_url ?? ""}
+                          alt=""
+                          className="h-14 w-14 rounded object-contain border bg-muted/30"
+                        />
+                        {p.image_cutout_url && (
+                          <span
+                            className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5"
+                            title="Détourée"
+                          >
+                            <Check className="h-2.5 w-2.5" />
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-14 w-14 rounded border border-dashed flex items-center justify-center text-muted-foreground shrink-0">
+                        <ImageIcon className="h-4 w-4" />
+                      </div>
+                    )}
+                    {p.image_source === "native" ? (
+                      <Badge
+                        variant="default"
+                        className="h-5 px-1.5 text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white"
+                        title="Image extraite directement du PDF (qualité native)"
+                      >
+                        HD
+                      </Badge>
+                    ) : p.image_source === "fallback-crop" ? (
+                      <Badge
+                        variant="secondary"
+                        className="h-5 px-1.5 text-[10px] bg-amber-500 hover:bg-amber-500 text-white"
+                        title="Crop d'une page rasterisée (qualité dégradée)"
+                      >
+                        Crop
+                      </Badge>
+                    ) : null}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <Input
