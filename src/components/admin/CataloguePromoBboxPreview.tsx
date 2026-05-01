@@ -411,8 +411,8 @@ function PageEditor({
                     });
                   }}
                   onClick={(e) => {
-                    // Toggle uniquement si pas de drag effectif (drag null après mouseup)
                     e.stopPropagation();
+                    setActiveIndex(i0);
                   }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
