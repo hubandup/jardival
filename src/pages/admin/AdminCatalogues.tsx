@@ -143,6 +143,15 @@ export default function AdminCatalogues() {
                     </span>
                   </TableCell>
                   <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Extraire les promotions du PDF"
+                      onClick={() => setExtractFor(c)}
+                      disabled={!c.pdf_url}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => setEditing(c)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
