@@ -27,58 +27,39 @@ interface ReelSlideProps {
 }
 
 const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, paused }: ReelSlideProps) => {
-  const palette = useCoverPalette(p.image);
   const price = formatPrice(p.price);
   const oldPrice = formatPrice(p.oldPrice);
   const slug = (p as Product & { slug?: string }).slug;
   const link = slug ? `/promotions/${slug}` : `/promotions`;
 
-  // Fond adapté à la couleur dominante (fallback sombre).
-  const bgStyle = palette
-    ? { backgroundColor: `hsl(${palette.primary})` }
-    : { backgroundColor: "hsl(var(--muted))" };
-
   return (
     <article
       data-reel-index={idx}
-      className="reels-scroll relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col overflow-hidden"
-      style={bgStyle}
+      className="reels-scroll relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col overflow-hidden bg-white"
     >
-      {/* Image centrée, max 700px */}
-      <div className="absolute inset-0 flex items-center justify-center p-4 pb-44">
+      {/* Image pleine largeur, sans bord arrondi */}
+      <div className="absolute inset-0 flex items-center justify-center pb-72">
         {p.image && priority !== "off" ? (
           <img
             src={p.image}
             alt={p.name}
-            className="max-h-full w-auto max-w-full object-contain"
-            style={{ maxWidth: "min(100%, 700px)" }}
+            className="h-full w-full object-contain"
             loading={priority === "high" ? "eager" : "lazy"}
             // @ts-expect-error fetchpriority est valide HTML mais pas encore typé partout
             fetchpriority={priority === "high" ? "high" : "low"}
             decoding="async"
           />
         ) : p.image ? (
-          // Slide hors zone de préchargement : on garde un placeholder vide pour ne pas déclencher la requête.
-          <div className="h-full w-full max-w-[700px]" aria-hidden />
+          <div className="h-full w-full" aria-hidden />
         ) : (
-          <div className="h-full w-full max-w-[700px] rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30" />
+          <div className="h-full w-full bg-gradient-to-br from-primary/10 to-accent/10" />
         )}
       </div>
-
-      {/* Voile pour la lisibilité du bloc d'infos */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5"
-        style={{
-          background:
-            "linear-gradient(180deg, hsl(0 0% 0% / 0) 0%, hsl(0 0% 0% / 0.55) 60%, hsl(0 0% 0% / 0.85) 100%)",
-        }}
-        aria-hidden
-      />
 
       {/* Badges en haut */}
       <div className="relative z-10 flex items-start justify-between gap-2 p-4">
         {validityLabel && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground backdrop-blur">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-foreground/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-background backdrop-blur">
             <Tag className="h-3 w-3" />
             {validityLabel}
           </span>
@@ -91,34 +72,34 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
       </div>
 
       {/* Compteur position */}
-      <div className="relative z-10 mx-auto -mt-2 inline-flex rounded-full bg-black/40 px-2.5 py-0.5 text-[10px] font-medium text-white/80 backdrop-blur">
+      <div className="relative z-10 mx-auto -mt-2 inline-flex rounded-full bg-foreground/10 px-2.5 py-0.5 text-[10px] font-medium text-foreground/70 backdrop-blur">
         {idx + 1} / {total}
       </div>
 
       <div className="flex-1" />
 
-      {/* Bloc d'infos en bas */}
-      <div className="relative z-10 space-y-3 p-5 pb-6 text-white">
+      {/* Bloc d'infos en bas — fond blanc, texte sombre */}
+      <div className="relative z-10 space-y-3 bg-white p-5 pb-6 text-foreground">
         {p.category && (
-          <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
+          <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             {p.category}
           </span>
         )}
-        <h2 className="font-display text-2xl font-semibold leading-tight">
+        <h2 className="font-display text-2xl font-semibold leading-tight text-foreground">
           {p.name}
         </h2>
         {(p as Product & { description?: string }).description && (
-          <p className="line-clamp-2 text-sm text-white/80">
+          <p className="line-clamp-2 text-sm text-muted-foreground">
             {(p as Product & { description?: string }).description}
           </p>
         )}
 
         <div className="flex items-end gap-3 pt-1">
           {price && (
-            <span className="font-display text-3xl font-bold">{price}</span>
+            <span className="font-display text-3xl font-bold text-foreground">{price}</span>
           )}
           {oldPrice && (
-            <span className="pb-1 text-sm text-white/60 line-through">
+            <span className="pb-1 text-sm text-muted-foreground line-through">
               {oldPrice}
             </span>
           )}
@@ -137,7 +118,7 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
         <div className="flex gap-2 pt-1">
           <Link
             to={link}
-            className="inline-flex flex-1 items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white backdrop-blur transition-transform active:scale-95"
+            className="inline-flex flex-1 items-center justify-center rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold text-foreground transition-transform active:scale-95"
           >
             Voir l'offre
           </Link>
@@ -170,7 +151,7 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
               }
             }}
             aria-label={`Partager ${p.name}`}
-            className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white backdrop-blur transition-transform active:scale-95"
+            className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold text-foreground transition-transform active:scale-95"
           >
             <Share2 className="h-4 w-4" />
           </button>
@@ -180,7 +161,7 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
       {/* Indicateur swipe (1ère slide uniquement, en pause si interruption) */}
       {idx === 0 && total > 1 && (
         <div
-          className={`pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 text-white/70 ${paused ? "" : "animate-bounce"}`}
+          className={`pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2 text-foreground/40 ${paused ? "" : "animate-bounce"}`}
         >
           <ChevronUp className="h-5 w-5 rotate-180" />
         </div>
