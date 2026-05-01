@@ -38,6 +38,7 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority }: Ree
 
   return (
     <article
+      data-reel-index={idx}
       className="reels-scroll relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col overflow-hidden"
       style={bgStyle}
     >
