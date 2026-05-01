@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { cropAndUploadPromoImages, detectEdgeOnlyBboxes, clearPdfCache } from "@/lib/pdfImageCrop";
+import { uploadAndGetUrl } from "@/lib/storageUpload";
 import CataloguePromoBboxPreview from "./CataloguePromoBboxPreview";
 import type { PreviewBox, WorkflowPromo } from "@/types/catalogue";
 
@@ -63,18 +65,71 @@ const makePatchPromo =
       prev.map((x, i) => (i === index ? { ...x, ...patch } : x))
     );
 
-async function uploadAndGetUrl(
-  bucket: string,
-  path: string,
-  file: File,
-  options?: { contentType?: string }
-): Promise<string> {
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(path, file, options?.contentType ? { contentType: options.contentType } : undefined);
-  if (error) throw error;
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+type LogRejection = (
+  bbox: [number, number, number, number],
+  reason?: string | null
+) => void;
+
+const noopLogRejection: LogRejection = () => {};
+
+// Phases textuelles affichées pendant l'extraction IA. Les bornes sont des fractions de la
+// durée estimée (90s) ; on plafonne à 95% pour pouvoir sauter à 100% au retour de l'API.
+const EXTRACT_PHASES: Array<{ until: number; label: string }> = [
+  { until: 0.10, label: "Analyse du PDF en cours..." },
+  { until: 0.40, label: "Détection des promotions..." },
+  { until: 0.70, label: "Extraction des informations produit..." },
+  { until: 0.90, label: "Vérification et nettoyage..." },
+  { until: 1.00, label: "Finalisation..." },
+];
+const EXTRACT_ESTIMATED_MS = 90_000;
+const EXTRACT_MAX_RETRIES = 2;
+const EXTRACT_RETRY_DELAY_MS = 5_000;
+
+function pickPhase(progress: number): string {
+  for (const p of EXTRACT_PHASES) if (progress <= p.until * 100) return p.label;
+  return EXTRACT_PHASES[EXTRACT_PHASES.length - 1].label;
+}
+
+function isTimeoutLikeError(err: unknown, dataError?: string | null): boolean {
+  const msg = `${err instanceof Error ? err.message : ""} ${dataError ?? ""}`.toLowerCase();
+  return (
+    msg.includes("dépassé") ||
+    msg.includes("timeout") ||
+    msg.includes("aborted") ||
+    msg.includes("504") ||
+    msg.includes("gateway")
+  );
+}
+
+// Applique systématiquement le filtre edge-only sur une liste de promos issue d'une extraction IA.
+// Centralisé ici pour garantir qu'aucun chemin (premier extract / ré-extract) ne saute le filtre.
+async function filterEdgeOnlyPromos(
+  pdfAbsoluteUrl: string,
+  promos: WorkflowPromo[]
+): Promise<{ kept: WorkflowPromo[]; dropped: number }> {
+  const candidates = promos
+    .map((p, idx) => ({ idx, pageNumber: p.page_number ?? 0, bbox: p.bbox_2d }))
+    .filter((c) => c.bbox && c.pageNumber > 0) as Array<{
+      idx: number;
+      pageNumber: number;
+      bbox: [number, number, number, number];
+    }>;
+  if (!candidates.length) return { kept: promos, dropped: 0 };
+  try {
+    const dropIdxs = await detectEdgeOnlyBboxes(
+      pdfAbsoluteUrl,
+      candidates.map((c) => ({ pageNumber: c.pageNumber, bbox: c.bbox }))
+    );
+    if (!dropIdxs.length) return { kept: promos, dropped: 0 };
+    const dropPromoIdx = new Set(dropIdxs.map((i) => candidates[i].idx));
+    return {
+      kept: promos.filter((_, i) => !dropPromoIdx.has(i)),
+      dropped: dropPromoIdx.size,
+    };
+  } catch (e) {
+    console.warn("Filtre edge-only échoué (ignoré)", e);
+    return { kept: promos, dropped: 0 };
+  }
 }
 
 export interface CatalogueLite {
@@ -121,6 +176,41 @@ export default function CatalogueWorkflowDialog({
   const [hydrated, setHydrated] = useState(false);
   const [extractionId, setExtractionId] = useState<string | null>(null);
   const dirtyRef = useRef(false);
+  const orgIdRef = useRef<string | null>(null);
+
+  // Charge l'organization_id du catalogue pour scoper les rejets.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("catalogues")
+        .select("organization_id")
+        .eq("id", catalogue.id)
+        .maybeSingle();
+      if (!cancelled) orgIdRef.current = (data as { organization_id?: string } | null)?.organization_id ?? null;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, catalogue.id]);
+
+  const logRejection = useCallback<LogRejection>(
+    (bbox, reason) => {
+      const orgId = orgIdRef.current;
+      if (!orgId) return;
+      // Fire-and-forget : le rejet n'est pas bloquant pour l'admin.
+      void supabase.from("catalogue_extraction_rejections").insert([{
+        organization_id: orgId,
+        catalogue_id: catalogue.id,
+        bbox: bbox as unknown as never,
+        reason: reason ?? null,
+      }]).then(({ error }) => {
+        if (error) console.warn("Insert rejection failed", error);
+      });
+    },
+    [catalogue.id]
+  );
 
   // Charger le brouillon existant à l'ouverture
   useEffect(() => {
@@ -286,6 +376,7 @@ export default function CatalogueWorkflowDialog({
                 catalogue={catalogue}
                 promos={promos}
                 updatePromos={updatePromos}
+                logRejection={logRejection}
                 onPrev={() => setStep("upload")}
                 onNext={() => setStep("tableau")}
               />
@@ -295,6 +386,7 @@ export default function CatalogueWorkflowDialog({
                 catalogue={catalogue}
                 promos={promos}
                 updatePromos={updatePromos}
+                logRejection={logRejection}
                 onPrev={() => setStep("zones")}
                 onNext={() => setStep("programmation")}
               />
@@ -476,6 +568,7 @@ function ZonesStep({
   catalogue,
   promos,
   updatePromos,
+  logRejection = noopLogRejection,
   onPrev,
   onNext,
 }: {
@@ -483,10 +576,12 @@ function ZonesStep({
   catalogue: CatalogueLite;
   promos: WorkflowPromo[];
   updatePromos: UpdatePromos;
+  logRejection?: LogRejection;
   onPrev: () => void;
   onNext: () => void;
 }) {
   const [extracting, setExtracting] = useState(false);
+  const [extractProgress, setExtractProgress] = useState<{ value: number; label: string } | null>(null);
   const [croppingImages, setCroppingImages] = useState(false);
   const [cropProgress, setCropProgress] = useState<{ done: number; total: number } | null>(null);
 
@@ -505,53 +600,79 @@ function ZonesStep({
 
   const handleAiExtract = async () => {
     setExtracting(true);
-    try {
-      const absoluteUrl = new URL(pdfUrl, window.location.origin).toString();
-      // Apprentissage local : si on a déjà des bboxes ajustées, on les renvoie comme exemples.
-      const previous_boxes = promos
-        .filter((p) => p.bbox_2d && p.page_number)
-        .map((p) => ({
-          page_number: p.page_number,
-          bbox_2d: p.bbox_2d,
-          title: p.title,
-        }));
-      const { data, error } = await supabase.functions.invoke("extract-catalogue-promos", {
+    setExtractProgress({ value: 0, label: EXTRACT_PHASES[0].label });
+
+    // Timer de progression simulée (ramped) sur la durée estimée de Gemini.
+    const startedAt = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - startedAt;
+      const value = Math.min(95, Math.round((elapsed / EXTRACT_ESTIMATED_MS) * 100));
+      setExtractProgress((prev) =>
+        prev?.label.startsWith("L'extraction prend plus de temps")
+          ? prev
+          : { value, label: pickPhase(value) }
+      );
+    };
+    const interval = window.setInterval(tick, 250);
+
+    const absoluteUrl = new URL(pdfUrl, window.location.origin).toString();
+    const previous_boxes = promos
+      .filter((p) => p.bbox_2d && p.page_number)
+      .map((p) => ({
+        page_number: p.page_number,
+        bbox_2d: p.bbox_2d,
+        title: p.title,
+      }));
+
+    const invokeOnce = () =>
+      supabase.functions.invoke("extract-catalogue-promos", {
         body: {
           pdf_url: absoluteUrl,
+          catalogue_id: catalogue.id,
           starts_at: catalogue.starts_at,
           ends_at: catalogue.ends_at,
           previous_boxes: previous_boxes.length ? previous_boxes : undefined,
         },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      let list: WorkflowPromo[] = (data?.promotions ?? []).map((p: WorkflowPromo) => ({
-        ...p,
-        selected: true,
-      }));
 
-      // Filtrage : supprimer les bboxes qui ne contiennent qu'un fragment d'image en bord (<5%).
-      const candidates = list
-        .map((p, idx) => ({ idx, pageNumber: p.page_number ?? 0, bbox: p.bbox_2d }))
-        .filter((c) => c.bbox && c.pageNumber > 0) as Array<{
-          idx: number;
-          pageNumber: number;
-          bbox: [number, number, number, number];
-        }>;
-      let droppedCount = 0;
-      try {
-        const dropIdxs = await detectEdgeOnlyBboxes(
-          absoluteUrl,
-          candidates.map((c) => ({ pageNumber: c.pageNumber, bbox: c.bbox }))
-        );
-        if (dropIdxs.length) {
-          const dropPromoIdx = new Set(dropIdxs.map((i) => candidates[i].idx));
-          droppedCount = dropPromoIdx.size;
-          list = list.filter((_, i) => !dropPromoIdx.has(i));
+    try {
+      let attempt = 0;
+      let result: Awaited<ReturnType<typeof invokeOnce>> | null = null;
+      while (attempt <= EXTRACT_MAX_RETRIES) {
+        if (attempt > 0) {
+          setExtractProgress({
+            value: 5,
+            label: "L'extraction prend plus de temps que prévu, nouvelle tentative...",
+          });
+          await new Promise((r) => setTimeout(r, EXTRACT_RETRY_DELAY_MS));
         }
-      } catch (e) {
-        console.warn("Filtre edge-only échoué (ignoré)", e);
+        const r = await invokeOnce();
+        const dataError = (r.data as { error?: string } | null)?.error ?? null;
+        const isTimeout = isTimeoutLikeError(r.error, dataError);
+        if (!r.error && !dataError) {
+          result = r;
+          break;
+        }
+        if (isTimeout && attempt < EXTRACT_MAX_RETRIES) {
+          attempt++;
+          continue;
+        }
+        // Erreur définitive : propage
+        if (r.error) throw r.error;
+        if (dataError) throw new Error(dataError);
+        attempt++;
       }
+      if (!result) throw new Error("Extraction IA impossible après plusieurs tentatives");
+
+      const rawList: WorkflowPromo[] = ((result.data as { promotions?: WorkflowPromo[] } | null)?.promotions ?? []).map(
+        (p: WorkflowPromo) => ({ ...p, selected: true })
+      );
+
+      // Filtre edge-only systématique : appliqué à CHAQUE extraction (premier appel ou ré-extraction).
+      const { kept: list, dropped: droppedCount } = await filterEdgeOnlyPromos(absoluteUrl, rawList);
+
+      // Saut à 100% au retour effectif de l'API.
+      setExtractProgress({ value: 100, label: "Terminé" });
 
       updatePromos(() => list);
       toast.success(
@@ -563,7 +684,10 @@ function ZonesStep({
       console.error(e);
       toast.error(e instanceof Error ? e.message : "Erreur extraction IA");
     } finally {
+      window.clearInterval(interval);
       setExtracting(false);
+      // Laisse 100% visible un instant avant de retirer la barre.
+      setTimeout(() => setExtractProgress(null), 500);
     }
   };
 
@@ -626,6 +750,14 @@ function ZonesStep({
             )}
             {promos.length ? "Relancer l'IA" : "Détecter avec l'IA"}
           </Button>
+          {extractProgress && (
+            <div className="flex flex-col gap-1 min-w-[260px] flex-1">
+              <Progress value={extractProgress.value} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                {extractProgress.label} <span className="tabular-nums">{extractProgress.value}%</span>
+              </p>
+            </div>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -678,7 +810,11 @@ function ZonesStep({
               prev.map((p, idx) => (idx === i ? { ...p, selected: !p.selected } : p))
             )
           }
-          onDeleteBox={(i) => updatePromos((prev) => prev.filter((_, idx) => idx !== i))}
+          onDeleteBox={(i) => {
+            const removed = promos[i];
+            if (removed?.bbox_2d) logRejection(removed.bbox_2d, "deleted-from-bbox-preview");
+            updatePromos((prev) => prev.filter((_, idx) => idx !== i));
+          }}
           onUpdateBbox={(i, bbox) =>
             updatePromos((prev) => prev.map((p, idx) => (idx === i ? { ...p, bbox_2d: bbox } : p)))
           }
@@ -726,12 +862,14 @@ function TableStep({
   catalogue,
   promos,
   updatePromos,
+  logRejection = noopLogRejection,
   onPrev,
   onNext,
 }: {
   catalogue: CatalogueLite;
   promos: WorkflowPromo[];
   updatePromos: UpdatePromos;
+  logRejection?: LogRejection;
   onPrev: () => void;
   onNext: () => void;
 }) {
@@ -985,9 +1123,10 @@ function TableStep({
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() =>
-                        updatePromos((prev) => prev.filter((_, idx) => idx !== i))
-                      }
+                      onClick={() => {
+                        if (p.bbox_2d) logRejection(p.bbox_2d, "deleted-from-table");
+                        updatePromos((prev) => prev.filter((_, idx) => idx !== i));
+                      }}
                       className="h-7 w-7 text-destructive"
                       title="Supprimer"
                     >

@@ -13,6 +13,7 @@ const bboxSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);
 
 const extractRequestSchema = z.object({
   pdf_url: z.string().url("pdf_url doit être une URL valide"),
+  catalogue_id: z.string().uuid().nullish(),
   starts_at: z.string().nullish(),
   ends_at: z.string().nullish(),
   // Bboxes ajustées par l'utilisateur lors d'une précédente extraction du MÊME catalogue.
@@ -130,14 +131,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- Apprentissage : agrégats sur les extractions validées passées ---
+    // --- Résout l'organisation cible (multi-tenant) ---
+    let organizationId: string | null = null;
+    if (body.catalogue_id) {
+      const { data: cat, error: catErr } = await supabase
+        .from("catalogues")
+        .select("organization_id")
+        .eq("id", body.catalogue_id)
+        .maybeSingle();
+      if (catErr) console.warn("Lecture catalogue.organization_id échouée", catErr);
+      else organizationId = cat?.organization_id ?? null;
+    }
+
+    // --- Apprentissage : agrégats sur les extractions validées passées (scoped par organisation) ---
     let learnedHints = "";
     try {
-      const { data: stats } = await supabase
+      let q = supabase
         .from("catalogue_extraction_stats")
         .select("bbox_width,bbox_height,aspect_ratio,had_price,had_original_price")
         .order("created_at", { ascending: false })
         .limit(500);
+      if (organizationId) q = q.eq("organization_id", organizationId);
+      const { data: stats } = await q;
       if (stats && stats.length >= 5) {
         const widths = stats.map((s: any) => Number(s.bbox_width)).filter((n: number) => Number.isFinite(n) && n > 0);
         const heights = stats.map((s: any) => Number(s.bbox_height)).filter((n: number) => Number.isFinite(n) && n > 0);
@@ -149,7 +164,8 @@ Deno.serve(async (req) => {
           return s[Math.floor(s.length / 2)];
         };
         const priceRate = stats.filter((s: any) => s.had_price).length / stats.length;
-        learnedHints = `\n\nHISTORIQUE D'APPRENTISSAGE (${stats.length} promotions précédemment validées par l'admin) :
+        const scope = organizationId ? "cette enseigne" : "tous catalogues confondus";
+        learnedHints = `\n\nHISTORIQUE D'APPRENTISSAGE (${stats.length} promotions précédemment validées pour ${scope}) :
 - Largeur médiane d'une zone produit : ~${Math.round(med(widths))}/1000 (moyenne ${Math.round(avg(widths))})
 - Hauteur médiane d'une zone produit : ~${Math.round(med(heights))}/1000 (moyenne ${Math.round(avg(heights))})
 - Ratio largeur/hauteur médian : ~${med(ratios).toFixed(2)}
@@ -158,6 +174,40 @@ Vise des bboxes proches de ces dimensions et évite les zones nettement plus pet
       }
     } catch (e) {
       console.warn("Lecture stats apprentissage échouée", e);
+    }
+
+    // --- Signal négatif : zones rejetées par l'admin sur cette même enseigne ---
+    let rejectionHints = "";
+    if (organizationId) {
+      try {
+        const { data: rejections } = await supabase
+          .from("catalogue_extraction_rejections")
+          .select("bbox,reason")
+          .eq("organization_id", organizationId)
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (rejections && rejections.length) {
+          const lines = rejections
+            .map((r: any) => {
+              const b = r.bbox;
+              const arr = Array.isArray(b)
+                ? b
+                : Array.isArray(b?.bbox)
+                ? b.bbox
+                : null;
+              if (!arr || arr.length !== 4) return null;
+              const reason = r.reason ? ` (${r.reason})` : "";
+              return `  · [${arr.join(", ")}]${reason}`;
+            })
+            .filter(Boolean)
+            .join("\n");
+          if (lines) {
+            rejectionHints = `\n\nZONES REJETÉES PAR L'ADMIN SUR DES CATALOGUES PRÉCÉDENTS DE CETTE ENSEIGNE (${rejections.length} exemples) :\n${lines}\nÉvite de proposer des zones similaires (mêmes coordonnées approximatives, même type de contenu non-produit).`;
+          }
+        }
+      } catch (e) {
+        console.warn("Lecture rejets apprentissage échouée", e);
+      }
     }
 
     // --- Exemples concrets fournis par le client (ré-extraction du même catalogue) ---
@@ -174,22 +224,31 @@ Vise des bboxes proches de ces dimensions et évite les zones nettement plus pet
     }
 
     const systemPrompt = `Tu es un assistant qui extrait les promotions d'un prospectus PDF de jardinerie.
-Pour chaque produit en promotion visible, retourne :
-- title : nom du produit (concis, ex "Barbecue Charbon Serena")
-- description : courte description (1 ligne) ou catégorie/référence si visible
-- price : prix actuel en euros (nombre, ex 99.90). Si le prix n'est pas affiché à l'unité (ex: "-20% sur les géraniums"), mets 0
-- original_price : prix barré/avant promo s'il est affiché, sinon null
-- discount_percent : pourcentage de remise affiché s'il est visible, sinon calcule-le si tu as price + original_price
+Pour chaque promotion, extrais précisément :
+- title : nom EXACT du produit tel qu'imprimé (concis, ex "Barbecue Charbon Serena")
+- description : description courte (1 ligne) ou catégorie/référence si visible
+- price : prix promotionnel en euros (nombre, ex 99.90). Si le prix n'est pas affiché à l'unité (ex: "-20% sur les géraniums"), mets 0
+- original_price : prix original BARRÉ/avant promo s'il est affiché, sinon null
+- discount_percent : pourcentage de réduction AFFICHÉ s'il est visible (sinon calcule-le à partir de price + original_price)
 - category : famille produit (ex "Barbecue & Plancha", "Végétaux", "Animalerie")
 - page_number : numéro de page où le produit apparaît (commence à 1)
 - bbox_2d : la zone qui contient l'IMAGE (la photo) du produit, au format [ymin, xmin, ymax, xmax] avec des entiers normalisés entre 0 et 1000 (0,0 = coin haut-gauche de la page ; 1000,1000 = coin bas-droit). Cible précisément le visuel produit, PAS le bloc texte/prix associé. Si plusieurs produits partagent une même photo de famille, donne la même bbox.
 
 RÈGLES IMPORTANTES :
+- UN PRODUIT = UNE BBOX. Chaque promotion doit correspondre à un seul produit. Ne fusionne JAMAIS plusieurs produits dans une même bbox, même s'ils sont visuellement proches.
+- La bbox doit englober uniquement le produit ciblé et son prix associé, PAS les produits adjacents. Laisse une marge minimale (5-10 px) autour du produit pour ne pas le couper, mais ne déborde pas sur le voisin.
 - Une bbox doit ENTIÈREMENT contenir la photo du produit, pas seulement un bord ou un coin.
 - Évite les bboxes qui ne touchent qu'un fragment d'image en bord (moins de 5% de la zone) : elles seront filtrées et perdues.
 - Préfère élargir légèrement la zone pour inclure toute la photo plutôt que la couper.
 
-N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les promotions distinctes.${learnedHints}${previousExamples}`;
+À IGNORER (NE PAS extraire ces éléments comme des promotions) :
+- En-têtes et pieds de page (titre du catalogue, numéro de page, dates)
+- Logos d'enseigne, mascottes, bannières marketing génériques
+- Mentions légales, conditions de vente, astérisques explicatifs
+- Adresses et coordonnées des magasins, encarts horaires
+- Blocs de texte purement éditoriaux (édito, conseils saison, etc.) sans produit identifiable
+
+N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les promotions distinctes.${learnedHints}${rejectionHints}${previousExamples}`;
 
     // Timeout interne (plus court que la limite edge de 150s) pour pouvoir renvoyer une erreur propre
     const aiController = new AbortController();

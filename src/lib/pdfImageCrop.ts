@@ -183,7 +183,7 @@ export function clearPdfCache() {
  * Analyse les pixels d'une bbox pour déterminer si son contenu non-blanc
  * est concentré sur une bande de bord ≤ `edgeFraction` (5% par défaut).
  */
-function analyseBboxEdges(
+export function analyseBboxEdges(
   pageCanvas: HTMLCanvasElement,
   bbox: Bbox,
   edgeFraction = 0.05
