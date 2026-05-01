@@ -266,3 +266,109 @@ export default function AdminCatalogues() {
     </div>
   );
 }
+
+// --- Éditeur de couleurs du hero (auto + override) ---
+
+const HERO_COLOR_FIELDS: Array<{ key: keyof HeroPalette; label: string }> = [
+  { key: "primary", label: "Primaire" },
+  { key: "secondary", label: "Secondaire" },
+  { key: "accent", label: "Accent" },
+  { key: "foreground", label: "Texte" },
+];
+
+function HeroColorsEditor({
+  coverImage,
+  value,
+  onChange,
+}: {
+  coverImage: string | null;
+  value: Partial<HeroPalette> | null;
+  onChange: (v: Partial<HeroPalette> | null) => void;
+}) {
+  const [extracting, setExtracting] = useState(false);
+
+  const runAuto = async () => {
+    if (!coverImage) {
+      toast.error("Aucune image de couverture");
+      return;
+    }
+    setExtracting(true);
+    const palette = await extractCoverPalette(coverImage);
+    setExtracting(false);
+    if (!palette) {
+      toast.error("Extraction des couleurs impossible");
+      return;
+    }
+    onChange(palette);
+    toast.success("Palette extraite de la couverture");
+  };
+
+  const update = (key: keyof HeroPalette, v: string) => {
+    onChange({ ...(value ?? {}), [key]: v });
+  };
+
+  return (
+    <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Palette className="h-4 w-4 text-primary" />
+          <Label className="m-0">Couleurs du hero (bannière catalogue)</Label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={runAuto}
+            disabled={extracting || !coverImage}
+            title="Extrait automatiquement la palette dominante de la couverture"
+          >
+            {extracting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Wand2 className="h-4 w-4" />
+            )}
+            Auto depuis la couverture
+          </Button>
+          {value && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>
+              Réinitialiser
+            </Button>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Laisse vide pour utiliser l'extraction automatique au chargement de la page.
+        Format HSL : <code className="text-[10px]">teinte saturation% luminosité%</code> (ex.{" "}
+        <code className="text-[10px]">45 90% 55%</code>).
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        {HERO_COLOR_FIELDS.map((f) => {
+          const v = value?.[f.key] ?? "";
+          return (
+            <div key={f.key} className="space-y-1">
+              <Label className="text-xs">{f.label}</Label>
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-8 w-8 rounded border shrink-0"
+                  style={{
+                    background: v ? `hsl(${v})` : "transparent",
+                    backgroundImage: v
+                      ? undefined
+                      : "repeating-linear-gradient(45deg, hsl(var(--muted)) 0 4px, transparent 4px 8px)",
+                  }}
+                />
+                <Input
+                  value={v}
+                  placeholder="ex. 45 90% 55%"
+                  onChange={(e) => update(f.key, e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
