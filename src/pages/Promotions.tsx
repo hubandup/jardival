@@ -24,6 +24,7 @@ const SITE_URL = "https://jardival.lovable.app";
 const ALL = "__all__";
 
 const Promotions = () => {
+  const isMobile = useIsMobile();
   const { data: dbPromos = [], isLoading } = usePromotions();
   const { data: catalogues } = useCatalogues();
   const { data: stores = [] } = useStores();
