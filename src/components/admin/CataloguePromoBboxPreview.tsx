@@ -218,6 +218,8 @@ function PageEditor({
   boxes,
   allBoxes,
   creating,
+  activeIndex,
+  setActiveIndex,
   onToggleBox,
   onDeleteBox,
   onUpdateBbox,
@@ -230,6 +232,8 @@ function PageEditor({
   boxes: PreviewBox[];
   allBoxes: PreviewBox[];
   creating: boolean;
+  activeIndex: number | null;
+  setActiveIndex: (i: number | null) => void;
   onToggleBox?: (i: number) => void;
   onDeleteBox?: (i: number) => void;
   onUpdateBbox?: (i: number, bbox: Bbox) => void;
