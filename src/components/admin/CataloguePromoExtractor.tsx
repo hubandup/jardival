@@ -335,6 +335,7 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                             price: p.price,
                             originalPrice: p.original_price,
                             description: p.description,
+                            imageUrl: p.image_url,
                           }
                         : null
                     )
@@ -350,6 +351,24 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
                       mapped.original_price = patch.original_price;
                     if (patch.description !== undefined) mapped.description = patch.description;
                     updatePromo(i, mapped);
+                  }}
+                  onSwapText={(i, j) => {
+                    setPromos((prev) =>
+                      prev.map((p, idx) => {
+                        if (idx !== i && idx !== j) return p;
+                        const other = prev[idx === i ? j : i];
+                        return {
+                          ...p,
+                          title: other.title,
+                          description: other.description,
+                          price: other.price,
+                          original_price: other.original_price,
+                          discount_percent: other.discount_percent,
+                          category: other.category,
+                        };
+                      })
+                    );
+                    toast.success(`Textes échangés entre #${i + 1} et #${j + 1}`);
                   }}
                   onAddBox={(pageNumber, bbox) =>
                     setPromos((prev) => [

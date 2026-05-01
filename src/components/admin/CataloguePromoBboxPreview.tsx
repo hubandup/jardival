@@ -2,9 +2,24 @@
 // Permet de : déplacer, redimensionner, supprimer, ajouter une zone,
 // et de voir le texte (titre/prix) associé à chaque sélection pour vérifier la cohérence.
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Loader2, Eye, EyeOff, Trash2, Plus, MousePointer2 } from "lucide-react";
+import {
+  Loader2,
+  Eye,
+  EyeOff,
+  Trash2,
+  Plus,
+  MousePointer2,
+  ImageIcon,
+  ArrowLeftRight,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { loadPdf, renderPage, type Bbox } from "@/lib/pdfImageCrop";
 
 export interface PreviewBox {
@@ -17,6 +32,7 @@ export interface PreviewBox {
   price?: number | null;
   originalPrice?: number | null;
   description?: string | null;
+  imageUrl?: string | null; // image extraite (pour indicateur visuel)
 }
 
 export interface PreviewTextPatch {
@@ -34,6 +50,7 @@ interface Props {
   onUpdateBbox?: (i: number, bbox: Bbox) => void;
   onAddBox?: (pageNumber: number, bbox: Bbox) => void;
   onUpdateText?: (i: number, patch: PreviewTextPatch) => void;
+  onSwapText?: (i: number, j: number) => void; // échange titre/prix/description entre deux promos
 }
 
 type DragState =
@@ -63,6 +80,7 @@ export default function CataloguePromoBboxPreview({
   onUpdateBbox,
   onAddBox,
   onUpdateText,
+  onSwapText,
 }: Props) {
   const [show, setShow] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -163,11 +181,13 @@ export default function CataloguePromoBboxPreview({
                   pageNumber={pageNumber}
                   src={src}
                   boxes={pageBoxes}
+                  allBoxes={boxes}
                   creating={creating}
                   onToggleBox={onToggleBox}
                   onDeleteBox={onDeleteBox}
                   onUpdateBbox={onUpdateBbox}
                   onUpdateText={onUpdateText}
+                  onSwapText={onSwapText}
                   onAddBox={
                     onAddBox
                       ? (bb) => {
@@ -193,22 +213,26 @@ function PageEditor({
   pageNumber,
   src,
   boxes,
+  allBoxes,
   creating,
   onToggleBox,
   onDeleteBox,
   onUpdateBbox,
   onAddBox,
   onUpdateText,
+  onSwapText,
 }: {
   pageNumber: number;
   src?: string;
   boxes: PreviewBox[];
+  allBoxes: PreviewBox[];
   creating: boolean;
   onToggleBox?: (i: number) => void;
   onDeleteBox?: (i: number) => void;
   onUpdateBbox?: (i: number, bbox: Bbox) => void;
   onAddBox?: (bbox: Bbox) => void;
   onUpdateText?: (i: number, patch: PreviewTextPatch) => void;
+  onSwapText?: (i: number, j: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState>(null);
@@ -365,6 +389,7 @@ function PageEditor({
                   fill={fill}
                   stroke={stroke}
                   strokeWidth={3}
+                  strokeDasharray={b.selected && !b.imageUrl ? "8 4" : undefined}
                   vectorEffect="non-scaling-stroke"
                   style={{ cursor: "move" }}
                   onMouseDown={(e) => {
@@ -548,6 +573,86 @@ function PageEditor({
                     <div className="text-muted-foreground line-clamp-1">{b.subLabel}</div>
                   )
                 )}
+                {/* Indicateur d'association image + bouton Réassocier */}
+                <div className="flex items-center gap-1 pt-0.5 border-t border-dashed">
+                  {b.imageUrl ? (
+                    <>
+                      <img
+                        src={b.imageUrl}
+                        alt=""
+                        className="h-6 w-6 rounded object-cover border border-primary/40"
+                      />
+                      <span className="text-[9px] text-primary font-medium flex items-center gap-0.5">
+                        <Check className="h-3 w-3" /> image liée
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[9px] text-muted-foreground flex items-center gap-1">
+                      <ImageIcon className="h-3 w-3" /> pas d'image extraite
+                    </span>
+                  )}
+                  {onSwapText && allBoxes.length > 1 && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="ml-auto text-[9px] text-primary hover:underline flex items-center gap-0.5"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Échanger le texte avec une autre zone"
+                        >
+                          <ArrowLeftRight className="h-3 w-3" /> Réassocier
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-64 p-2 max-h-72 overflow-y-auto"
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <p className="text-xs font-medium mb-2">
+                          Échanger le texte de #{b.index} avec :
+                        </p>
+                        <div className="space-y-1">
+                          {allBoxes
+                            .filter((other) => other.index !== b.index)
+                            .map((other) => {
+                              const j0 = other.index - 1;
+                              return (
+                                <button
+                                  key={other.index}
+                                  type="button"
+                                  className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-accent text-left"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSwapText(i0, j0);
+                                  }}
+                                >
+                                  {other.imageUrl ? (
+                                    <img
+                                      src={other.imageUrl}
+                                      alt=""
+                                      className="h-8 w-8 rounded object-cover border shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="h-8 w-8 rounded border border-dashed flex items-center justify-center shrink-0">
+                                      <ImageIcon className="h-3 w-3 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-xs font-medium truncate">
+                                      #{other.index} · {other.label}
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground truncate">
+                                      p.{other.pageNumber}
+                                      {other.price != null ? ` · ${other.price} €` : ""}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
                 {onToggleBox && (
                   <button
                     type="button"
