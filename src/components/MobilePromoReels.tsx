@@ -55,7 +55,7 @@ export const MobilePromoReels = () => {
 
       {promos.map((p, idx) => {
         const price = formatPrice(p.price);
-        const oldPrice = formatPrice(p.old_price);
+        const oldPrice = formatPrice(p.oldPrice);
         const slug = (p as Product & { slug?: string }).slug;
         const link = slug ? `/promotions/${slug}` : `/promotions`;
 
