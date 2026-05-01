@@ -238,8 +238,8 @@ const CataloguePage = () => {
             </Document>
           </div>
 
-          {/* Toolbar under the book */}
-          {numPages > 0 && (
+          {/* Toolbar — desktop seulement (mobile gère son propre compteur) */}
+          {numPages > 0 && !isMobile && (
             <div className="mt-4 flex items-center justify-center gap-4">
               <button
                 onClick={goPrev}
