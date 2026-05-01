@@ -114,14 +114,21 @@ Pour chaque produit en promotion visible, retourne :
 
 N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les promotions distinctes.`;
 
+    // Timeout interne (plus court que la limite edge de 150s) pour pouvoir renvoyer une erreur propre
+    const aiController = new AbortController();
+    const aiTimeout = setTimeout(() => aiController.abort(), 140_000);
+
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: aiController.signal,
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        // gemini-2.5-flash : 3-5× plus rapide que pro sur PDF multi-pages,
+        // qualité d'extraction structurée suffisante avec tool calling.
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           {
