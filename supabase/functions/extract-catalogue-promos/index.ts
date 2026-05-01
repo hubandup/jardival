@@ -188,7 +188,7 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
         ],
         tool_choice: { type: "function", function: { name: "save_promotions" } },
       }),
-    });
+    }).finally(() => clearTimeout(aiTimeout));
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
