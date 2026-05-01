@@ -85,6 +85,15 @@ const Promotions = () => {
     canonical: SITE_URL + "/promotions",
   });
 
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <MobilePromoReels />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
