@@ -45,14 +45,23 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
-      <CatalogueBanner />
-      <main>
-        <Hero products={products} />
-        <PromoSection />
-        <DriveToStoreBanner />
-        <Catalogue products={products} />
+
+      {/* Mobile : reels plein écran uniquement */}
+      <main className="md:hidden">
+        <MobilePromoReels />
       </main>
-      <SiteFooter />
+
+      {/* Tablette / desktop : expérience complète */}
+      <div className="hidden md:block">
+        <CatalogueBanner />
+        <main>
+          <Hero products={products} />
+          <PromoSection />
+          <DriveToStoreBanner />
+          <Catalogue products={products} />
+        </main>
+        <SiteFooter />
+      </div>
     </div>
   );
 };
