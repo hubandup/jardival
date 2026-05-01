@@ -32,6 +32,7 @@ export const DirectionsMenu = ({
   size = "default",
   className,
   label = "Itinéraire",
+  origin = null,
 }: Props) => {
   const base =
     "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all";
