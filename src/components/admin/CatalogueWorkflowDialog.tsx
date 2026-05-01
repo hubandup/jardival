@@ -826,13 +826,40 @@ function ZonesStep({
         </div>
       )}
 
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center gap-2">
         <Button variant="outline" onClick={onPrev}>
           <ChevronLeft className="h-4 w-4" /> Précédent
         </Button>
-        <Button onClick={onNext} disabled={promos.length === 0}>
-          Étape suivante <ChevronRight className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleCropImages}
+            disabled={croppingImages || selectedWithBbox === 0}
+          >
+            {croppingImages ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {cropProgress ? `${cropProgress.done}/${cropProgress.total}` : ""}
+              </>
+            ) : (
+              <>
+                <ImageIcon className="h-4 w-4" />
+                Extraire les images ({selectedWithBbox})
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={onNext}
+            disabled={
+              promos.length === 0 ||
+              croppingImages ||
+              selectedWithBbox > 0 ||
+              !promos.some((p) => p.selected !== false && p.image_cutout_url)
+            }
+          >
+            Étape suivante <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
