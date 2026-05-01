@@ -66,7 +66,11 @@ export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {
 
   return (
     <section
-      className="relative overflow-hidden border-b border-border transition-colors duration-700"
+      className={`relative overflow-hidden border-b border-border transition-colors duration-700 ${
+        simplified
+          ? "flex min-h-[calc(100dvh-4rem)] items-center justify-center snap-start snap-always"
+          : ""
+      }`}
       style={styleVars}
     >
       <div className="absolute inset-0 opacity-25" aria-hidden>
@@ -81,7 +85,9 @@ export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {
       </div>
 
       <div
-        className="container-px relative mx-auto flex max-w-7xl flex-col items-center gap-8 py-10 md:flex-row md:gap-12 md:py-12"
+        className={`container-px relative mx-auto flex max-w-7xl flex-col items-center gap-8 md:flex-row md:gap-12 md:py-12 ${
+          simplified ? "w-full py-12" : "py-10"
+        }`}
         style={{ color: "hsl(var(--hero-fg))" }}
       >
         <Link
