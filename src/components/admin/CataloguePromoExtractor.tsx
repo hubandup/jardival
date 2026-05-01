@@ -61,6 +61,53 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
   const [mode, setMode] = useState<"replace" | "deactivate">("deactivate");
   const [importing, setImporting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [extractingImages, setExtractingImages] = useState(false);
+  const [imgProgress, setImgProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const handleExtractImages = async () => {
+    if (!catalogue.pdf_url) {
+      toast.error("Pas de PDF associé");
+      return;
+    }
+    const tasks = promos
+      .map((p, idx) => ({ p, idx }))
+      .filter(({ p }) => p.bbox_2d && p.page_number && p.selected !== false)
+      .map(({ p, idx }) => ({
+        pageNumber: p.page_number!,
+        bbox: p.bbox_2d!,
+        filename: `${idx}-${p.title}`,
+      }));
+    if (!tasks.length) {
+      toast.error("Aucune zone d'image détectée par l'IA");
+      return;
+    }
+    setExtractingImages(true);
+    setImgProgress({ done: 0, total: tasks.length });
+    try {
+      const results = await cropAndUploadPromoImages(
+        catalogue.pdf_url,
+        tasks,
+        (done, total) => setImgProgress({ done, total })
+      );
+      // Indexe par filename (qui contient l'idx)
+      const byFilename = new Map(results.map((r) => [r.filename, r.publicUrl]));
+      setPromos((prev) =>
+        prev.map((p, idx) => {
+          const key = `${idx}-${p.title}`;
+          const url = byFilename.get(key);
+          return url ? { ...p, image_url: url } : p;
+        })
+      );
+      const ok = results.filter((r) => r.publicUrl).length;
+      const fail = results.length - ok;
+      toast.success(`${ok} images extraites${fail ? ` (${fail} échec${fail > 1 ? "s" : ""})` : ""}`);
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Erreur extraction images");
+    } finally {
+      setExtractingImages(false);
+    }
+  };
 
   const handleExtract = async () => {
     if (!catalogue.pdf_url) {
