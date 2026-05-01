@@ -46,10 +46,9 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
-      {/* Mobile : Hero + Catalogue, puis reels promos plein écran */}
+      {/* Mobile : bannière catalogue simplifiée, puis reels promos plein écran */}
       <main className="md:hidden">
-        <Hero products={products} />
-        <Catalogue products={products} />
+        <CatalogueBanner simplified />
         <MobilePromoReels />
       </main>
 

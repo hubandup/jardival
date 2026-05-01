@@ -18,7 +18,12 @@ const FALLBACK_PALETTE: HeroPalette = {
   foreground: "20 14% 12%",
 };
 
-export const CatalogueBanner = () => {
+interface CatalogueBannerProps {
+  /** Si true : affiche un seul CTA "Voir le catalogue" qui ouvre le viewer (utilisé sur mobile). */
+  simplified?: boolean;
+}
+
+export const CatalogueBanner = ({ simplified = false }: CatalogueBannerProps = {}) => {
   const { data: catalogues } = useCatalogues();
   const active = catalogues?.[0];
 
@@ -137,51 +142,68 @@ export const CatalogueBanner = () => {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noreferrer"
-              onClick={async (e) => {
-                try {
-                  e.preventDefault();
-                  const res = await fetch(pdfUrl);
-                  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `catalogue-${title.toLowerCase().replace(/\s+/g, "-")}.pdf`;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  setTimeout(() => URL.revokeObjectURL(url), 1000);
-                } catch (err) {
-                  console.warn("[Catalogue] Téléchargement direct impossible, ouverture dans un onglet", err);
-                  window.open(pdfUrl, "_blank", "noopener,noreferrer");
-                }
-              }}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-card transition-all hover:scale-[1.02] hover:shadow-glow"
-              style={{
-                background: "hsl(var(--hero-fg))",
-                color: palette.foreground.startsWith("0 0%")
-                  ? "hsl(var(--hero-primary))"
-                  : "hsl(0 0% 98%)",
-              }}
-            >
-              <Download className="h-4 w-4" />
-              Télécharger le catalogue
-            </a>
-            <Link
-              to={VIEWER_URL}
-              className="inline-flex items-center gap-2 rounded-full border px-6 py-3 text-sm font-semibold backdrop-blur transition-colors"
-              style={{
-                borderColor: "hsl(var(--hero-fg) / 0.3)",
-                background: "hsl(var(--hero-fg) / 0.08)",
-                color: "hsl(var(--hero-fg))",
-              }}
-            >
-              Feuilleter en ligne
-            </Link>
+            {simplified ? (
+              <Link
+                to={VIEWER_URL}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-card transition-all hover:scale-[1.02] hover:shadow-glow"
+                style={{
+                  background: "hsl(var(--hero-fg))",
+                  color: palette.foreground.startsWith("0 0%")
+                    ? "hsl(var(--hero-primary))"
+                    : "hsl(0 0% 98%)",
+                }}
+              >
+                Voir le catalogue
+              </Link>
+            ) : (
+              <>
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={async (e) => {
+                    try {
+                      e.preventDefault();
+                      const res = await fetch(pdfUrl);
+                      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `catalogue-${title.toLowerCase().replace(/\s+/g, "-")}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    } catch (err) {
+                      console.warn("[Catalogue] Téléchargement direct impossible, ouverture dans un onglet", err);
+                      window.open(pdfUrl, "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-card transition-all hover:scale-[1.02] hover:shadow-glow"
+                  style={{
+                    background: "hsl(var(--hero-fg))",
+                    color: palette.foreground.startsWith("0 0%")
+                      ? "hsl(var(--hero-primary))"
+                      : "hsl(0 0% 98%)",
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  Télécharger le catalogue
+                </a>
+                <Link
+                  to={VIEWER_URL}
+                  className="inline-flex items-center gap-2 rounded-full border px-6 py-3 text-sm font-semibold backdrop-blur transition-colors"
+                  style={{
+                    borderColor: "hsl(var(--hero-fg) / 0.3)",
+                    background: "hsl(var(--hero-fg) / 0.08)",
+                    color: "hsl(var(--hero-fg))",
+                  }}
+                >
+                  Feuilleter en ligne
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
