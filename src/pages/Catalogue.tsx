@@ -270,4 +270,112 @@ const CataloguePage = () => {
   );
 };
 
+/**
+ * Carrousel horizontal swipeable pour mobile.
+ * Snap horizontal natif (CSS), pages PDF rendues à la demande via IntersectionObserver
+ * pour limiter la mémoire (seules les pages voisines sont rendues).
+ */
+const MobileCatalogueCarousel = ({
+  numPages,
+  onPageChange,
+}: {
+  numPages: number;
+  onPageChange: (idx: number) => void;
+}) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [pageWidth, setPageWidth] = useState(360);
+
+  useEffect(() => {
+    const update = () => {
+      const vw = window.innerWidth;
+      setPageWidth(Math.min(vw - 24, 720));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+    const slides = Array.from(root.querySelectorAll<HTMLElement>("[data-cat-page]"));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        const idx = Number((visible.target as HTMLElement).dataset.catPage ?? "0");
+        if (!Number.isNaN(idx)) {
+          setActiveIdx(idx);
+          onPageChange(idx);
+        }
+      },
+      { root, threshold: [0.5, 0.75, 1] },
+    );
+    slides.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, [numPages, onPageChange]);
+
+  const RENDER_RADIUS = 1; // pages voisines à rendre
+
+  return (
+    <div className="relative">
+      <div
+        ref={containerRef}
+        className="flex w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth pb-3"
+        style={{ scrollbarWidth: "none" }}
+        aria-label="Pages du catalogue"
+      >
+        <style>{`
+          [data-cat-carousel]::-webkit-scrollbar { display: none; }
+        `}</style>
+        {Array.from({ length: numPages }, (_, i) => {
+          const distance = Math.abs(i - activeIdx);
+          const shouldRender = distance <= RENDER_RADIUS;
+          return (
+            <div
+              key={i}
+              data-cat-page={i}
+              className="shrink-0 snap-center overflow-hidden rounded-lg bg-white shadow-card"
+              style={{ width: pageWidth }}
+            >
+              {shouldRender ? (
+                <Page
+                  pageNumber={i + 1}
+                  width={pageWidth}
+                  renderAnnotationLayer={false}
+                  renderTextLayer={false}
+                  loading={
+                    <div
+                      className="flex items-center justify-center bg-muted"
+                      style={{ width: pageWidth, height: pageWidth * 1.414 }}
+                    >
+                      <Loader2 className="h-5 w-5 animate-spin text-foreground/50" />
+                    </div>
+                  }
+                />
+              ) : (
+                <div
+                  className="flex items-center justify-center bg-muted text-xs text-muted-foreground"
+                  style={{ width: pageWidth, height: pageWidth * 1.414 }}
+                >
+                  Page {i + 1}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {/* Compteur sticky bas */}
+      <div className="pointer-events-none sticky bottom-2 z-10 mx-auto mt-2 inline-flex w-full justify-center">
+        <span className="rounded-full bg-foreground/85 px-3 py-1 text-xs font-semibold tabular-nums text-background backdrop-blur">
+          {activeIdx + 1} / {numPages}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export default CataloguePage;
