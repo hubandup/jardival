@@ -180,6 +180,7 @@ export default function CataloguePromoExtractor({ catalogue, open, onOpenChange 
         description: p.description ?? p.category ?? null,
         price: p.price ?? 0,
         original_price: p.original_price ?? null,
+        image: p.image_url ?? null,
         starts_at: catalogue.starts_at,
         ends_at: catalogue.ends_at,
         active: true,
