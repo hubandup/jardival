@@ -595,8 +595,11 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
             outputs?: Array<{
               index: number;
               image_url: string | null;
-              source?: string | null;
-              match_distance?: number | null;
+              source?: "native" | null;
+              match_score?: number | null;
+              match_method?: "iou" | "centroid" | null;
+              is_rasterized?: boolean;
+              reason?: string | null;
             }>;
             stats?: unknown;
           } = {};
@@ -610,6 +613,24 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
             }
           }
           const outputs = Array.isArray(renderJson.outputs) ? renderJson.outputs : [];
+
+          // Récupère les UUIDs des promotions déjà insérées pour ce catalogue,
+          // ordonnées par display_order. L'index renvoyé par le service Python
+          // correspond à cet ordre.
+          let promoIds: string[] = [];
+          if (body.catalogue_id) {
+            const { data: existingPromos, error: selErr } = await supabase
+              .from("promotions")
+              .select("id")
+              .eq("catalogue_id", body.catalogue_id)
+              .order("display_order", { ascending: true });
+            if (selErr) {
+              console.error("Lecture promotions pour mapping UUID échouée", selErr);
+            } else {
+              promoIds = (existingPromos ?? []).map((r: { id: string }) => r.id);
+            }
+          }
+
           for (const out of outputs) {
             if (
               typeof out?.index !== "number" ||
@@ -617,19 +638,40 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
               out.index >= enrichedPromotions.length
             ) continue;
             const target = enrichedPromotions[out.index];
-            // Mapping depuis PromoOutput : match_score = match_distance,
-            // match_method = source ?? "fallback", is_rasterized = source !== "native".
-            target.match_score = typeof out.match_distance === "number" ? out.match_distance : null;
-            target.match_method = typeof out.source === "string" && out.source.length > 0 ? out.source : "fallback";
-            target.is_rasterized = out.source !== "native";
+            // On expose match_score / match_method / is_rasterized au client
+            // pour la preview (UI).
+            target.match_score = typeof out.match_score === "number" ? out.match_score : null;
+            target.match_method = typeof out.match_method === "string" ? out.match_method : null;
+            target.is_rasterized = typeof out.is_rasterized === "boolean" ? out.is_rasterized : null;
             if (typeof out.image_url === "string" && out.image_url.length > 0) {
               target.image_url = out.image_url;
               target.image_source = "native";
+            }
+
+            // Persiste dans la DB. Skip si pas d'image_url renvoyée.
+            // Skip si pas d'UUID disponible pour cet index.
+            if (
+              !out.image_url ||
+              out.index >= promoIds.length
+            ) continue;
+            const promoId = promoIds[out.index];
+            const { error: updErr } = await supabase
+              .from("promotions")
+              .update({
+                image: out.image_url,
+                match_score: target.match_score,
+                match_method: target.match_method,
+                is_rasterized: target.is_rasterized ?? false,
+              })
+              .eq("id", promoId);
+            if (updErr) {
+              console.error("UPDATE promotion échoué", { promoId, err: updErr.message });
             }
           }
           console.log("Render extract OK", {
             received: outputs.length,
             withImage: outputs.filter((o) => o?.image_url).length,
+            promoIdsFound: promoIds.length,
             stats: renderJson.stats,
           });
         }
