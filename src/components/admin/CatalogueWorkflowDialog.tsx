@@ -236,14 +236,8 @@ export default function CatalogueWorkflowDialog({
     if (!open || !hydrated) return;
     if (!dirtyRef.current) return;
     const t = setTimeout(async () => {
-      const orgId = orgIdRef.current;
-      if (!orgId) {
-        console.error("[catalogue_extractions autosave] missing organization_id, skipping draft save");
-        return;
-      }
       const payload = {
         catalogue_id: catalogue.id,
-        organization_id: orgId,
         step,
         promos: promos as unknown as never,
         starts_at: startsAt || null,
@@ -1214,7 +1208,7 @@ function ScheduleStep({
       if (error) throw error;
 
       // Apprentissage : enregistrer les caractéristiques des promos validées (avec bbox).
-      const orgIdForStats = orgIdRef.current;
+      const orgIdForStats = await getCurrentOrgId();
       const statsRows = orgIdForStats
         ? selected
             .filter((p) => Array.isArray(p.bbox_2d) && p.bbox_2d.length === 4)
