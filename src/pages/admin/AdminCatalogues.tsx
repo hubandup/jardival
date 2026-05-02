@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon, Sparkles, Palette, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import CatalogueWorkflowDialog, { type WorkflowStep } from "@/components/admin/CatalogueWorkflowDialog";
+import { getCurrentOrgId } from "@/lib/auth";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,7 +86,7 @@ export default function AdminCatalogues() {
   const handleSave = async () => {
     if (!editing || !editing.title) return toast.error("Le titre est requis");
     setSaving(true);
-    const payload = {
+    const basePayload = {
       title: editing.title,
       cover_image: editing.cover_image ?? null,
       pdf_url: editing.pdf_url ?? null,
@@ -95,11 +96,34 @@ export default function AdminCatalogues() {
       active: editing.active ?? true,
       hero_colors: editing.hero_colors ?? null,
     };
-    const { error } = editing.isNew
-      ? await (supabase as any).from("catalogues").insert(payload)
-      : await (supabase as any).from("catalogues").update(payload).eq("id", editing.id!);
+
+    let result;
+    if (editing.isNew) {
+      const orgId = await getCurrentOrgId();
+      if (!orgId) {
+        setSaving(false);
+        console.error("[handleSave catalogues] missing organization_id for current user");
+        return toast.error("Aucune organisation associée à votre compte. Contactez l'administrateur.");
+      }
+      result = await (supabase as any)
+        .from("catalogues")
+        .insert({ ...basePayload, organization_id: orgId });
+    } else {
+      result = await (supabase as any)
+        .from("catalogues")
+        .update(basePayload)
+        .eq("id", editing.id!);
+    }
     setSaving(false);
-    if (error) return toast.error("Erreur");
+    if (result.error) {
+      console.error("[handleSave catalogues] Supabase error", {
+        message: result.error.message,
+        code: result.error.code,
+        details: result.error.details,
+        hint: result.error.hint,
+      });
+      return toast.error("Erreur");
+    }
     toast.success("Catalogue enregistré");
     setEditing(null);
     qc.invalidateQueries({ queryKey: ["admin-catalogues"] });
@@ -135,12 +159,24 @@ export default function AdminCatalogues() {
         </div>
         <Button
           onClick={async () => {
+            const orgId = await getCurrentOrgId();
+            if (!orgId) {
+              console.error("[create catalogue] missing organization_id for current user");
+              toast.error("Aucune organisation associée à votre compte. Contactez l'administrateur.");
+              return;
+            }
             const { data, error } = await (supabase as any)
               .from("catalogues")
-              .insert({ title: "Nouveau catalogue", active: false, display_order: 0 })
+              .insert({ title: "Nouveau catalogue", active: false, display_order: 0, organization_id: orgId })
               .select("*")
               .single();
             if (error || !data) {
+              console.error("[create catalogue] Supabase error", {
+                message: error?.message,
+                code: error?.code,
+                details: error?.details,
+                hint: error?.hint,
+              });
               toast.error("Impossible de créer le catalogue");
               return;
             }

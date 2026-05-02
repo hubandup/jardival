@@ -50,6 +50,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { clearPdfCache } from "@/lib/pdfImageCrop";
 import { uploadAndGetUrl } from "@/lib/storageUpload";
+import { getCurrentOrgId } from "@/lib/auth";
 import { extractPromoImages, bboxFromPosition } from "@/lib/extractPromoImages";
 import { Badge } from "@/components/ui/badge";
 import CataloguePromoBboxPreview from "./CataloguePromoBboxPreview";
@@ -178,7 +179,12 @@ export default function CatalogueWorkflowDialog({
         bbox: bbox as unknown as never,
         reason: reason ?? null,
       }]).then(({ error }) => {
-        if (error) console.warn("Insert rejection failed", error);
+        if (error) console.error("[catalogue_extraction_rejections] Supabase error", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
       });
     },
     [catalogue.id]
@@ -245,7 +251,12 @@ export default function CatalogueWorkflowDialog({
         .select("id")
         .maybeSingle();
       if (error) {
-        console.error("Save draft error", error);
+        console.error("[catalogue_extractions autosave] Supabase error", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
       } else if (data) {
         setExtractionId(data.id);
         dirtyRef.current = false;
@@ -1198,27 +1209,39 @@ function ScheduleStep({
       if (error) throw error;
 
       // Apprentissage : enregistrer les caractéristiques des promos validées (avec bbox).
-      const statsRows = selected
-        .filter((p) => Array.isArray(p.bbox_2d) && p.bbox_2d.length === 4)
-        .map((p) => {
-          const [ymin, xmin, ymax, xmax] = p.bbox_2d as [number, number, number, number];
-          return {
-            catalogue_id: catalogue.id,
-            page_number: p.page_number ?? null,
-            bbox_ymin: Math.round(ymin),
-            bbox_xmin: Math.round(xmin),
-            bbox_ymax: Math.round(ymax),
-            bbox_xmax: Math.round(xmax),
-            had_price: !!(p.price && p.price > 0),
-            had_original_price: !!(p.original_price && p.original_price > 0),
-            category: p.category ?? null,
-          };
-        });
+      const orgIdForStats = await getCurrentOrgId();
+      const statsRows = orgIdForStats
+        ? selected
+            .filter((p) => Array.isArray(p.bbox_2d) && p.bbox_2d.length === 4)
+            .map((p) => {
+              const [ymin, xmin, ymax, xmax] = p.bbox_2d as [number, number, number, number];
+              return {
+                organization_id: orgIdForStats,
+                catalogue_id: catalogue.id,
+                page_number: p.page_number ?? null,
+                bbox_ymin: Math.round(ymin),
+                bbox_xmin: Math.round(xmin),
+                bbox_ymax: Math.round(ymax),
+                bbox_xmax: Math.round(xmax),
+                had_price: !!(p.price && p.price > 0),
+                had_original_price: !!(p.original_price && p.original_price > 0),
+                category: p.category ?? null,
+              };
+            })
+        : [];
+      if (!orgIdForStats) {
+        console.error("[catalogue_extraction_stats] missing organization_id, skipping stats insert");
+      }
       if (statsRows.length) {
         const { error: statsErr } = await (supabase as any)
           .from("catalogue_extraction_stats")
           .insert(statsRows);
-        if (statsErr) console.warn("Stats apprentissage non enregistrées", statsErr);
+        if (statsErr) console.error("[catalogue_extraction_stats] Supabase error", {
+          message: statsErr.message,
+          code: statsErr.code,
+          details: statsErr.details,
+          hint: statsErr.hint,
+        });
       }
 
       await supabase
