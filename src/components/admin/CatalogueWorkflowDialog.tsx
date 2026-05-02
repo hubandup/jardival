@@ -172,7 +172,7 @@ export default function CatalogueWorkflowDialog({
       const orgId = orgIdRef.current;
       if (!orgId) return;
       // Fire-and-forget : le rejet n'est pas bloquant pour l'admin.
-      void supabase.from("catalogue_extraction_rejections").insert([{
+      void (supabase as any).from("catalogue_extraction_rejections").insert([{
         organization_id: orgId,
         catalogue_id: catalogue.id,
         bbox: bbox as unknown as never,
