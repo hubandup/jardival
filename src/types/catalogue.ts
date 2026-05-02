@@ -35,6 +35,12 @@ export interface WorkflowPromo {
    *  - "manual" : image uploadée manuellement par l'admin
    *  - null : pas encore d'image */
   image_source?: "native" | "fallback-crop" | "manual" | null;
+  /** Score de matching renvoyé par le service Python (match_distance). */
+  match_score?: number | null;
+  /** Méthode de matching utilisée ("native", "fallback", ...). */
+  match_method?: string | null;
+  /** True si l'image a été rasterisée (pas extraite nativement du PDF). */
+  is_rasterized?: boolean | null;
   selected?: boolean;
 }
 
