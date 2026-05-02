@@ -609,6 +609,24 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
   } catch (e) {
     console.error("extract-catalogue-promos error", e);
     const isAbort = e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"));
+
+    // Fallback : si on a déjà des promos extraites en mémoire, on les renvoie au lieu de 500
+    if (fallbackPromotions && fallbackPromotions.length > 0) {
+      console.warn("Crash après extraction — renvoi du fallback en mémoire", {
+        count: fallbackPromotions.length,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      return new Response(
+        JSON.stringify({
+          promotions: fallbackPromotions,
+          count: fallbackPromotions.length,
+          warning: "Enrichissement partiel : une erreur est survenue après l'extraction (" +
+            (e instanceof Error ? e.message : "erreur inconnue") + ").",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({
         error: isAbort
