@@ -1205,34 +1205,10 @@ function ScheduleStep({
         display_order: idx,
         catalogue_id: catalogue.id,
       }));
-      const { data: insertedRows, error } = await supabase
-        .from("promotions")
-        .insert(rows)
-        .select("id");
+      const { error } = await supabase.from("promotions").insert(rows);
       if (error) throw error;
-
-      // UPDATE par UUID des champs de matching IA renvoyés par l'edge function.
-      // Mapping par index (rows et insertedRows partagent l'ordre de display_order).
-      if (insertedRows && insertedRows.length === selected.length) {
-        await Promise.all(
-          insertedRows.map((row, idx) => {
-            const p = selected[idx];
-            if (
-              p.match_score == null &&
-              p.match_method == null &&
-              p.is_rasterized == null
-            ) return Promise.resolve();
-            return supabase
-              .from("promotions")
-              .update({
-                match_score: p.match_score ?? null,
-                match_method: p.match_method ?? null,
-                is_rasterized: p.is_rasterized ?? null,
-              })
-              .eq("id", row.id);
-          })
-        );
-      }
+      // Note : image, match_score, match_method, is_rasterized sont mis à jour
+      // par l'edge function extract-catalogue-promos après matching natif.
 
       // Apprentissage : enregistrer les caractéristiques des promos validées (avec bbox).
       const orgIdForStats = await getCurrentOrgId();
