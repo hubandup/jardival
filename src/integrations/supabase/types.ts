@@ -294,6 +294,51 @@ export type Database = {
         }
         Relationships: []
       }
+      extraction_logs: {
+        Row: {
+          catalogue_id: string | null
+          created_at: string | null
+          fallback_used: boolean | null
+          id: string
+          org_id: string | null
+          page_number: number | null
+          reason: string | null
+        }
+        Insert: {
+          catalogue_id?: string | null
+          created_at?: string | null
+          fallback_used?: boolean | null
+          id?: string
+          org_id?: string | null
+          page_number?: number | null
+          reason?: string | null
+        }
+        Update: {
+          catalogue_id?: string | null
+          created_at?: string | null
+          fallback_used?: boolean | null
+          id?: string
+          org_id?: string | null
+          page_number?: number | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extraction_logs_catalogue_id_fkey"
+            columns: ["catalogue_id"]
+            isOneToOne: false
+            referencedRelation: "catalogues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extraction_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_assets: {
         Row: {
           alt: string | null
@@ -529,6 +574,9 @@ export type Database = {
           hero_featured: boolean
           id: string
           image: string | null
+          is_rasterized: boolean | null
+          match_method: string | null
+          match_score: number | null
           original_price: number | null
           price: number | null
           slug: string | null
@@ -547,6 +595,9 @@ export type Database = {
           hero_featured?: boolean
           id?: string
           image?: string | null
+          is_rasterized?: boolean | null
+          match_method?: string | null
+          match_score?: number | null
           original_price?: number | null
           price?: number | null
           slug?: string | null
@@ -565,6 +616,9 @@ export type Database = {
           hero_featured?: boolean
           id?: string
           image?: string | null
+          is_rasterized?: boolean | null
+          match_method?: string | null
+          match_score?: number | null
           original_price?: number | null
           price?: number | null
           slug?: string | null
