@@ -10,6 +10,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const EDGE_SOFT_DEADLINE_MS = 132_000;
+const RESPONSE_RESERVE_MS = 8_000;
+const AI_CHUNK_TIMEOUT_MS = 52_000;
+const RENDER_MAX_TIMEOUT_MS = 25_000;
+const RENDER_MIN_BUDGET_MS = 12_000;
+
 const bboxSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);
 
 const extractRequestSchema = z.object({
@@ -120,6 +126,9 @@ function parseAiPromotionsFromRaw(aiRaw: string, label: string): ExtractedPromo[
 }
 
 Deno.serve(async (req) => {
+  const startedAt = Date.now();
+  const remainingMs = () => EDGE_SOFT_DEADLINE_MS - (Date.now() - startedAt);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -416,14 +425,27 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
       let aiRaw = "";
       const maxAiAttempts = 2;
       for (let aiAttempt = 1; aiAttempt <= maxAiAttempts; aiAttempt++) {
+        const requestBudgetMs = Math.min(AI_CHUNK_TIMEOUT_MS, Math.max(1_000, remainingMs() - RESPONSE_RESERVE_MS));
+        if (requestBudgetMs < 5_000) {
+          throw new AiExtractionError(`Temps restant insuffisant pour traiter ${payload.label}.`, 504);
+        }
         const aiController = new AbortController();
-        const aiTimeout = setTimeout(() => aiController.abort(), 140_000);
-        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          signal: aiController.signal,
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: aiRequestBody,
-        }).finally(() => clearTimeout(aiTimeout));
+        const aiTimeout = setTimeout(() => aiController.abort(), requestBudgetMs);
+        let aiResp: Response;
+        try {
+          aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            signal: aiController.signal,
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: aiRequestBody,
+          });
+        } catch (e) {
+          const isAbort = e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"));
+          if (isAbort) throw new AiExtractionError(`Timeout IA contrôlé pour ${payload.label}.`, 504);
+          throw e;
+        } finally {
+          clearTimeout(aiTimeout);
+        }
 
         if (!aiResp.ok) {
           const errText = await aiResp.text();
@@ -435,7 +457,7 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
 
         aiRaw = await aiResp.text();
         if (aiRaw.trim()) break;
-        console.error("Réponse IA vide", { status: aiResp.status, contentLength: aiResp.headers.get("content-length"), attempt: aiAttempt, label: payload.label });
+        console.error("Réponse IA vide", { status: aiResp.status, contentLength: aiResp.headers.get("content-length"), attempt: aiAttempt, label: payload.label, requestBudgetMs });
         if (aiAttempt < maxAiAttempts) await new Promise((r) => setTimeout(r, 1500));
       }
 
@@ -452,6 +474,12 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
     const rawList: ExtractedPromo[] = [];
     const extractionWarnings: string[] = [];
     for (const payload of pdfPayloads) {
+      if (remainingMs() < AI_CHUNK_TIMEOUT_MS + RESPONSE_RESERVE_MS) {
+        const message = `Temps restant insuffisant avant timeout, lots restants ignorés à partir de ${payload.label}.`;
+        console.warn(message, { remainingMs: remainingMs(), extracted: rawList.length });
+        extractionWarnings.push(message);
+        break;
+      }
       try {
         rawList.push(...await extractPromotionsFromPayload(payload));
       } catch (e) {
@@ -525,9 +553,10 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
     // Dès qu'on a des promos extraites, on les expose au fallback
     fallbackPromotions = enrichedPromotions;
 
-    if (RENDER_API_SECRET && organizationId && body.catalogue_id) {
+    const renderBudgetMs = Math.min(RENDER_MAX_TIMEOUT_MS, remainingMs() - RESPONSE_RESERVE_MS);
+    if (RENDER_API_SECRET && organizationId && body.catalogue_id && renderBudgetMs >= RENDER_MIN_BUDGET_MS) {
       const renderController = new AbortController();
-      const renderTimeout = setTimeout(() => renderController.abort(), 90_000);
+      const renderTimeout = setTimeout(() => renderController.abort(), renderBudgetMs);
       try {
         const renderPayload = {
           pdf_url: body.pdf_url,
@@ -598,6 +627,7 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
       if (!RENDER_API_SECRET) console.warn("RENDER_API_SECRET non configurée, skip extraction images natives");
       if (!organizationId) console.warn("organization_id introuvable, skip extraction images natives");
       if (!body.catalogue_id) console.warn("catalogue_id non fourni, skip extraction images natives");
+      if (renderBudgetMs < RENDER_MIN_BUDGET_MS) extractionWarnings.push("Images natives ignorées : temps restant insuffisant avant timeout.");
     }
 
     return new Response(
