@@ -592,7 +592,12 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
           // sans crash "Unexpected end of JSON input".
           const rawText = await renderResp.text().catch(() => "");
           let renderJson: {
-            outputs?: Array<{ index: number; image_url: string | null; source?: string | null }>;
+            outputs?: Array<{
+              index: number;
+              image_url: string | null;
+              source?: string | null;
+              match_distance?: number | null;
+            }>;
             stats?: unknown;
           } = {};
           if (rawText.trim().length === 0) {
@@ -607,14 +612,19 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
           const outputs = Array.isArray(renderJson.outputs) ? renderJson.outputs : [];
           for (const out of outputs) {
             if (
-              typeof out?.index === "number" &&
-              out.index >= 0 &&
-              out.index < enrichedPromotions.length &&
-              typeof out.image_url === "string" &&
-              out.image_url.length > 0
-            ) {
-              enrichedPromotions[out.index].image_url = out.image_url;
-              enrichedPromotions[out.index].image_source = "native";
+              typeof out?.index !== "number" ||
+              out.index < 0 ||
+              out.index >= enrichedPromotions.length
+            ) continue;
+            const target = enrichedPromotions[out.index];
+            // Mapping depuis PromoOutput : match_score = match_distance,
+            // match_method = source ?? "fallback", is_rasterized = source !== "native".
+            target.match_score = typeof out.match_distance === "number" ? out.match_distance : null;
+            target.match_method = typeof out.source === "string" && out.source.length > 0 ? out.source : "fallback";
+            target.is_rasterized = out.source !== "native";
+            if (typeof out.image_url === "string" && out.image_url.length > 0) {
+              target.image_url = out.image_url;
+              target.image_source = "native";
             }
           }
           console.log("Render extract OK", {
