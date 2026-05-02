@@ -436,9 +436,30 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
 
     let parsed: { promotions: ExtractedPromo[] };
     try {
-      parsed = JSON.parse(toolCall.function.arguments);
+      const argsRaw = toolCall.function.arguments;
+      if (typeof argsRaw !== "string" || argsRaw.trim().length === 0) {
+        console.error("Tool call arguments vides", { type: typeof argsRaw });
+        return new Response(
+          JSON.stringify({ error: "L'IA a renvoyé un appel d'outil vide. Réessayez." }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      try {
+        parsed = JSON.parse(argsRaw);
+      } catch (e) {
+        console.error("Parse error tool args", {
+          error: String(e),
+          length: argsRaw.length,
+          head: argsRaw.slice(0, 300),
+          tail: argsRaw.slice(-300),
+        });
+        return new Response(
+          JSON.stringify({ error: "Réponse IA invalide (arguments tronqués). Réessayez." }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     } catch (e) {
-      console.error("Parse error", e);
+      console.error("Parse error wrapper", e);
       return new Response(
         JSON.stringify({ error: "Réponse IA invalide." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
