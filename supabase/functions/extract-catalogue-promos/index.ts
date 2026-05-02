@@ -544,11 +544,17 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
     type PromoWithImage = (typeof promotions)[number] & {
       image_url?: string | null;
       image_source?: "native" | null;
+      match_score?: number | null;
+      match_method?: string | null;
+      is_rasterized?: boolean | null;
     };
     const enrichedPromotions: PromoWithImage[] = promotions.map((p) => ({
       ...p,
       image_url: null,
       image_source: null,
+      match_score: null,
+      match_method: null,
+      is_rasterized: null,
     }));
     // Dès qu'on a des promos extraites, on les expose au fallback
     fallbackPromotions = enrichedPromotions;
