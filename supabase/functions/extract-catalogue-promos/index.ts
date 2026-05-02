@@ -524,6 +524,8 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
       image_url: null,
       image_source: null,
     }));
+    // Dès qu'on a des promos extraites, on les expose au fallback
+    fallbackPromotions = enrichedPromotions;
 
     if (RENDER_API_SECRET && organizationId && body.catalogue_id) {
       const renderController = new AbortController();
