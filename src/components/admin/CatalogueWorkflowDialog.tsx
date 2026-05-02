@@ -871,7 +871,7 @@ function TableStep({
         file,
         { contentType: file.type || "image/jpeg" }
       );
-      patchPromo(i, { image_url: publicUrl, image_cutout_url: null });
+      patchPromo(i, { image_url: publicUrl, image_cutout_url: null, image_source: "manual" });
       toast.success("Image remplacée");
     } catch (e) {
       console.error(e);
@@ -978,7 +978,16 @@ function TableStep({
                       >
                         HD
                       </Badge>
-                    ) : p.image_source === "fallback-crop" ? (
+                    ) : p.image_source === "manual" ? (
+                      <Badge
+                        variant="default"
+                        className="h-5 px-1.5 text-[10px] bg-blue-600 hover:bg-blue-600 text-white"
+                        title="Image uploadée manuellement par l'admin"
+                      >
+                        Manuel
+                      </Badge>
+                    ) : p.image_source === "fallback-crop" ||
+                      (p.image_source == null && p.image_url) ? (
                       <Badge
                         variant="secondary"
                         className="h-5 px-1.5 text-[10px] bg-amber-500 hover:bg-amber-500 text-white"
