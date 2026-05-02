@@ -425,8 +425,12 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
       let aiRaw = "";
       const maxAiAttempts = 2;
       for (let aiAttempt = 1; aiAttempt <= maxAiAttempts; aiAttempt++) {
+        const requestBudgetMs = Math.min(AI_CHUNK_TIMEOUT_MS, Math.max(1_000, remainingMs() - RESPONSE_RESERVE_MS));
+        if (requestBudgetMs < 5_000) {
+          throw new AiExtractionError(`Temps restant insuffisant pour traiter ${payload.label}.`, 504);
+        }
         const aiController = new AbortController();
-        const aiTimeout = setTimeout(() => aiController.abort(), 140_000);
+        const aiTimeout = setTimeout(() => aiController.abort(), requestBudgetMs);
         const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           signal: aiController.signal,
@@ -444,7 +448,7 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
 
         aiRaw = await aiResp.text();
         if (aiRaw.trim()) break;
-        console.error("Réponse IA vide", { status: aiResp.status, contentLength: aiResp.headers.get("content-length"), attempt: aiAttempt, label: payload.label });
+        console.error("Réponse IA vide", { status: aiResp.status, contentLength: aiResp.headers.get("content-length"), attempt: aiAttempt, label: payload.label, requestBudgetMs });
         if (aiAttempt < maxAiAttempts) await new Promise((r) => setTimeout(r, 1500));
       }
 
@@ -461,6 +465,12 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
     const rawList: ExtractedPromo[] = [];
     const extractionWarnings: string[] = [];
     for (const payload of pdfPayloads) {
+      if (remainingMs() < AI_CHUNK_TIMEOUT_MS + RESPONSE_RESERVE_MS) {
+        const message = `Temps restant insuffisant avant timeout, lots restants ignorés à partir de ${payload.label}.`;
+        console.warn(message, { remainingMs: remainingMs(), extracted: rawList.length });
+        extractionWarnings.push(message);
+        break;
+      }
       try {
         rawList.push(...await extractPromotionsFromPayload(payload));
       } catch (e) {
