@@ -1229,7 +1229,7 @@ function ScheduleStep({
           };
         });
       if (statsRows.length) {
-        const { error: statsErr } = await supabase
+        const { error: statsErr } = await (supabase as any)
           .from("catalogue_extraction_stats")
           .insert(statsRows);
         if (statsErr) console.warn("Stats apprentissage non enregistrées", statsErr);

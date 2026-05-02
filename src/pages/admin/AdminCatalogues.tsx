@@ -96,8 +96,8 @@ export default function AdminCatalogues() {
       hero_colors: editing.hero_colors ?? null,
     };
     const { error } = editing.isNew
-      ? await supabase.from("catalogues").insert(payload)
-      : await supabase.from("catalogues").update(payload).eq("id", editing.id!);
+      ? await (supabase as any).from("catalogues").insert(payload)
+      : await (supabase as any).from("catalogues").update(payload).eq("id", editing.id!);
     setSaving(false);
     if (error) return toast.error("Erreur");
     toast.success("Catalogue enregistré");
@@ -135,7 +135,7 @@ export default function AdminCatalogues() {
         </div>
         <Button
           onClick={async () => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
               .from("catalogues")
               .insert({ title: "Nouveau catalogue", active: false, display_order: 0 })
               .select("*")
