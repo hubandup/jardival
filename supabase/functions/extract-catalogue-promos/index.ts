@@ -468,10 +468,22 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
           const errText = await renderResp.text().catch(() => "");
           console.error("Render extract failed", renderResp.status, errText.slice(0, 500));
         } else {
-          const renderJson = await renderResp.json() as {
+          // Lit en texte d'abord pour gérer le cas body vide / JSON tronqué
+          // sans crash "Unexpected end of JSON input".
+          const rawText = await renderResp.text().catch(() => "");
+          let renderJson: {
             outputs?: Array<{ index: number; image_url: string | null; source?: string | null }>;
             stats?: unknown;
-          };
+          } = {};
+          if (rawText.trim().length === 0) {
+            console.error("Render extract: réponse 200 mais body vide");
+          } else {
+            try {
+              renderJson = JSON.parse(rawText);
+            } catch (parseErr) {
+              console.error("Render extract: JSON invalide", parseErr, "preview:", rawText.slice(0, 300));
+            }
+          }
           const outputs = Array.isArray(renderJson.outputs) ? renderJson.outputs : [];
           for (const out of outputs) {
             if (
