@@ -553,9 +553,10 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
     // Dès qu'on a des promos extraites, on les expose au fallback
     fallbackPromotions = enrichedPromotions;
 
-    if (RENDER_API_SECRET && organizationId && body.catalogue_id) {
+    const renderBudgetMs = Math.min(RENDER_MAX_TIMEOUT_MS, remainingMs() - RESPONSE_RESERVE_MS);
+    if (RENDER_API_SECRET && organizationId && body.catalogue_id && renderBudgetMs >= RENDER_MIN_BUDGET_MS) {
       const renderController = new AbortController();
-      const renderTimeout = setTimeout(() => renderController.abort(), 90_000);
+      const renderTimeout = setTimeout(() => renderController.abort(), renderBudgetMs);
       try {
         const renderPayload = {
           pdf_url: body.pdf_url,
@@ -626,6 +627,7 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
       if (!RENDER_API_SECRET) console.warn("RENDER_API_SECRET non configurée, skip extraction images natives");
       if (!organizationId) console.warn("organization_id introuvable, skip extraction images natives");
       if (!body.catalogue_id) console.warn("catalogue_id non fourni, skip extraction images natives");
+      if (renderBudgetMs < RENDER_MIN_BUDGET_MS) extractionWarnings.push("Images natives ignorées : temps restant insuffisant avant timeout.");
     }
 
     return new Response(
