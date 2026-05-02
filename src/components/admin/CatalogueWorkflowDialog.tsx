@@ -1214,13 +1214,13 @@ function ScheduleStep({
       // Appel de l'edge function pour matcher les images natives + persister
       // image / match_score / match_method / is_rasterized par UUID.
       const promoIds = (insertedRows ?? []).map((r: { id: string }) => r.id);
-      if (promoIds.length === selected.length && pdfUrl) {
+      if (promoIds.length === selected.length && catalogue.pdf_url) {
         try {
           const { error: matchErr } = await supabase.functions.invoke(
             "extract-catalogue-promos",
             {
               body: {
-                pdf_url: pdfUrl,
+                pdf_url: catalogue.pdf_url,
                 catalogue_id: catalogue.id,
                 promo_ids: promoIds,
               },
