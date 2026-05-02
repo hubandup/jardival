@@ -29,9 +29,12 @@ export interface WorkflowPromo {
   bbox_2d?: Bbox | null;
   image_url?: string | null;
   image_cutout_url?: string | null;
-  /** Provenance de l'image_url : "native" = image extraite directement du PDF (qualité HD),
-   *  "fallback-crop" = crop d'une page rasterisée, null = pas encore d'image. */
-  image_source?: "native" | "fallback-crop" | null;
+  /** Provenance de l'image_url :
+   *  - "native" : image extraite directement du PDF (qualité HD, via service Render)
+   *  - "fallback-crop" : crop d'une page rasterisée (legacy, qualité dégradée)
+   *  - "manual" : image uploadée manuellement par l'admin
+   *  - null : pas encore d'image */
+  image_source?: "native" | "fallback-crop" | "manual" | null;
   selected?: boolean;
 }
 
