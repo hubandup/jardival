@@ -18,17 +18,29 @@ const RENDER_MIN_BUDGET_MS = 12_000;
 
 const bboxSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);
 
+const positionEnum = z.enum([
+  "haut-gauche", "haut-centre", "haut-droite",
+  "milieu-gauche", "milieu-centre", "milieu-droite",
+  "bas-gauche", "bas-centre", "bas-droite",
+]);
+
+const promoInputSchema = z.object({
+  title: z.string(),
+  page_number: z.number().int().nullish(),
+  position: positionEnum.nullish(),
+});
+
 const extractRequestSchema = z.object({
   pdf_url: z.string().url("pdf_url doit être une URL valide"),
   catalogue_id: z.string().uuid().nullish(),
   starts_at: z.string().nullish(),
   ends_at: z.string().nullish(),
-  // UUIDs des promotions déjà insérées en DB, dans l'ordre des index renvoyés
-  // par le service Python. Quand fourni, l'edge fait UPDATE direct par id
-  // (image, match_score, match_method, is_rasterized).
+  // UUIDs des promotions déjà insérées en DB, dans l'ordre des promos.
+  // Présence de promo_ids + promos = mode "matching-only" : skip Gemini,
+  // appel direct au service Render pour matcher images natives + UPDATE par id.
   promo_ids: z.array(z.string().uuid()).nullish(),
+  promos: z.array(promoInputSchema).nullish(),
   // Bboxes ajustées par l'utilisateur lors d'une précédente extraction du MÊME catalogue.
-  // Servent d'exemples concrets pour guider la nouvelle détection.
   previous_boxes: z
     .array(
       z.object({
