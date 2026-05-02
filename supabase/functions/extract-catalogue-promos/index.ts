@@ -316,105 +316,126 @@ VÉRIFICATION FINALE avant de renvoyer :
 N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHints}${rejectionHints}${previousExamples}`;
 
     // Timeout interne (plus court que la limite edge de 150s) pour pouvoir renvoyer une erreur propre
-    const aiController = new AbortController();
-    const aiTimeout = setTimeout(() => aiController.abort(), 140_000);
-
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      signal: aiController.signal,
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        // gemini-2.5-flash : 3-5× plus rapide que pro sur PDF multi-pages,
-        // qualité d'extraction structurée suffisante avec tool calling.
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              {
-                type: "file",
-                file: {
-                  filename: "catalogue.pdf",
-                  file_data: `data:application/pdf;base64,${pdfBase64}`,
-                },
-              },
-              {
-                type: "text",
-                text: "Extrais toutes les promotions de ce catalogue.",
-              },
-            ],
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "save_promotions",
-              description: "Enregistre la liste des promotions extraites du catalogue.",
-              parameters: {
-                type: "object",
-                properties: {
-                  promotions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        description: { type: "string" },
-                        price: { type: "number" },
-                        original_price: { type: "number" },
-                        discount_percent: { type: "number" },
-                        category: { type: "string" },
-                        page_number: { type: "number" },
-                        position: {
-                          type: "string",
-                          description: "Zone de la page (grille 3×3) où l'image du produit apparaît",
-                          enum: [...POSITION_VALUES],
-                        },
-                      },
-                      required: ["title"],
-                    },
-                  },
-                },
-                required: ["promotions"],
+    const aiRequestBody = JSON.stringify({
+      // gemini-2.5-flash : 3-5× plus rapide que pro sur PDF multi-pages,
+      // qualité d'extraction structurée suffisante avec tool calling.
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            {
+              type: "file",
+              file: {
+                filename: "catalogue.pdf",
+                file_data: `data:application/pdf;base64,${pdfBase64}`,
               },
             },
+            {
+              type: "text",
+              text: "Extrais toutes les promotions de ce catalogue.",
+            },
+          ],
+        },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "save_promotions",
+            description: "Enregistre la liste des promotions extraites du catalogue.",
+            parameters: {
+              type: "object",
+              properties: {
+                promotions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string" },
+                      description: { type: "string" },
+                      price: { type: "number" },
+                      original_price: { type: "number" },
+                      discount_percent: { type: "number" },
+                      category: { type: "string" },
+                      page_number: { type: "number" },
+                      position: {
+                        type: "string",
+                        description: "Zone de la page (grille 3×3) où l'image du produit apparaît",
+                        enum: [...POSITION_VALUES],
+                      },
+                    },
+                    required: ["title"],
+                  },
+                },
+              },
+              required: ["promotions"],
+            },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "save_promotions" } },
-      }),
-    }).finally(() => clearTimeout(aiTimeout));
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "save_promotions" } },
+    });
 
-    if (!aiResp.ok) {
-      const errText = await aiResp.text();
-      console.error("AI gateway error", aiResp.status, errText);
-      if (aiResp.status === 429) {
+    // Retry jusqu'à 2 fois si le gateway renvoie 200 avec un body vide (timeout interne / hiccup transient)
+    let aiResp: Response | null = null;
+    let aiRaw = "";
+    let aiAttempt = 0;
+    const maxAiAttempts = 2;
+    let lastEmptyMeta: { status: number; contentLength: string | null } | null = null;
+
+    while (aiAttempt < maxAiAttempts) {
+      aiAttempt++;
+      const aiController = new AbortController();
+      const aiTimeout = setTimeout(() => aiController.abort(), 140_000);
+      aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        signal: aiController.signal,
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: aiRequestBody,
+      }).finally(() => clearTimeout(aiTimeout));
+
+      if (!aiResp.ok) {
+        const errText = await aiResp.text();
+        console.error("AI gateway error", aiResp.status, errText, "attempt", aiAttempt);
+        if (aiResp.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Limite de requêtes atteinte, réessayez dans une minute." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (aiResp.status === 402) {
+          return new Response(
+            JSON.stringify({ error: "Crédits Lovable AI insuffisants. Ajoutez des fonds dans Settings > Workspace > Usage." }),
+            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         return new Response(
-          JSON.stringify({ error: "Limite de requêtes atteinte, réessayez dans une minute." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: `Erreur IA (${aiResp.status})` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (aiResp.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Crédits Lovable AI insuffisants. Ajoutez des fonds dans Settings > Workspace > Usage." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+
+      aiRaw = await aiResp.text();
+      if (aiRaw && aiRaw.trim()) {
+        break; // got a body, proceed to parse
       }
-      return new Response(
-        JSON.stringify({ error: `Erreur IA (${aiResp.status})` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      lastEmptyMeta = { status: aiResp.status, contentLength: aiResp.headers.get("content-length") };
+      console.error("Réponse IA vide", { ...lastEmptyMeta, attempt: aiAttempt });
+      if (aiAttempt < maxAiAttempts) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
     }
 
-    const aiRaw = await aiResp.text();
     if (!aiRaw || !aiRaw.trim()) {
-      console.error("Réponse IA vide", { status: aiResp.status, contentLength: aiResp.headers.get("content-length") });
       return new Response(
-        JSON.stringify({ error: "L'IA a renvoyé une réponse vide (timeout ou réponse tronquée). Réessayez ou réduisez la taille du PDF." }),
+        JSON.stringify({
+          error: "L'IA a renvoyé une réponse vide après plusieurs tentatives. Réduisez le nombre de pages du PDF (≤ 6) ou réessayez dans quelques minutes.",
+        }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
