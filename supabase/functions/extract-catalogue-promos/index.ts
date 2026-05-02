@@ -65,6 +65,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Fallback partagé : si un crash survient APRÈS extraction, on renvoie les promos déjà en mémoire
+  let fallbackPromotions: unknown[] | null = null;
+
   try {
     // --- Auth check : doit être admin ---
     const authHeader = req.headers.get("Authorization");
@@ -436,9 +439,30 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
 
     let parsed: { promotions: ExtractedPromo[] };
     try {
-      parsed = JSON.parse(toolCall.function.arguments);
+      const argsRaw = toolCall.function.arguments;
+      if (typeof argsRaw !== "string" || argsRaw.trim().length === 0) {
+        console.error("Tool call arguments vides", { type: typeof argsRaw });
+        return new Response(
+          JSON.stringify({ error: "L'IA a renvoyé un appel d'outil vide. Réessayez." }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      try {
+        parsed = JSON.parse(argsRaw);
+      } catch (e) {
+        console.error("Parse error tool args", {
+          error: String(e),
+          length: argsRaw.length,
+          head: argsRaw.slice(0, 300),
+          tail: argsRaw.slice(-300),
+        });
+        return new Response(
+          JSON.stringify({ error: "Réponse IA invalide (arguments tronqués). Réessayez." }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     } catch (e) {
-      console.error("Parse error", e);
+      console.error("Parse error wrapper", e);
       return new Response(
         JSON.stringify({ error: "Réponse IA invalide." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -500,6 +524,8 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
       image_url: null,
       image_source: null,
     }));
+    // Dès qu'on a des promos extraites, on les expose au fallback
+    fallbackPromotions = enrichedPromotions;
 
     if (RENDER_API_SECRET && organizationId && body.catalogue_id) {
       const renderController = new AbortController();
@@ -583,6 +609,24 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
   } catch (e) {
     console.error("extract-catalogue-promos error", e);
     const isAbort = e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"));
+
+    // Fallback : si on a déjà des promos extraites en mémoire, on les renvoie au lieu de 500
+    if (fallbackPromotions && fallbackPromotions.length > 0) {
+      console.warn("Crash après extraction — renvoi du fallback en mémoire", {
+        count: fallbackPromotions.length,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      return new Response(
+        JSON.stringify({
+          promotions: fallbackPromotions,
+          count: fallbackPromotions.length,
+          warning: "Enrichissement partiel : une erreur est survenue après l'extraction (" +
+            (e instanceof Error ? e.message : "erreur inconnue") + ").",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({
         error: isAbort
