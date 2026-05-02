@@ -10,6 +10,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const EDGE_SOFT_DEADLINE_MS = 132_000;
+const RESPONSE_RESERVE_MS = 8_000;
+const AI_CHUNK_TIMEOUT_MS = 52_000;
+const RENDER_MAX_TIMEOUT_MS = 25_000;
+const RENDER_MIN_BUDGET_MS = 12_000;
+
 const bboxSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);
 
 const extractRequestSchema = z.object({
@@ -120,6 +126,9 @@ function parseAiPromotionsFromRaw(aiRaw: string, label: string): ExtractedPromo[
 }
 
 Deno.serve(async (req) => {
+  const startedAt = Date.now();
+  const remainingMs = () => EDGE_SOFT_DEADLINE_MS - (Date.now() - startedAt);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
