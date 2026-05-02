@@ -618,22 +618,10 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
           }
           const outputs = Array.isArray(renderJson.outputs) ? renderJson.outputs : [];
 
-          // Récupère les UUIDs des promotions déjà insérées pour ce catalogue,
-          // ordonnées par display_order. L'index renvoyé par le service Python
-          // correspond à cet ordre.
-          let promoIds: string[] = [];
-          if (body.catalogue_id) {
-            const { data: existingPromos, error: selErr } = await supabase
-              .from("promotions")
-              .select("id")
-              .eq("catalogue_id", body.catalogue_id)
-              .order("display_order", { ascending: true });
-            if (selErr) {
-              console.error("Lecture promotions pour mapping UUID échouée", selErr);
-            } else {
-              promoIds = (existingPromos ?? []).map((r: { id: string }) => r.id);
-            }
-          }
+          // UUIDs fournis explicitement par le client (étape "Publier"),
+          // dans l'ordre des index renvoyés par le service Python.
+          const promoIds: string[] = Array.isArray(body.promo_ids) ? body.promo_ids : [];
+
 
           for (const out of outputs) {
             if (
