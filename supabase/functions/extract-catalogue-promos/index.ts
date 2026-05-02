@@ -65,6 +65,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Fallback partagé : si un crash survient APRÈS extraction, on renvoie les promos déjà en mémoire
+  let fallbackPromotions: unknown[] | null = null;
+
   try {
     // --- Auth check : doit être admin ---
     const authHeader = req.headers.get("Authorization");
