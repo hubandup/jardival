@@ -1,74 +1,69 @@
+# Edge function `upload-promo-image` pour Render
 
-# Plan — 4 améliorations UX mobile / géolocalisation
+## Objectif
 
-Aucun fichier dans `supabase/`, ni `CatalogueWorkflowDialog.tsx`, `CataloguePromoBboxPreview.tsx`, `pdfImageCrop.ts` ne sera touché.
+Permettre à un service externe hébergé sur Render d'uploader des images extraites de catalogues PDF dans le bucket `promo-images`, sans exposer la `SUPABASE_SERVICE_ROLE_KEY` côté Render. L'authentification se fait via un secret partagé `RENDER_API_SECRET`.
 
-Bonne nouvelle : beaucoup de briques existent déjà (`MobilePromoReels`, `useGeolocation`, `nearestStore`/`distanceKm`, `DirectionsMenu`). On capitalise dessus.
+## Ce qui sera créé
 
----
+### 1. Secret `RENDER_API_SECRET`
+- Généré côté serveur : 32 caractères aléatoires (alphanumériques URL-safe, via `crypto.getRandomValues`).
+- Stocké dans les Secrets Lovable Cloud via le tool `add_secret`.
+- **Important** : la valeur sera générée puis affichée **une seule fois** dans le chat pour que vous puissiez la copier dans les variables d'environnement Render. Elle ne sera plus jamais ré-affichable ensuite (vous devrez en regénérer une si perdue).
 
-## 1. `/promotions` en mode reels sur mobile
+### 2. Edge function `supabase/functions/upload-promo-image/index.ts`
 
-État actuel : `Promotions.tsx` rend la même grille filtrable sur mobile et desktop. `MobilePromoReels.tsx` existe déjà (utilisé sur la home) et fait quasiment tout ce qui est demandé : 100dvh par slide, snap vertical, image en grand, prix barré + prix promo, badge `-X%`, partage, lien magasin.
+**Endpoint** : `POST /functions/v1/upload-promo-image`
 
-Adaptations :
-- Dans `src/pages/Promotions.tsx`, brancher `useIsMobile()` et, si mobile, retourner `<MobilePromoReels />` à la place de la grille (en gardant `SiteHeader` et le SEO actuel).
-- Dans `src/components/MobilePromoReels.tsx`, renforcer le CTA "Trouver ce produit en magasin" :
-  - Remplacer le petit bouton `MapPin` icône-only par un CTA pleine largeur fixé en bas, libellé `Trouver ce produit en magasin →`.
-  - Le lien pointe vers `/magasins?promo={slug|id}&geo=1` (param `geo=1` = on déclenche la géoloc auto à l'arrivée).
-  - Conserver le bouton "Voir l'offre" et le partage au-dessus, dans une rangée plus compacte.
-- Respecter les filtres URL (`q`, `categorie`, `magasin`) en les appliquant aussi au flux des reels (filtrage côté composant avant `promotionToProduct`). Un petit bouton "Filtrer" en haut ouvre une sheet avec les mêmes contrôles que le desktop — réutilisation des `Select` existants.
+**Authentification** :
+- Header attendu : `Authorization: Bearer <RENDER_API_SECRET>`
+- Comparaison à temps constant pour éviter les timing attacks.
+- Pas de JWT utilisateur (`verify_jwt = false` côté config — déjà le défaut Lovable).
+- 401 si manquant ou invalide.
 
-## 2. `/magasins` avec géolocalisation auto + tri par distance
-
-État actuel : `Stores.tsx` propose déjà la géoloc via `<NearestStore />` mais à la demande, et la liste n'est pas triée par distance. `DirectionsMenu` existe déjà (multi-providers Google / Apple / Waze / OSM).
-
-Modifications dans `src/pages/Stores.tsx` :
-- Lire `useSearchParams()` et, si `?geo=1` est présent (ou par défaut au premier rendu), appeler `useGeolocation(true)` pour demander la position au mount.
-- Calculer `storesWithDistance` : pour chaque magasin filtré, ajouter `distance` via `distanceKm(userPos, store.coords)` quand `state.status === "ready"`.
-- Tri : si position connue, trier par distance croissante ; sinon, conserver le tri alphabétique actuel.
-- Afficher la distance dans `StoreCard` ("À 4,2 km") sous le code postal, badge discret.
-- Bouton "Itinéraire" déjà présent via `DirectionsMenu` ; on s'assure qu'il passe `&origin={lat,lng}` quand la position user est connue. Pour ça, étendre `directionsUrlFor` dans `src/data/stores.ts` pour accepter un `origin?: [number, number]` optionnel et l'injecter dans l'URL Google Maps (`&origin=lat,lng`), Apple Plans (`saddr=`) et Waze (via `from=ll.`). OSM accepte déjà `from=`.
-- L'utilisateur garde la possibilité de refuser : on retombe sur le tri alphabétique + un petit bandeau "Activer la géolocalisation" (déjà géré par `<NearestStore />` qu'on conserve).
-
-## 3. `/catalogue` — affichage mobile fluide + swipe horizontal
-
-État actuel : `Catalogue.tsx` utilise `react-pdf` + `react-pageflip`. Sur mobile, `usePortrait={isMobile}` est déjà actif mais le rendu PDF reste lourd, surtout au premier chargement.
-
-Modifications dans `src/pages/Catalogue.tsx` :
-- Garder `react-pdf` comme moteur (pas de pré-rendu serveur — on n'a pas de pipeline pour ça aujourd'hui), mais améliorer le mobile :
-  - Sur mobile, basculer du flipbook vers un carrousel horizontal natif : container `flex overflow-x-auto snap-x snap-mandatory`, chaque page `<Page>` rendue à `width = viewport - padding`, hauteur auto, `loading="lazy"` via `IntersectionObserver` (on ne `<Page pageNumber>` qu'une fois la slide proche).
-  - Ajouter un compteur sticky en bas `currentPage / numPages` mis à jour via IntersectionObserver sur les slides.
-  - Précharger seulement les 1-2 pages voisines de la page active pour réduire la mémoire.
-- Sur desktop, on garde l'expérience flipbook actuelle inchangée.
-- Sur mobile aussi, masquer la bande "title + breadcrumb" plein écran si le viewport < 768px pour donner plus de place au PDF (réduire les paddings).
-
-Note : pas de pré-rendu d'images côté serveur dans ce plan (ça impliquerait une edge function et de toucher Supabase, exclu par la contrainte). Si la perf reste insuffisante après cette passe, on envisagera un cache d'images dans une seconde itération.
-
-## 4. CTA global flottant "Trouver un magasin"
-
-Création d'un nouveau composant `src/components/FloatingFindStoreCta.tsx` :
-- Position `fixed bottom-4 right-4 z-40`, pill verte avec icône `MapPin` + label "Trouver un magasin".
-- Animation `hover:scale-105 active:scale-95`, `shadow-glow`.
-- `useLocation()` : ne s'affiche pas si `pathname.startsWith("/magasins")` ni sur les routes `/admin/*` (inutile / intrusif côté admin).
-- Au clic : `<Link to="/magasins?geo=1">`.
-- Sur très petits écrans (< 380px), version compacte icône-only avec aria-label.
-- Respecte le safe-area (`pb-[env(safe-area-inset-bottom)]`) pour iOS.
-
-Intégration : monter `<FloatingFindStoreCta />` dans `src/App.tsx`, à l'intérieur de `<BrowserRouter>` mais en dehors de `<Routes>` (pour qu'il soit visible partout, et fasse son `useLocation()` librement).
-
----
-
-## Récap des fichiers modifiés / créés
-
-```text
-src/App.tsx                              modifié (monter le CTA flottant)
-src/pages/Promotions.tsx                 modifié (bascule reels mobile + filtres)
-src/pages/Stores.tsx                     modifié (géoloc auto, tri distance, distance affichée)
-src/pages/Catalogue.tsx                  modifié (carrousel horizontal mobile)
-src/components/MobilePromoReels.tsx      modifié (CTA "Trouver en magasin", filtres URL)
-src/components/FloatingFindStoreCta.tsx  créé
-src/data/stores.ts                       modifié (directionsUrlFor accepte origin?)
+**Corps de requête (JSON, validé via Zod)** :
+```json
+{
+  "organization_id": "uuid",
+  "catalogue_id": "uuid",
+  "page_number": 1,
+  "image_index": 0,
+  "image_base64": "...",
+  "content_type": "image/jpeg"
+}
 ```
+- `content_type` restreint à `image/jpeg`, `image/png`, `image/webp`.
+- `page_number` et `image_index` : entiers ≥ 0, bornés (ex. ≤ 10000) pour éviter les abus.
+- `image_base64` : taille max ~15 MB (après décodage) pour éviter de saturer la mémoire.
+- IDs validés au format UUID.
 
-Aucun changement de schéma DB, aucune edge function touchée.
+**Logique** :
+1. Vérifier le secret.
+2. Parser et valider le body.
+3. Décoder le base64 → `Uint8Array`.
+4. Construire le chemin : `extracted-native/{organization_id}/{catalogue_id}/{page_number}_{image_index}.jpg` (extension toujours `.jpg` comme demandé, même si content-type différent — cohérent avec votre wording).
+5. Upload via le client Supabase initialisé avec `SUPABASE_SERVICE_ROLE_KEY` (`upsert: true`, `contentType` correct).
+6. Récupérer l'URL publique (bucket `promo-images` est public).
+7. Retourner `{ "public_url": "https://..." }` + 200.
+
+**Gestion d'erreurs** :
+- 400 : validation échouée
+- 401 : secret invalide
+- 413 : payload trop gros
+- 500 : erreur upload (avec message safe, sans fuite interne)
+- CORS headers sur toutes les réponses (y compris erreurs et OPTIONS).
+
+### 3. Pas de modif de `supabase/config.toml`
+Les fonctions Lovable se déploient avec `verify_jwt = false` par défaut — pas besoin d'override.
+
+## Ce qui ne sera PAS fait
+- Pas d'écriture en base (juste upload storage). Si vous voulez aussi enregistrer une ligne dans `media_assets` ou similaire, dites-le et je l'ajouterai.
+- Pas de rate limiting applicatif (le secret partagé suffit pour un service de confiance ; si vous voulez un quota par organisation, à préciser).
+
+## Questions avant de coder
+
+1. **Extension du fichier** : vous avez écrit `.jpg` en dur dans le chemin. Je garde `.jpg` en dur, ou je dérive l'extension du `content_type` (`.jpg` / `.png` / `.webp`) ? Garder `.jpg` en dur peut tromper les navigateurs si vous uploadez du PNG.
+2. **Écrasement** : si une image existe déjà au même chemin, j'utilise `upsert: true` (écrase). OK ?
+3. **Trace en base** : faut-il aussi insérer une ligne dans `media_assets` (avec `public_url`, `bucket`, `path`, organisation, etc.) à la fin de l'upload ?
+
+Si vous validez le plan tel quel (avec `.jpg` en dur, upsert oui, pas de trace en base), je passe à l'implémentation directement.

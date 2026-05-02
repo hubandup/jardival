@@ -105,9 +105,10 @@ async function imageToBlob(
       }
     } else {
       // Format inconnu : on tente quand même.
-      rgba = new Uint8ClampedArray(data.buffer ?? data);
+      const buf = (data as { buffer?: ArrayBufferLike }).buffer ?? (data as ArrayBufferLike);
+      rgba = new Uint8ClampedArray(buf as ArrayBuffer);
     }
-    const imgData = new ImageData(rgba, w, h);
+    const imgData = new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, w, h);
     ctx.putImageData(imgData, 0, 0);
   } else {
     return null;
