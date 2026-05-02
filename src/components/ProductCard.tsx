@@ -1,5 +1,6 @@
 import { Product } from "@/types/product";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMediaAlt } from "@/hooks/useMedia";
@@ -21,14 +22,19 @@ export const ProductCard = ({ product, featured = false }: Props) => {
     >
       <div className="relative aspect-square overflow-hidden bg-muted">
         {!errored ? (
-          <img
-            src={product.image}
-            alt={alt}
-            loading="lazy"
-            onLoad={() => setLoaded(true)}
-            onError={() => setErrored(true)}
-            className={`h-full w-full object-contain p-4 transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
-          />
+          <>
+            {!loaded && (
+              <Skeleton className="absolute inset-0 rounded-none" aria-hidden />
+            )}
+            <img
+              src={product.image}
+              alt={alt}
+              loading="lazy"
+              onLoad={() => setLoaded(true)}
+              onError={() => setErrored(true)}
+              className={`h-full w-full object-contain p-4 transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+            />
+          </>
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">Image indisponible</div>
         )}
