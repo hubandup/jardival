@@ -634,55 +634,32 @@ function ZonesStep({
       }
       if (!result) throw new Error("Extraction IA impossible après plusieurs tentatives");
 
-      const rawList: WorkflowPromo[] = ((result.data as { promotions?: WorkflowPromo[] } | null)?.promotions ?? []).map(
-        (p: WorkflowPromo) => ({ ...p, selected: true })
-      );
-
-      // Pipeline natif : extraction des images PDF en qualité d'origine + matching
-      // par position. Bascule en fallback rasterize+crop si aucune image native, ou
-      // complète au crop pour les promos non couvertes (timeout partiel).
-      setExtractProgress({ value: 90, label: "Association des images aux promotions..." });
-      const orchestrated = await extractPromoImages(
-        absoluteUrl,
-        rawList,
-        undefined,
-        (phase) => {
-          if (phase === "native-extracting") {
-            setExtractProgress({ value: 90, label: "Lecture des images natives du PDF..." });
-          } else if (phase === "native-matching") {
-            setExtractProgress({ value: 92, label: "Association des images aux promotions..." });
-          } else if (phase === "partial-fallback-cropping") {
-            setExtractProgress({
-              value: 94,
-              label: "Extraction native partielle, utilisation du crop pour les images manquantes...",
-            });
-          } else if (phase === "fallback-cropping") {
-            setExtractProgress({ value: 94, label: "Crop des images depuis le PDF..." });
-          }
-        }
-      );
-
-      const list: WorkflowPromo[] = rawList.map((p, i) => {
-        const out = orchestrated.outputs[i];
-        // Pour les natives : pas de bbox éditable (l'image est déjà propre).
-        // Pour les fallback : bbox dérivée de la position (modifiable par l'admin).
-        const isNative = out?.source === "native";
-        return {
+      // Les image_url sont désormais résolues côté edge function (service Render
+      // qui extrait les images natives du PDF). Le frontend consomme directement
+      // ce que renvoie l'edge function — plus de pipeline native/crop côté client.
+      // Pour les promos sans image_url retournée, l'admin pourra cropper/uploader manuellement.
+      const list: WorkflowPromo[] = ((result.data as { promotions?: WorkflowPromo[] } | null)?.promotions ?? []).map(
+        (p: WorkflowPromo) => ({
           ...p,
           selected: true,
-          image_url: out?.imageUrl ?? null,
-          image_source: out?.source ?? null,
-          bbox_2d: isNative ? null : (p.bbox_2d ?? bboxFromPosition(p.position ?? null)),
-        };
-      });
+          image_url: p.image_url ?? null,
+          image_source: p.image_source ?? null,
+          // Si pas d'image native : bbox dérivée de la position pour permettre le crop manuel.
+          bbox_2d:
+            p.image_source === "native"
+              ? null
+              : (p.bbox_2d ?? bboxFromPosition(p.position ?? null)),
+        })
+      );
 
       // Saut à 100% au retour effectif de l'API.
       setExtractProgress({ value: 100, label: "Terminé" });
 
       updatePromos(() => list);
-      const { matchedNative, fallbackCropped, failed } = orchestrated.stats;
+      const nativeCount = list.filter((p) => p.image_source === "native").length;
+      const noImageCount = list.filter((p) => !p.image_url).length;
       toast.success(
-        `${list.length} promos · ${matchedNative} HD · ${fallbackCropped} crop${failed ? ` · ${failed} sans image` : ""}`
+        `${list.length} promos · ${nativeCount} HD${noImageCount ? ` · ${noImageCount} sans image` : ""}`
       );
     } catch (e) {
       console.error(e);
@@ -894,7 +871,7 @@ function TableStep({
         file,
         { contentType: file.type || "image/jpeg" }
       );
-      patchPromo(i, { image_url: publicUrl, image_cutout_url: null });
+      patchPromo(i, { image_url: publicUrl, image_cutout_url: null, image_source: "manual" });
       toast.success("Image remplacée");
     } catch (e) {
       console.error(e);
@@ -1001,7 +978,16 @@ function TableStep({
                       >
                         HD
                       </Badge>
-                    ) : p.image_source === "fallback-crop" ? (
+                    ) : p.image_source === "manual" ? (
+                      <Badge
+                        variant="default"
+                        className="h-5 px-1.5 text-[10px] bg-blue-600 hover:bg-blue-600 text-white"
+                        title="Image uploadée manuellement par l'admin"
+                      >
+                        Manuel
+                      </Badge>
+                    ) : p.image_source === "fallback-crop" ||
+                      (p.image_source == null && p.image_url) ? (
                       <Badge
                         variant="secondary"
                         className="h-5 px-1.5 text-[10px] bg-amber-500 hover:bg-amber-500 text-white"

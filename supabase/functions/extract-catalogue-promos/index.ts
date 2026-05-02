@@ -426,8 +426,85 @@ N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les prom
       );
     }
 
+    // --- Appel au service Render pour extraire les images natives du PDF ---
+    // Timeout 90s (cold start free tier ~30-50s la 1ère fois).
+    // Échec ou timeout : on log et on renvoie les promos sans image_url, pas de crash.
+    const RENDER_API_SECRET = Deno.env.get("RENDER_API_SECRET");
+    type PromoWithImage = (typeof promotions)[number] & {
+      image_url?: string | null;
+      image_source?: "native" | null;
+    };
+    const enrichedPromotions: PromoWithImage[] = promotions.map((p) => ({
+      ...p,
+      image_url: null,
+      image_source: null,
+    }));
+
+    if (RENDER_API_SECRET && organizationId && body.catalogue_id) {
+      const renderController = new AbortController();
+      const renderTimeout = setTimeout(() => renderController.abort(), 90_000);
+      try {
+        const renderPayload = {
+          pdf_url: body.pdf_url,
+          organization_id: organizationId,
+          catalogue_id: body.catalogue_id,
+          promos: promotions.map((p, i) => ({
+            index: i,
+            page_number: p.page_number,
+            position: p.position,
+            title: p.title,
+          })),
+        };
+        const renderResp = await fetch("https://jardival-extract.onrender.com/extract", {
+          method: "POST",
+          signal: renderController.signal,
+          headers: {
+            Authorization: `Bearer ${RENDER_API_SECRET}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(renderPayload),
+        });
+        if (!renderResp.ok) {
+          const errText = await renderResp.text().catch(() => "");
+          console.error("Render extract failed", renderResp.status, errText.slice(0, 500));
+        } else {
+          const renderJson = await renderResp.json() as {
+            outputs?: Array<{ index: number; image_url: string | null; source?: string | null }>;
+            stats?: unknown;
+          };
+          const outputs = Array.isArray(renderJson.outputs) ? renderJson.outputs : [];
+          for (const out of outputs) {
+            if (
+              typeof out?.index === "number" &&
+              out.index >= 0 &&
+              out.index < enrichedPromotions.length &&
+              typeof out.image_url === "string" &&
+              out.image_url.length > 0
+            ) {
+              enrichedPromotions[out.index].image_url = out.image_url;
+              enrichedPromotions[out.index].image_source = "native";
+            }
+          }
+          console.log("Render extract OK", {
+            received: outputs.length,
+            withImage: outputs.filter((o) => o?.image_url).length,
+            stats: renderJson.stats,
+          });
+        }
+      } catch (e) {
+        const isAbort = e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"));
+        console.error("Render extract error", isAbort ? "timeout 90s" : e);
+      } finally {
+        clearTimeout(renderTimeout);
+      }
+    } else {
+      if (!RENDER_API_SECRET) console.warn("RENDER_API_SECRET non configurée, skip extraction images natives");
+      if (!organizationId) console.warn("organization_id introuvable, skip extraction images natives");
+      if (!body.catalogue_id) console.warn("catalogue_id non fourni, skip extraction images natives");
+    }
+
     return new Response(
-      JSON.stringify({ promotions, count: promotions.length }),
+      JSON.stringify({ promotions: enrichedPromotions, count: enrichedPromotions.length }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
