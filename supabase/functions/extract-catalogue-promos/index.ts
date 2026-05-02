@@ -240,33 +240,77 @@ Vise des bboxes proches de ces dimensions et évite les zones nettement plus pet
       }
     }
 
-    const systemPrompt = `Tu es un assistant qui extrait les promotions d'un prospectus PDF de jardinerie.
-Pour chaque promotion, extrais précisément :
-- title : nom EXACT du produit tel qu'imprimé (concis, ex "Barbecue Charbon Serena")
-- description : description courte (1 ligne) ou catégorie/référence si visible
-- price : prix promotionnel en euros (nombre, ex 99.90). Si le prix n'est pas affiché à l'unité (ex: "-20% sur les géraniums"), mets 0
-- original_price : prix original BARRÉ/avant promo s'il est affiché, sinon null
-- discount_percent : pourcentage de réduction AFFICHÉ s'il est visible (sinon calcule-le à partir de price + original_price)
-- category : famille produit (ex "Barbecue & Plancha", "Végétaux", "Animalerie")
-- page_number : numéro de page où le produit apparaît (commence à 1)
-- position : zone de la page où le produit apparaît, parmi exactement ces 9 valeurs :
-  "haut-gauche" | "haut-centre" | "haut-droite"
-  | "milieu-gauche" | "milieu-centre" | "milieu-droite"
-  | "bas-gauche" | "bas-centre" | "bas-droite"
-  Découpe mentalement la page en grille 3×3 et choisis la zone qui contient l'IMAGE (la photo) du produit. Choisis UNE seule valeur, la plus représentative. Si l'image chevauche deux zones, prends celle qui contient le centre de l'image.
+    const systemPrompt = `Tu es un assistant qui extrait les promotions d'un prospectus PDF de jardinerie pour les afficher sur un site mobile.
 
-RÈGLES IMPORTANTES :
-- UN PRODUIT = UNE PROMO. Chaque promotion doit correspondre à un seul produit. Ne fusionne JAMAIS plusieurs produits dans une même entrée.
-- Pour chaque promotion, extraire : le nom EXACT du produit, la description courte, le prix promotionnel, le prix original barré (s'il existe), et le pourcentage de réduction (s'il est affiché).
+OBJECTIF : extraire UNIQUEMENT les vrais produits avec un prix unitaire identifiable. La qualité prime sur la quantité.
 
-À IGNORER (NE PAS extraire ces éléments comme des promotions) :
-- En-têtes et pieds de page (titre du catalogue, numéro de page, dates)
-- Logos d'enseigne, mascottes, bannières marketing génériques
-- Mentions légales, conditions de vente, astérisques explicatifs
-- Adresses et coordonnées des magasins, encarts horaires
-- Blocs de texte purement éditoriaux (édito, conseils saison, etc.) sans produit identifiable
+DÉFINITION D'UNE PROMO VALIDE (TOUTES les conditions doivent être réunies) :
 
-N'invente rien. Si un champ n'est pas visible, mets null. Inclus toutes les promotions distinctes.${learnedHints}${rejectionHints}${previousExamples}`;
+1. Le produit a un nom commercial identifiable (pas "Plantes méditerranéennes" en générique, mais "OLIVIER EN POT" ou "TERREAU AGRUMES").
+
+2. Le produit a un prix UNITAIRE imprimé en gros caractères (format "XX,YY €" ou "XX€YY"). Les prix au litre/kilo en petits caractères ne comptent pas.
+
+3. Le produit a une PHOTO distincte sur la page (pas un logo, pas un bandeau décoratif).
+
+À EXTRAIRE :
+
+- Chaque produit qui satisfait les 3 conditions ci-dessus = UNE entrée
+
+- Si un produit a plusieurs déclinaisons avec des prix différents (ex: "Terreau À partir de 8,50€ unité / 17€ lot de 3"), crée UNE SEULE entrée avec le prix unitaire le plus bas, et mentionne les variantes dans description
+
+À IGNORER FORMELLEMENT (NE crée PAS d'entrée pour) :
+
+- Couverture du catalogue, page de garde, pages de coordonnées des magasins
+
+- Logos d'enseigne (Jardival, Point Vert, marques fournisseurs comme Teragile, Algoflash, Vilmorin)
+
+- Bandeaux "-X% DE REMISE" qui annoncent une remise sur une catégorie sans produit ni prix unitaire (ex: "-20% sur les géraniums", "-15% sur les rosiers")
+
+- Mascottes, illustrations décoratives, photos d'ambiance sans produit
+
+- Mentions légales, astérisques, conditions
+
+- Encarts "Avec votre carte fidélité", QR codes, encarts éditoriaux
+
+- Tableaux de comparaison de specs techniques sans visuel produit principal
+
+- Pictogrammes "BIO", "Origine France", labels éco
+
+CHAMPS À EXTRAIRE (pour chaque promo valide) :
+
+- title : nom du produit en MAJUSCULES tel qu'imprimé en gros (ex "BARBECUE CHARBON SERENA"). Pas le slogan, pas la marque seule.
+
+- description : 1 ligne max, avec contenance/quantité/référence si visible (ex "Cuve rectangulaire en acier peint, 73x46 cm")
+
+- price : prix unitaire promotionnel en euros, nombre décimal (ex 99.90). OBLIGATOIRE : si tu ne vois pas de prix unitaire imprimé en gros, n'extrais PAS cette promo du tout.
+
+- original_price : prix barré si visible, sinon null
+
+- discount_percent : % affiché si visible, sinon null
+
+- category : "Barbecue", "Mobilier jardin", "Végétaux", "Terreau & Paillage", "Outillage", "Phytosanitaire", "Animalerie", "Cave & Spiritueux", "Arrosage", "Décoration jardin"
+
+- page_number : à partir de 1
+
+- position : grille 3x3 — "haut-gauche/centre/droite", "milieu-gauche/centre/droite", "bas-gauche/centre/droite". Choisis la zone qui contient le CENTRE de la photo produit principale.
+
+LIMITES DE QUANTITÉ ATTENDUES (utilise-les comme garde-fou) :
+
+- Une page de catalogue retail standard contient entre 4 et 14 promos réelles
+
+- La page de couverture contient 0 ou 1 promo
+
+- La page de coordonnées finale contient 0 à 5 promos
+
+- Si tu obtiens >15 entrées sur une page, relis la règle "À IGNORER" et supprime les entrées qui ne respectent pas les 3 conditions de validité.
+
+VÉRIFICATION FINALE avant de renvoyer :
+
+- Pour chaque entrée, demande-toi : "Est-ce qu'un client peut acheter CE produit précis à CE prix précis ?"
+
+- Si la réponse est non (parce que c'est une remise catégorielle, un logo, une mention légale, un produit sans prix), supprime l'entrée.
+
+N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHints}${rejectionHints}${previousExamples}`;
 
     // Timeout interne (plus court que la limite edge de 150s) pour pouvoir renvoyer une erreur propre
     const aiController = new AbortController();
