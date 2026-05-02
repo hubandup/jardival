@@ -1,6 +1,7 @@
 // Edge function: extrait des promotions structurées depuis un PDF de catalogue
 // via Lovable AI Gateway (Gemini 2.5 Pro, multimodal PDF support).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1";
 import { z } from "https://esm.sh/zod@3.25.76";
 
 const corsHeaders = {
@@ -58,6 +59,64 @@ interface ExtractedPromo {
   category?: string | null;
   page_number?: number | null;
   position?: PositionZone | null;
+}
+
+class AiExtractionError extends Error {
+  status: number;
+
+  constructor(message: string, status = 502) {
+    super(message);
+    this.name = "AiExtractionError";
+    this.status = status;
+  }
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(
+      null,
+      bytes.subarray(i, i + chunkSize) as unknown as number[]
+    );
+  }
+  return btoa(binary);
+}
+
+function parseAiPromotionsFromRaw(aiRaw: string, label: string): ExtractedPromo[] {
+  let aiJson: any;
+  try {
+    aiJson = JSON.parse(aiRaw);
+  } catch (e) {
+    console.error("Réponse IA non-JSON", { label, error: String(e), preview: aiRaw.slice(0, 500) });
+    throw new AiExtractionError("Réponse IA non parsable (probablement tronquée).", 502);
+  }
+
+  const toolCall = aiJson?.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall?.function?.arguments) {
+    console.error("Réponse IA sans tool call", { label, preview: JSON.stringify(aiJson).slice(0, 500) });
+    throw new AiExtractionError("L'IA n'a pas renvoyé de promotions structurées.", 500);
+  }
+
+  const argsRaw = toolCall.function.arguments;
+  if (typeof argsRaw !== "string" || argsRaw.trim().length === 0) {
+    console.error("Tool call arguments vides", { label, type: typeof argsRaw });
+    throw new AiExtractionError("L'IA a renvoyé un appel d'outil vide. Réessayez.", 502);
+  }
+
+  try {
+    const parsed = JSON.parse(argsRaw);
+    return Array.isArray(parsed?.promotions) ? parsed.promotions : [];
+  } catch (e) {
+    console.error("Parse error tool args", {
+      label,
+      error: String(e),
+      length: argsRaw.length,
+      head: argsRaw.slice(0, 300),
+      tail: argsRaw.slice(-300),
+    });
+    throw new AiExtractionError("Réponse IA invalide (arguments tronqués). Réessayez.", 502);
+  }
 }
 
 Deno.serve(async (req) => {
