@@ -189,17 +189,39 @@ Deno.serve(async (req) => {
       );
     }
     const pdfBuf = await pdfResp.arrayBuffer();
-    // Encode en base64
     const bytes = new Uint8Array(pdfBuf);
-    let binary = "";
-    const chunkSize = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      binary += String.fromCharCode.apply(
-        null,
-        bytes.subarray(i, i + chunkSize) as unknown as number[]
-      );
+    let pdfPayloads: Array<{ label: string; base64: string; pageOffset: number; pageCount: number }> = [
+      { label: "catalogue complet", base64: bytesToBase64(bytes), pageOffset: 0, pageCount: 0 },
+    ];
+    try {
+      const sourcePdf = await PDFDocument.load(pdfBuf);
+      const totalPages = sourcePdf.getPageCount();
+      pdfPayloads[0].pageCount = totalPages;
+      if (totalPages > 6) {
+        const pagesPerChunk = 4;
+        const chunks: Array<{ label: string; base64: string; pageOffset: number; pageCount: number }> = [];
+        for (let start = 0; start < totalPages; start += pagesPerChunk) {
+          const end = Math.min(start + pagesPerChunk, totalPages);
+          const chunkPdf = await PDFDocument.create();
+          const copiedPages = await chunkPdf.copyPages(
+            sourcePdf,
+            Array.from({ length: end - start }, (_, i) => start + i)
+          );
+          copiedPages.forEach((page) => chunkPdf.addPage(page));
+          const chunkBytes = await chunkPdf.save();
+          chunks.push({
+            label: `pages ${start + 1}-${end}`,
+            base64: bytesToBase64(chunkBytes),
+            pageOffset: start,
+            pageCount: end - start,
+          });
+        }
+        pdfPayloads = chunks;
+        console.log("PDF découpé pour extraction IA", { totalPages, chunks: chunks.length, pagesPerChunk });
+      }
+    } catch (e) {
+      console.warn("Découpage PDF impossible, extraction en une seule passe", e);
     }
-    const pdfBase64 = btoa(binary);
 
     // --- Appel Lovable AI Gateway avec tool calling ---
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
