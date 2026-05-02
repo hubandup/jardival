@@ -601,7 +601,11 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
     }
 
     return new Response(
-      JSON.stringify({ promotions: enrichedPromotions, count: enrichedPromotions.length }),
+      JSON.stringify({
+        promotions: enrichedPromotions,
+        count: enrichedPromotions.length,
+        warning: extractionWarnings.length ? `Extraction partielle : ${extractionWarnings.join(" ; ")}` : undefined,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
