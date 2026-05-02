@@ -18,17 +18,29 @@ const RENDER_MIN_BUDGET_MS = 12_000;
 
 const bboxSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);
 
+const positionEnum = z.enum([
+  "haut-gauche", "haut-centre", "haut-droite",
+  "milieu-gauche", "milieu-centre", "milieu-droite",
+  "bas-gauche", "bas-centre", "bas-droite",
+]);
+
+const promoInputSchema = z.object({
+  title: z.string(),
+  page_number: z.number().int().nullish(),
+  position: positionEnum.nullish(),
+});
+
 const extractRequestSchema = z.object({
   pdf_url: z.string().url("pdf_url doit être une URL valide"),
   catalogue_id: z.string().uuid().nullish(),
   starts_at: z.string().nullish(),
   ends_at: z.string().nullish(),
-  // UUIDs des promotions déjà insérées en DB, dans l'ordre des index renvoyés
-  // par le service Python. Quand fourni, l'edge fait UPDATE direct par id
-  // (image, match_score, match_method, is_rasterized).
+  // UUIDs des promotions déjà insérées en DB, dans l'ordre des promos.
+  // Présence de promo_ids + promos = mode "matching-only" : skip Gemini,
+  // appel direct au service Render pour matcher images natives + UPDATE par id.
   promo_ids: z.array(z.string().uuid()).nullish(),
+  promos: z.array(promoInputSchema).nullish(),
   // Bboxes ajustées par l'utilisateur lors d'une précédente extraction du MÊME catalogue.
-  // Servent d'exemples concrets pour guider la nouvelle détection.
   previous_boxes: z
     .array(
       z.object({
@@ -192,6 +204,133 @@ Deno.serve(async (req) => {
       );
     }
     const body: ExtractRequest = parsedBody.data;
+
+    // ============================================================
+    // MODE "MATCHING-ONLY" : promos Gemini déjà extraites côté client,
+    // promotions déjà INSERT en DB. On skip totalement Gemini et on
+    // appelle directement Render (Poppler + matching) + UPDATE par UUID.
+    // ============================================================
+    if (Array.isArray(body.promo_ids) && Array.isArray(body.promos) && body.promos.length > 0) {
+      const RENDER_API_SECRET_M = Deno.env.get("RENDER_API_SECRET");
+      if (!RENDER_API_SECRET_M) {
+        return new Response(
+          JSON.stringify({ error: "RENDER_API_SECRET non configurée" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!body.catalogue_id) {
+        return new Response(
+          JSON.stringify({ error: "catalogue_id requis en mode matching-only" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (body.promo_ids.length !== body.promos.length) {
+        return new Response(
+          JSON.stringify({ error: "promo_ids et promos doivent avoir la même longueur" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Résolution organization_id
+      let orgIdM: string | null = null;
+      const { data: catM } = await supabase
+        .from("catalogues")
+        .select("organization_id")
+        .eq("id", body.catalogue_id)
+        .maybeSingle();
+      orgIdM = catM?.organization_id ?? null;
+
+      const renderControllerM = new AbortController();
+      const renderTimeoutM = setTimeout(() => renderControllerM.abort(), RENDER_MAX_TIMEOUT_MS);
+      let updated = 0;
+      const warnings: string[] = [];
+      try {
+        const renderResp = await fetch("https://jardival-extract.onrender.com/extract", {
+          method: "POST",
+          signal: renderControllerM.signal,
+          headers: {
+            Authorization: `Bearer ${RENDER_API_SECRET_M}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            pdf_url: body.pdf_url,
+            organization_id: orgIdM,
+            catalogue_id: body.catalogue_id,
+            promos: body.promos.map((p, i) => ({
+              index: i,
+              page_number: p.page_number ?? null,
+              position: p.position ?? null,
+              title: p.title,
+            })),
+          }),
+        });
+        if (!renderResp.ok) {
+          const errText = await renderResp.text().catch(() => "");
+          console.error("Matching-only: Render failed", renderResp.status, errText.slice(0, 500));
+          warnings.push(`Render ${renderResp.status}`);
+        } else {
+          const rawText = await renderResp.text().catch(() => "");
+          let renderJson: {
+            outputs?: Array<{
+              index: number;
+              image_url: string | null;
+              source?: "native" | null;
+              match_score?: number | null;
+              match_method?: "iou" | "centroid" | null;
+              is_rasterized?: boolean;
+              reason?: string | null;
+            }>;
+          } = {};
+          try {
+            if (rawText.trim().length > 0) renderJson = JSON.parse(rawText);
+          } catch (e) {
+            console.error("Matching-only: JSON invalide", e);
+            warnings.push("Réponse Render invalide");
+          }
+          const outputs = Array.isArray(renderJson.outputs) ? renderJson.outputs : [];
+          for (const out of outputs) {
+            if (
+              typeof out?.index !== "number" ||
+              out.index < 0 ||
+              out.index >= body.promo_ids.length ||
+              !out.image_url
+            ) continue;
+            const promoId = body.promo_ids[out.index];
+            const { error: updErr } = await supabase
+              .from("promotions")
+              .update({
+                image: out.image_url,
+                match_score: typeof out.match_score === "number" ? out.match_score : null,
+                match_method: typeof out.match_method === "string" ? out.match_method : null,
+                is_rasterized: typeof out.is_rasterized === "boolean" ? out.is_rasterized : false,
+              })
+              .eq("id", promoId);
+            if (updErr) {
+              console.error("Matching-only: UPDATE échoué", { promoId, err: updErr.message });
+              warnings.push(`UPDATE ${promoId.slice(0, 8)}: ${updErr.message}`);
+            } else {
+              updated++;
+            }
+          }
+        }
+      } catch (e) {
+        const isAbort = e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"));
+        console.error("Matching-only: erreur", isAbort ? "timeout" : e);
+        warnings.push(isAbort ? "Render timeout" : "Erreur Render");
+      } finally {
+        clearTimeout(renderTimeoutM);
+      }
+
+      return new Response(
+        JSON.stringify({
+          mode: "matching-only",
+          updated,
+          total: body.promo_ids.length,
+          warning: warnings.length ? warnings.join(" ; ") : undefined,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // --- Téléchargement du PDF ---
     const pdfResp = await fetch(body.pdf_url);

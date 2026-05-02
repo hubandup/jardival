@@ -1223,6 +1223,13 @@ function ScheduleStep({
                 pdf_url: catalogue.pdf_url,
                 catalogue_id: catalogue.id,
                 promo_ids: promoIds,
+                // Mode matching-only : on passe les promos Gemini déjà extraites
+                // pour que l'edge skip Gemini et appelle directement Render.
+                promos: selected.map((p) => ({
+                  title: p.title,
+                  page_number: p.page_number ?? null,
+                  position: p.position ?? null,
+                })),
               },
             }
           );
