@@ -67,6 +67,10 @@ class MatchResult:
     image_path: Optional[str] = None
     match_score: Optional[float] = None
     match_method: Optional[MatchMethod] = None
+    # Source d'extraction de l'image matchée ("poppler" | "pymupdf" | "raster"),
+    # propagée depuis `ImageRecord.source` pour permettre à la couche métier de
+    # marquer `is_rasterized` sans avoir à recroiser l'image_id.
+    image_source: Optional[str] = None
     reason: Optional[str] = None
 
 
@@ -115,6 +119,7 @@ def match_promos(
             image_path=img.file_path,
             match_score=round(score, 4),
             match_method="iou",
+            image_source=img.source,
         )
         used_images.add(img.image_id)
 
@@ -152,6 +157,7 @@ def match_promos(
             image_path=best_img.file_path,
             match_score=round(score, 4),
             match_method="centroid",
+            image_source=best_img.source,
         )
         used_images.add(best_img.image_id)
 

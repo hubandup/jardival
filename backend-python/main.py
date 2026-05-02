@@ -96,6 +96,11 @@ class PromoOutput(BaseModel):
     match_score: Optional[float] = None
     # "iou" | "centroid" — méthode qui a permis le match (debug).
     match_method: Optional[Literal["iou", "centroid"]] = None
+    # True si l'image associée a dû être obtenue par rasterization de la page
+    # (Poppler ET PyMuPDF ont échoué à fournir les bytes natifs). L'edge
+    # function appelante persiste ce flag dans `promotions.is_rasterized`
+    # pour pouvoir filtrer/réessayer ces promos plus tard.
+    is_rasterized: bool = False
     # Raison d'échec si image_url est null (debug).
     reason: Optional[str] = None
 
@@ -239,6 +244,7 @@ async def extract(
                     source="native",
                     match_score=match.match_score,
                     match_method=match.match_method,
+                    is_rasterized=(record.source == "raster"),
                 ))
                 matched_count += 1
             except Exception as e:
@@ -247,6 +253,7 @@ async def extract(
                     index=promo.index,
                     match_score=match.match_score,
                     match_method=match.match_method,
+                    is_rasterized=(record.source == "raster"),
                     reason=f"upload_failed: {e}",
                 ))
                 failed_uploads += 1
