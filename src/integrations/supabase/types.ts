@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalogue_extraction_rejections: {
+        Row: {
+          bbox: Json
+          catalogue_id: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          reason: string | null
+        }
+        Insert: {
+          bbox: Json
+          catalogue_id?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          reason?: string | null
+        }
+        Update: {
+          bbox?: Json
+          catalogue_id?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogue_extraction_rejections_catalogue_id_fkey"
+            columns: ["catalogue_id"]
+            isOneToOne: false
+            referencedRelation: "catalogues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalogue_extraction_rejections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalogue_extraction_stats: {
         Row: {
           aspect_ratio: number | null
@@ -29,6 +71,7 @@ export type Database = {
           had_original_price: boolean
           had_price: boolean
           id: string
+          organization_id: string
           page_number: number | null
         }
         Insert: {
@@ -45,6 +88,7 @@ export type Database = {
           had_original_price?: boolean
           had_price?: boolean
           id?: string
+          organization_id: string
           page_number?: number | null
         }
         Update: {
@@ -61,9 +105,18 @@ export type Database = {
           had_original_price?: boolean
           had_price?: boolean
           id?: string
+          organization_id?: string
           page_number?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalogue_extraction_stats_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       catalogue_extractions: {
         Row: {
@@ -110,6 +163,7 @@ export type Database = {
           ends_at: string | null
           hero_colors: Json | null
           id: string
+          organization_id: string
           pdf_url: string | null
           starts_at: string | null
           title: string
@@ -123,6 +177,7 @@ export type Database = {
           ends_at?: string | null
           hero_colors?: Json | null
           id?: string
+          organization_id: string
           pdf_url?: string | null
           starts_at?: string | null
           title: string
@@ -136,12 +191,21 @@ export type Database = {
           ends_at?: string | null
           hero_colors?: Json | null
           id?: string
+          organization_id?: string
           pdf_url?: string | null
           starts_at?: string | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "catalogues_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_send_log: {
         Row: {
@@ -290,6 +354,59 @@ export type Database = {
           updated_at?: string
           uploaded_by?: string | null
           width?: number | null
+        }
+        Relationships: []
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          slug?: string
         }
         Relationships: []
       }
@@ -604,6 +721,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_org_member: {
+        Args: { _organization_id: string; _user_id: string }
+        Returns: boolean
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
