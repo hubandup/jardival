@@ -50,6 +50,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { clearPdfCache } from "@/lib/pdfImageCrop";
 import { uploadAndGetUrl } from "@/lib/storageUpload";
+import { getCurrentOrgId } from "@/lib/auth";
 import { extractPromoImages, bboxFromPosition } from "@/lib/extractPromoImages";
 import { Badge } from "@/components/ui/badge";
 import CataloguePromoBboxPreview from "./CataloguePromoBboxPreview";
