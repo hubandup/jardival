@@ -407,7 +407,24 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
       );
     }
 
-    const aiJson = await aiResp.json();
+    const aiRaw = await aiResp.text();
+    if (!aiRaw || !aiRaw.trim()) {
+      console.error("Réponse IA vide", { status: aiResp.status, contentLength: aiResp.headers.get("content-length") });
+      return new Response(
+        JSON.stringify({ error: "L'IA a renvoyé une réponse vide (timeout ou réponse tronquée). Réessayez ou réduisez la taille du PDF." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    let aiJson: any;
+    try {
+      aiJson = JSON.parse(aiRaw);
+    } catch (e) {
+      console.error("Réponse IA non-JSON", { error: String(e), preview: aiRaw.slice(0, 500) });
+      return new Response(
+        JSON.stringify({ error: "Réponse IA non parsable (probablement tronquée)." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     const toolCall = aiJson?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
       console.error("Réponse IA sans tool call", JSON.stringify(aiJson).slice(0, 500));
