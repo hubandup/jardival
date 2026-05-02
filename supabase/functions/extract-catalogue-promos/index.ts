@@ -23,6 +23,10 @@ const extractRequestSchema = z.object({
   catalogue_id: z.string().uuid().nullish(),
   starts_at: z.string().nullish(),
   ends_at: z.string().nullish(),
+  // UUIDs des promotions déjà insérées en DB, dans l'ordre des index renvoyés
+  // par le service Python. Quand fourni, l'edge fait UPDATE direct par id
+  // (image, match_score, match_method, is_rasterized).
+  promo_ids: z.array(z.string().uuid()).nullish(),
   // Bboxes ajustées par l'utilisateur lors d'une précédente extraction du MÊME catalogue.
   // Servent d'exemples concrets pour guider la nouvelle détection.
   previous_boxes: z
@@ -614,22 +618,10 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
           }
           const outputs = Array.isArray(renderJson.outputs) ? renderJson.outputs : [];
 
-          // Récupère les UUIDs des promotions déjà insérées pour ce catalogue,
-          // ordonnées par display_order. L'index renvoyé par le service Python
-          // correspond à cet ordre.
-          let promoIds: string[] = [];
-          if (body.catalogue_id) {
-            const { data: existingPromos, error: selErr } = await supabase
-              .from("promotions")
-              .select("id")
-              .eq("catalogue_id", body.catalogue_id)
-              .order("display_order", { ascending: true });
-            if (selErr) {
-              console.error("Lecture promotions pour mapping UUID échouée", selErr);
-            } else {
-              promoIds = (existingPromos ?? []).map((r: { id: string }) => r.id);
-            }
-          }
+          // UUIDs fournis explicitement par le client (étape "Publier"),
+          // dans l'ordre des index renvoyés par le service Python.
+          const promoIds: string[] = Array.isArray(body.promo_ids) ? body.promo_ids : [];
+
 
           for (const out of outputs) {
             if (

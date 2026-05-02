@@ -1205,10 +1205,35 @@ function ScheduleStep({
         display_order: idx,
         catalogue_id: catalogue.id,
       }));
-      const { error } = await supabase.from("promotions").insert(rows);
+      const { data: insertedRows, error } = await supabase
+        .from("promotions")
+        .insert(rows)
+        .select("id");
       if (error) throw error;
-      // Note : image, match_score, match_method, is_rasterized sont mis à jour
-      // par l'edge function extract-catalogue-promos après matching natif.
+
+      // Appel de l'edge function pour matcher les images natives + persister
+      // image / match_score / match_method / is_rasterized par UUID.
+      const promoIds = (insertedRows ?? []).map((r: { id: string }) => r.id);
+      if (promoIds.length === selected.length && catalogue.pdf_url) {
+        try {
+          const { error: matchErr } = await supabase.functions.invoke(
+            "extract-catalogue-promos",
+            {
+              body: {
+                pdf_url: catalogue.pdf_url,
+                catalogue_id: catalogue.id,
+                promo_ids: promoIds,
+              },
+            }
+          );
+          if (matchErr) {
+            console.error("Matching IA post-publication échoué", matchErr);
+            toast.warning("Promotions publiées, mais le matching d'images a échoué");
+          }
+        } catch (e) {
+          console.error("Erreur appel edge matching", e);
+        }
+      }
 
       // Apprentissage : enregistrer les caractéristiques des promos validées (avec bbox).
       const orgIdForStats = await getCurrentOrgId();
