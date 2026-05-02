@@ -431,12 +431,21 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
         }
         const aiController = new AbortController();
         const aiTimeout = setTimeout(() => aiController.abort(), requestBudgetMs);
-        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          signal: aiController.signal,
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: aiRequestBody,
-        }).finally(() => clearTimeout(aiTimeout));
+        let aiResp: Response;
+        try {
+          aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            signal: aiController.signal,
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: aiRequestBody,
+          });
+        } catch (e) {
+          const isAbort = e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"));
+          if (isAbort) throw new AiExtractionError(`Timeout IA contrôlé pour ${payload.label}.`, 504);
+          throw e;
+        } finally {
+          clearTimeout(aiTimeout);
+        }
 
         if (!aiResp.ok) {
           const errText = await aiResp.text();
