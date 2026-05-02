@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: jardival-extract
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: RENDER_API_SECRET
+        sync: false  # to be filled manually in the Render dashboard
+      - key: UPLOAD_ENDPOINT
+        value: https://nwqhzsjajjluvwrbaemw.supabase.co/functions/v1/upload-promo-image
