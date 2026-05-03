@@ -61,6 +61,7 @@ const Promotions = () => {
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
     return dbPromos.filter((p) => {
+      if (!p.image || p.image.trim() === "") return false;
       if (category !== ALL && (p.description ?? "").trim() !== category) return false;
       if (storeId !== ALL) {
         if (!p.store_ids || p.store_ids.length === 0) return false;
@@ -186,7 +187,9 @@ const Promotions = () => {
             </div>
           ) : promos.length === 0 ? (
             <p className="py-16 text-center text-muted-foreground">
-              Aucune promotion ne correspond à ces filtres.
+              {hasFilters
+                ? "Aucune promotion ne correspond à ces filtres."
+                : "Promotions bientôt disponibles."}
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
