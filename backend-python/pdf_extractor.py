@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Optional
 
 import fitz  # PyMuPDF
-from PIL import Image
+from PIL import Image, ImageChops
 
 log = logging.getLogger("jardival-extract.pdf_extractor")
 
@@ -257,18 +257,16 @@ def _poppler_available() -> bool:
 
 def _run_poppler_dump(pdf_bytes: bytes) -> dict[int, Path]:
     """
-    Lance `pdfimages -png -list` dans un tempdir et retourne un mapping
+    Lance `pdfimages -all -list` dans un tempdir et retourne un mapping
     {object_id: chemin_fichier}.
 
     Timeout global : 30 s. Si dépassé, on lève → fallback complet PyMuPDF.
 
-    On force `-png` plutôt que `-all` parce que `-all` préserve le format
-    natif des XObjects (JPEG CMYK, JBIG2, JPX color-managed…) et Pillow ne
-    sait pas désambiguïser DeviceCMYK PDF (inversé) de CMYK standard,
-    produisant des images « négatives ». Avec `-png`, Poppler applique
-    lui-même la conversion vers RGB en utilisant les profils ICC du PDF
-    et la convention DeviceCMYK correcte. Coût : fichiers ~2-4× plus
-    gros, mais ré-encodés en JPEG via `_to_jpeg` juste après.
+    On préserve les formats natifs (JPEG, JP2, JBIG2…) plutôt que de forcer
+    `-png` : Render free tier (512 MB RAM) OOM-ait sous l'inflation ~2-4×
+    des PNG décompressés. La correction du DeviceCMYK PDF inversé est
+    déléguée à `_to_jpeg` qui détecte le mode CMYK et inverse via
+    `ImageChops.invert` avant le `convert("RGB")`.
     """
     tmpdir = Path(tempfile.mkdtemp(prefix="jardival-poppler-"))
     pdf_path = tmpdir / "input.pdf"
@@ -277,11 +275,10 @@ def _run_poppler_dump(pdf_bytes: bytes) -> dict[int, Path]:
 
     started = time.monotonic()
     try:
-        # `-png` : Poppler convertit toutes les images en PNG RGB(A) à l'export
-        # → colorspace géré côté Poppler, pas de mauvaise interprétation aval.
+        # `-all` : exporte JPEG en .jpg, JP2 en .jp2, JBIG2 en .jb2, etc.
         # `-list` sur stdout : métadonnées par image (page, object id, dim).
         proc = subprocess.run(
-            ["pdfimages", "-png", "-list", "-p", str(pdf_path), str(prefix)],
+            ["pdfimages", "-all", "-list", "-p", str(pdf_path), str(prefix)],
             capture_output=True,
             timeout=POPPLER_GLOBAL_TIMEOUT_SEC,
             check=False,
@@ -504,7 +501,14 @@ def _to_jpeg(raw_bytes: bytes) -> bytes:
         bg.paste(img, mask=img.split()[-1] if "A" in img.mode else None)
         img = bg
     elif img.mode == "CMYK":
-        img = img.convert("RGB")
+        # Les PDF utilisent quasi-exclusivement la convention DeviceCMYK
+        # Adobe (0=encre saturée, 255=pas d'encre) — l'inverse de la
+        # convention "CMYK standard" que Pillow assume par défaut. Sans
+        # inversion préalable, le `convert("RGB")` produit un négatif
+        # (fond blanc → noir, etc.). On compense en pré-inversant : pari
+        # statistique safe pour les catalogues print, fragile pour les
+        # rares JPEG CMYK non-Adobe (qui sortiraient inversés à leur tour).
+        img = ImageChops.invert(img).convert("RGB")
     elif img.mode != "RGB":
         img = img.convert("RGB")
     buf = io.BytesIO()
