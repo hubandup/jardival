@@ -33,7 +33,9 @@ interface ReelSlideProps {
 const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, paused }: ReelSlideProps) => {
   const navigate = useNavigate();
   const { isFavorite, toggle } = useFavorites();
+  const { store: selectedStore } = useSelectedStore();
   const [shareOpen, setShareOpen] = useState(false);
+  const [dirOpen, setDirOpen] = useState(false);
   const price = formatPrice(p.price);
   const oldPrice = formatPrice(p.oldPrice);
   const slug = (p as Product & { slug?: string }).slug;
