@@ -27,6 +27,10 @@ export interface WorkflowPromo {
   position?: PositionZone | null;
   /** Bbox visuelle (legacy : utilisée pour le crop de fallback ou l'édition manuelle). */
   bbox_2d?: Bbox | null;
+  /** Bbox réelle de l'image native matchée par le backend Python.
+   *  Format : [x, y, w, h] normalisés 0..1, origine top-left de la page.
+   *  Quand présent, prend le pas sur la grille 3×3 / bbox_2d pour l'aperçu visuel. */
+  image_bbox_norm?: [number, number, number, number] | null;
   image_url?: string | null;
   image_cutout_url?: string | null;
   /** Provenance de l'image_url :
