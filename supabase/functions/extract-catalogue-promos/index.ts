@@ -278,6 +278,7 @@ Deno.serve(async (req) => {
               match_score?: number | null;
               match_method?: "iou" | "centroid" | null;
               is_rasterized?: boolean;
+              image_bbox_norm?: [number, number, number, number] | null;
               reason?: string | null;
             }>;
           } = {};
@@ -296,6 +297,9 @@ Deno.serve(async (req) => {
               !out.image_url
             ) continue;
             const promoId = body.promo_ids[out.index];
+            const bbox = Array.isArray(out.image_bbox_norm) && out.image_bbox_norm.length === 4
+              ? out.image_bbox_norm
+              : null;
             const { error: updErr } = await supabase
               .from("promotions")
               .update({
@@ -303,6 +307,7 @@ Deno.serve(async (req) => {
                 match_score: typeof out.match_score === "number" ? out.match_score : null,
                 match_method: typeof out.match_method === "string" ? out.match_method : null,
                 is_rasterized: typeof out.is_rasterized === "boolean" ? out.is_rasterized : false,
+                image_bbox_norm: bbox,
               })
               .eq("id", promoId);
             if (updErr) {
@@ -690,6 +695,7 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
       match_score?: number | null;
       match_method?: string | null;
       is_rasterized?: boolean | null;
+      image_bbox_norm?: [number, number, number, number] | null;
     };
     const enrichedPromotions: PromoWithImage[] = promotions.map((p) => ({
       ...p,
@@ -698,6 +704,7 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
       match_score: null,
       match_method: null,
       is_rasterized: null,
+      image_bbox_norm: null,
     }));
     // Dès qu'on a des promos extraites, on les expose au fallback
     fallbackPromotions = enrichedPromotions;
@@ -742,6 +749,7 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
               match_score?: number | null;
               match_method?: "iou" | "centroid" | null;
               is_rasterized?: boolean;
+              image_bbox_norm?: [number, number, number, number] | null;
               reason?: string | null;
             }>;
             stats?: unknown;
@@ -769,11 +777,14 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
               out.index >= enrichedPromotions.length
             ) continue;
             const target = enrichedPromotions[out.index];
-            // On expose match_score / match_method / is_rasterized au client
-            // pour la preview (UI).
+            // On expose match_score / match_method / is_rasterized / image_bbox_norm
+            // au client pour la preview (UI overlay).
             target.match_score = typeof out.match_score === "number" ? out.match_score : null;
             target.match_method = typeof out.match_method === "string" ? out.match_method : null;
             target.is_rasterized = typeof out.is_rasterized === "boolean" ? out.is_rasterized : null;
+            target.image_bbox_norm = Array.isArray(out.image_bbox_norm) && out.image_bbox_norm.length === 4
+              ? out.image_bbox_norm
+              : null;
             if (typeof out.image_url === "string" && out.image_url.length > 0) {
               target.image_url = out.image_url;
               target.image_source = "native";
@@ -793,6 +804,7 @@ N'invente rien. Si un champ optionnel n'est pas visible, mets null.${learnedHint
                 match_score: target.match_score,
                 match_method: target.match_method,
                 is_rasterized: target.is_rasterized ?? false,
+                image_bbox_norm: target.image_bbox_norm,
               })
               .eq("id", promoId);
             if (updErr) {
