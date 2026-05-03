@@ -161,7 +161,7 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
           {shareOpen && (
             <div
               onClick={stop}
-              className="absolute right-0 top-14 z-30 w-44 overflow-hidden rounded-2xl border border-border bg-background shadow-elegant"
+              className="absolute right-0 bottom-16 z-30 w-44 overflow-hidden rounded-2xl border border-border bg-background shadow-elegant"
             >
               {shareLinks.map((s) => (
                 <a
