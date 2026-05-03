@@ -14,6 +14,13 @@ export interface PromotionRow {
   store_ids: string[] | null;
   display_order: number;
   active: boolean;
+  catalogue_id: string | null;
+  catalogues?: {
+    id: string;
+    active: boolean;
+    starts_at: string | null;
+    ends_at: string | null;
+  } | null;
 }
 
 export function isActiveNow(p: PromotionRow): boolean {
@@ -24,16 +31,25 @@ export function isActiveNow(p: PromotionRow): boolean {
   return true;
 }
 
+function hasActiveCatalogue(p: PromotionRow): boolean {
+  const catalogue = p.catalogues;
+  if (!catalogue?.id || !catalogue.active) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  if (catalogue.starts_at && today < catalogue.starts_at) return false;
+  if (catalogue.ends_at && today > catalogue.ends_at) return false;
+  return true;
+}
+
 export function usePromotions() {
   return useQuery({
     queryKey: ["promotions"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("promotions")
-        .select("*")
+        .select("*, catalogues!inner(id, active, starts_at, ends_at)")
         .order("display_order");
       if (error) throw error;
-      return (data as PromotionRow[]).filter(isActiveNow);
+      return (data as PromotionRow[]).filter((p) => isActiveNow(p) && hasActiveCatalogue(p));
     },
     staleTime: 60 * 1000,
   });
