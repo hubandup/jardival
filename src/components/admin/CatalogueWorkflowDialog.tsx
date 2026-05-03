@@ -766,27 +766,41 @@ function ZonesStep({
           <CataloguePromoBboxPreview
             pdfUrl={new URL(pdfUrl, window.location.origin).toString()}
             boxes={promos
-              .map((p, idx): PreviewBox | null =>
-                p.image_source !== "native" && p.bbox_2d && p.page_number
-                  ? {
-                      pageNumber: p.page_number,
-                      bbox: p.bbox_2d,
-                      index: idx + 1,
-                      label: p.title,
-                      subLabel: [
-                        p.price != null ? `${p.price} €` : null,
-                        p.original_price != null ? `au lieu de ${p.original_price} €` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · "),
-                      selected: p.selected !== false,
-                      price: p.price,
-                      originalPrice: p.original_price,
-                      description: p.description,
-                      imageUrl: p.image_cutout_url ?? p.image_url,
-                    }
-                  : null
-              )
+              .map((p, idx): PreviewBox | null => {
+                if (!p.page_number) return null;
+                // Priorité : bbox réelle de l'image native renvoyée par le backend Python.
+                // Format backend : [x, y, w, h] normalisé 0..1 (origine top-left).
+                // Format PreviewBox.bbox : [ymin, xmin, ymax, xmax] en 0..1000.
+                let bbox: Bbox | null = null;
+                if (
+                  Array.isArray(p.image_bbox_norm) &&
+                  p.image_bbox_norm.length === 4 &&
+                  p.image_bbox_norm.every((n) => typeof n === "number" && Number.isFinite(n))
+                ) {
+                  const [x, y, w, h] = p.image_bbox_norm;
+                  bbox = [y * 1000, x * 1000, (y + h) * 1000, (x + w) * 1000];
+                } else if (p.image_source !== "native" && p.bbox_2d) {
+                  bbox = p.bbox_2d;
+                }
+                if (!bbox) return null;
+                return {
+                  pageNumber: p.page_number,
+                  bbox,
+                  index: idx + 1,
+                  label: p.title,
+                  subLabel: [
+                    p.price != null ? `${p.price} €` : null,
+                    p.original_price != null ? `au lieu de ${p.original_price} €` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
+                  selected: p.selected !== false,
+                  price: p.price,
+                  originalPrice: p.original_price,
+                  description: p.description,
+                  imageUrl: p.image_cutout_url ?? p.image_url,
+                };
+              })
               .filter((b): b is PreviewBox => b !== null)}
             onToggleBox={(i) =>
               updatePromos((prev) =>
