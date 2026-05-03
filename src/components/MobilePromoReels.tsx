@@ -221,14 +221,52 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
         </div>
 
         {/* CTA principal — pleine largeur (en bas) */}
-        <Link
-          to={`/magasins?promo=${encodeURIComponent(slug ?? p.id)}&geo=1`}
-          onClick={stop}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3.5 text-sm font-bold text-accent-foreground shadow-card transition-transform active:scale-95"
-        >
-          <MapPin className="h-4 w-4" />
-          Trouver ce produit en magasin →
-        </Link>
+        {selectedStore ? (
+          <div className="relative mt-3">
+            <button
+              type="button"
+              onClick={(e) => { stop(e); setDirOpen((v) => !v); }}
+              aria-expanded={dirOpen}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3.5 text-sm font-bold text-accent-foreground shadow-card transition-transform active:scale-95"
+            >
+              <Navigation className="h-4 w-4" />
+              Voir chez {selectedStore.name} →
+            </button>
+            {dirOpen && (
+              <div
+                onClick={stop}
+                className="absolute left-0 right-0 bottom-14 z-30 overflow-hidden rounded-2xl border border-border bg-background shadow-elegant"
+              >
+                {([
+                  { id: "google", name: "Google Maps" },
+                  { id: "apple", name: "Plans (Apple)" },
+                  { id: "waze", name: "Waze" },
+                  { id: "osm", name: "OpenStreetMap" },
+                ] as { id: DirectionsProvider; name: string }[]).map((prov) => (
+                  <a
+                    key={prov.id}
+                    href={directionsUrlFor(selectedStore, prov.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setDirOpen(false)}
+                    className="block px-4 py-3 text-sm font-medium text-foreground hover:bg-muted"
+                  >
+                    {prov.name}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link
+            to={`/magasins?promo=${encodeURIComponent(slug ?? p.id)}&geo=1`}
+            onClick={stop}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3.5 text-sm font-bold text-accent-foreground shadow-card transition-transform active:scale-95"
+          >
+            <MapPin className="h-4 w-4" />
+            Trouver ce produit en magasin →
+          </Link>
+        )}
       </div>
 
       {/* Indicateur swipe (1ère slide uniquement, en pause si interruption) */}
