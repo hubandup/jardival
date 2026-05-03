@@ -54,7 +54,7 @@ import { getCurrentOrgId } from "@/lib/auth";
 import { extractPromoImages, bboxFromPosition } from "@/lib/extractPromoImages";
 import { Badge } from "@/components/ui/badge";
 import CataloguePromoBboxPreview from "./CataloguePromoBboxPreview";
-import type { PreviewBox, WorkflowPromo } from "@/types/catalogue";
+import type { Bbox, PreviewBox, WorkflowPromo } from "@/types/catalogue";
 
 export type WorkflowStep = "upload" | "zones" | "tableau" | "programmation";
 
