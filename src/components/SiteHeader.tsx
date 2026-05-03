@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/logo-jardival.png";
-import { MapPin } from "lucide-react";
+
 
 export const SiteHeader = () => {
   const { pathname } = useLocation();
@@ -27,13 +27,6 @@ export const SiteHeader = () => {
           <Link to="/promotions" className="text-foreground/70 transition-colors hover:text-accent">Toutes les promos</Link>
           <Link to="/magasins" className="text-foreground/70 transition-colors hover:text-primary">Magasins</Link>
         </nav>
-        <Link
-          to="/magasins"
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-soft transition-all hover:shadow-glow hover:scale-[1.02]"
-        >
-          <MapPin className="h-4 w-4" />
-          Trouver un magasin
-        </Link>
       </div>
     </header>
   );
