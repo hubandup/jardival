@@ -1467,6 +1467,25 @@ function ScheduleStep({
         </p>
       </div>
 
+      {publishPhase && (
+        <div className="rounded-md border p-3 bg-primary/5 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-medium text-foreground inline-flex items-center gap-2">
+              {publishPhase.step !== "done" && (
+                <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              )}
+              {publishPhase.step === "insert" && "1/3 · Insertion"}
+              {publishPhase.step === "render" && "2/3 · Render (matching images)"}
+              {publishPhase.step === "update" && "3/3 · Mise à jour"}
+              {publishPhase.step === "done" && "Publication terminée"}
+            </span>
+            <span className="tabular-nums text-muted-foreground">{publishPhase.value}%</span>
+          </div>
+          <Progress value={publishPhase.value} className="h-2" />
+          <p className="text-xs text-muted-foreground">{publishPhase.label}</p>
+        </div>
+      )}
+
       <div className="flex justify-between pt-2">
         <Button variant="outline" onClick={onPrev}>
           <ChevronLeft className="h-4 w-4" /> Précédent
