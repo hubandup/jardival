@@ -10,7 +10,7 @@ import { useGeolocation } from "@/hooks/useGeolocation";
 import { useSeo } from "@/hooks/useSeo";
 import { Loader2, Compass } from "lucide-react";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
-import { MapPin, Search, Phone, Clock } from "lucide-react";
+import { MapPin, Search, Phone, Clock, ArrowLeft } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbList,
