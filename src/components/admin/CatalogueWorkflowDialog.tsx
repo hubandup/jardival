@@ -489,14 +489,28 @@ function UploadStep({
 }) {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || !files[0]) return;
     setUploading(true);
+    setUploadProgress(5);
+    // Simule une progression pendant l'upload (pas de vrai signal côté SDK Supabase Storage).
+    const startedAt = Date.now();
+    const sizeMb = files[0].size / (1024 * 1024);
+    const estimatedMs = Math.max(2000, sizeMb * 600); // ~600ms/MB
+    const interval = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const v = Math.min(92, Math.round((elapsed / estimatedMs) * 100));
+      setUploadProgress(v);
+    }, 150);
     try {
       await onUploaded(files[0]);
+      setUploadProgress(100);
     } finally {
+      window.clearInterval(interval);
       setUploading(false);
+      setTimeout(() => setUploadProgress(0), 500);
     }
   };
 
