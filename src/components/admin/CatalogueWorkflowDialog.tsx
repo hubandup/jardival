@@ -1234,6 +1234,7 @@ function ScheduleStep({
       return;
     }
     setPublishing(true);
+    setPublishPhase({ step: "insert", label: "Création des promotions en base...", value: 10 });
     try {
       await supabase
         .from("promotions")
@@ -1262,6 +1263,29 @@ function ScheduleStep({
       // image / match_score / match_method / is_rasterized par UUID.
       const promoIds = (insertedRows ?? []).map((r: { id: string }) => r.id);
       if (promoIds.length === selected.length && catalogue.pdf_url) {
+        const renderStartedAt = Date.now();
+        setPublishPhase({
+          step: "render",
+          label: `Render en cours · matching de ${promoIds.length} image(s)...`,
+          value: 35,
+          elapsedMs: 0,
+        });
+        // Estimation : ~1.5s par promo, plafonné à 90% pendant l'attente.
+        const estimatedMs = Math.max(8000, promoIds.length * 1500);
+        const renderInterval = window.setInterval(() => {
+          const elapsed = Date.now() - renderStartedAt;
+          const v = Math.min(90, 35 + Math.round((elapsed / estimatedMs) * 55));
+          setPublishPhase((prev) =>
+            prev?.step === "render"
+              ? {
+                  ...prev,
+                  value: v,
+                  elapsedMs: elapsed,
+                  label: `Render en cours · matching de ${promoIds.length} image(s) (${Math.round(elapsed / 1000)}s)`,
+                }
+              : prev
+          );
+        }, 500);
         try {
           const { error: matchErr } = await supabase.functions.invoke(
             "extract-catalogue-promos",
@@ -1286,7 +1310,10 @@ function ScheduleStep({
           }
         } catch (e) {
           console.error("Erreur appel edge matching", e);
+        } finally {
+          window.clearInterval(renderInterval);
         }
+        setPublishPhase({ step: "update", label: "Mise à jour des promotions...", value: 95 });
       }
 
       // Apprentissage : enregistrer les caractéristiques des promos validées (avec bbox).
