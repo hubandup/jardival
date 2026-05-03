@@ -701,102 +701,125 @@ function ZonesStep({
     }
   };
 
+  const hasPromos = promos.length > 0;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2 p-3 border rounded-md bg-muted/30">
-        <div>
-          <p className="text-sm font-medium">Extraction des promotions</p>
-          <p className="text-xs text-muted-foreground">
+      {!hasPromos ? (
+        <div className="py-16 px-6 text-center border-2 border-dashed rounded-lg bg-primary/5">
+          <Sparkles className="h-14 w-14 mx-auto text-primary mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Extraction des promotions</h3>
+          <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-6">
             Un seul clic : Gemini lit le catalogue et chaque promo est associée à
             son image native (HD) ou à un crop fallback si l'image n'est pas isolable.
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={handleAiExtract} disabled={extracting} size="sm">
+          <Button onClick={handleAiExtract} disabled={extracting} size="lg">
             {extracting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-5 w-5" />
             )}
-            {promos.length ? "Relancer l'extraction" : "Extraire les promotions"}
+            Extraire les promotions
           </Button>
           {extractProgress && (
-            <div className="flex flex-col gap-1 min-w-[260px] flex-1">
+            <div className="mt-6 max-w-md mx-auto space-y-2">
               <Progress value={extractProgress.value} className="h-2" />
               <p className="text-xs text-muted-foreground">
-                {extractProgress.label} <span className="tabular-nums">{extractProgress.value}%</span>
+                {extractProgress.label}{" "}
+                <span className="tabular-nums">{extractProgress.value}%</span>
               </p>
             </div>
           )}
         </div>
-      </div>
-
-      {promos.length > 0 ? (
-        <CataloguePromoBboxPreview
-          pdfUrl={new URL(pdfUrl, window.location.origin).toString()}
-          boxes={promos
-            .map((p, idx): PreviewBox | null =>
-              // Les promos `native` n'apparaissent pas comme bboxes éditables :
-              // l'image est déjà extraite proprement, pas besoin de cadrer.
-              p.image_source !== "native" && p.bbox_2d && p.page_number
-                ? {
-                    pageNumber: p.page_number,
-                    bbox: p.bbox_2d,
-                    index: idx + 1,
-                    label: p.title,
-                    subLabel: [
-                      p.price != null ? `${p.price} €` : null,
-                      p.original_price != null ? `au lieu de ${p.original_price} €` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · "),
-                    selected: p.selected !== false,
-                    price: p.price,
-                    originalPrice: p.original_price,
-                    description: p.description,
-                    imageUrl: p.image_cutout_url ?? p.image_url,
-                  }
-                : null
-            )
-            .filter((b): b is PreviewBox => b !== null)}
-          onToggleBox={(i) =>
-            updatePromos((prev) =>
-              prev.map((p, idx) => (idx === i ? { ...p, selected: !p.selected } : p))
-            )
-          }
-          onDeleteBox={(i) => {
-            const removed = promos[i];
-            if (removed?.bbox_2d) logRejection(removed.bbox_2d, "deleted-from-bbox-preview");
-            updatePromos((prev) => prev.filter((_, idx) => idx !== i));
-          }}
-          onUpdateBbox={(i, bbox) =>
-            updatePromos((prev) => prev.map((p, idx) => (idx === i ? { ...p, bbox_2d: bbox } : p)))
-          }
-          onUpdateText={(i, patch) =>
-            updatePromos((prev) =>
-              prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p))
-            )
-          }
-          onAddBox={(pageNumber, bbox) =>
-            updatePromos((prev) => [
-              ...prev,
-              {
-                title: `Nouvelle zone (page ${pageNumber})`,
-                page_number: pageNumber,
-                bbox_2d: bbox,
-                image_source: "fallback-crop",
-                selected: true,
-              },
-            ])
-          }
-        />
       ) : (
-        <div className="py-12 text-center border rounded-md bg-muted/20">
-          <Sparkles className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-          <p className="text-sm text-muted-foreground">
-            Lancez l'extraction pour identifier les promotions et leurs images.
-          </p>
-        </div>
+        <>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm font-medium">
+              Aperçu visuel & édition · {promos.length} promotion(s) détectée(s)
+            </p>
+            <div className="flex items-center gap-3">
+              {extractProgress && (
+                <div className="flex flex-col gap-1 min-w-[220px]">
+                  <Progress value={extractProgress.value} className="h-2" />
+                  <p className="text-xs text-muted-foreground">
+                    {extractProgress.label}{" "}
+                    <span className="tabular-nums">{extractProgress.value}%</span>
+                  </p>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleAiExtract}
+                disabled={extracting}
+                className="text-xs text-primary hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+              >
+                {extracting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCcw className="h-3 w-3" />
+                )}
+                Refaire l'extraction des promotions
+              </button>
+            </div>
+          </div>
+
+          <CataloguePromoBboxPreview
+            pdfUrl={new URL(pdfUrl, window.location.origin).toString()}
+            boxes={promos
+              .map((p, idx): PreviewBox | null =>
+                p.image_source !== "native" && p.bbox_2d && p.page_number
+                  ? {
+                      pageNumber: p.page_number,
+                      bbox: p.bbox_2d,
+                      index: idx + 1,
+                      label: p.title,
+                      subLabel: [
+                        p.price != null ? `${p.price} €` : null,
+                        p.original_price != null ? `au lieu de ${p.original_price} €` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · "),
+                      selected: p.selected !== false,
+                      price: p.price,
+                      originalPrice: p.original_price,
+                      description: p.description,
+                      imageUrl: p.image_cutout_url ?? p.image_url,
+                    }
+                  : null
+              )
+              .filter((b): b is PreviewBox => b !== null)}
+            onToggleBox={(i) =>
+              updatePromos((prev) =>
+                prev.map((p, idx) => (idx === i ? { ...p, selected: !p.selected } : p))
+              )
+            }
+            onDeleteBox={(i) => {
+              const removed = promos[i];
+              if (removed?.bbox_2d) logRejection(removed.bbox_2d, "deleted-from-bbox-preview");
+              updatePromos((prev) => prev.filter((_, idx) => idx !== i));
+            }}
+            onUpdateBbox={(i, bbox) =>
+              updatePromos((prev) => prev.map((p, idx) => (idx === i ? { ...p, bbox_2d: bbox } : p)))
+            }
+            onUpdateText={(i, patch) =>
+              updatePromos((prev) =>
+                prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p))
+              )
+            }
+            onAddBox={(pageNumber, bbox) =>
+              updatePromos((prev) => [
+                ...prev,
+                {
+                  title: `Nouvelle zone (page ${pageNumber})`,
+                  page_number: pageNumber,
+                  bbox_2d: bbox,
+                  image_source: "fallback-crop",
+                  selected: true,
+                },
+              ])
+            }
+          />
+        </>
       )}
 
       <div className="flex justify-between">
