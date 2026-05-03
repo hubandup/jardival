@@ -101,6 +101,11 @@ class PromoOutput(BaseModel):
     # function appelante persiste ce flag dans `promotions.is_rasterized`
     # pour pouvoir filtrer/réessayer ces promos plus tard.
     is_rasterized: bool = False
+    # Bbox de l'image native matchée, normalisée [0,1] sur la page :
+    # (x, y, w, h) avec origine top-left. Permet l'affichage d'overlay
+    # côté front (preview, validation manuelle) sans avoir à rouvrir
+    # le PDF. None quand aucune image n'a été matchée.
+    image_bbox_norm: Optional[tuple[float, float, float, float]] = None
     # Raison d'échec si image_url est null (debug).
     reason: Optional[str] = None
 
@@ -245,6 +250,7 @@ async def extract(
                     match_score=match.match_score,
                     match_method=match.match_method,
                     is_rasterized=(record.source == "raster"),
+                    image_bbox_norm=_normalize_bbox(record),
                 ))
                 matched_count += 1
             except Exception as e:
@@ -254,6 +260,7 @@ async def extract(
                     match_score=match.match_score,
                     match_method=match.match_method,
                     is_rasterized=(record.source == "raster"),
+                    image_bbox_norm=_normalize_bbox(record),
                     reason=f"upload_failed: {e}",
                 ))
                 failed_uploads += 1
@@ -282,6 +289,25 @@ async def extract(
     )
 
     return ExtractResponse(outputs=final_outputs, stats=stats)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def _normalize_bbox(record: ImageRecord) -> Optional[tuple[float, float, float, float]]:
+    """
+    Convertit la bbox PDF (points, origine top-left) d'un `ImageRecord` en
+    coordonnées normalisées [0,1] sur la page. Retourne None si la page a
+    des dimensions invalides (ne devrait pas arriver — garde-fou défensif).
+    """
+    if record.page_width <= 0 or record.page_height <= 0:
+        return None
+    return (
+        record.x / record.page_width,
+        record.y / record.page_height,
+        record.w / record.page_width,
+        record.h / record.page_height,
+    )
 
 
 # ---------------------------------------------------------------------------
