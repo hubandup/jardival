@@ -1189,6 +1189,12 @@ function ScheduleStep({
   onCatalogueUpdated?: () => void;
 }) {
   const [publishing, setPublishing] = useState(false);
+  const [publishPhase, setPublishPhase] = useState<{
+    step: "insert" | "render" | "update" | "done";
+    label: string;
+    value: number;
+    elapsedMs?: number;
+  } | null>(null);
   const [title, setTitle] = useState(catalogue.title || "");
   const [coverImage, setCoverImage] = useState<string | null>(catalogue.cover_image ?? null);
   const [displayOrder, setDisplayOrder] = useState<number>(catalogue.display_order ?? 0);
