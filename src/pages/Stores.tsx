@@ -176,7 +176,7 @@ const Stores = () => {
       </section>
 
       {/* Stores grid */}
-      <section className="pt-2 pb-10 md:pt-4 md:pb-12">
+      <section className="snap-start pt-2 pb-10 md:pt-4 md:pb-12">
         <div className="container-px mx-auto max-w-7xl">
           {/* Map */}
           <div className="mb-12">
@@ -219,6 +219,7 @@ const Stores = () => {
           )}
         </div>
       </section>
+      </div>
 
       <SiteFooter />
     </div>
