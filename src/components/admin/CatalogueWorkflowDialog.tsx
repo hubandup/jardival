@@ -1366,6 +1366,7 @@ function ScheduleStep({
         .eq("id", catalogue.id);
 
       onCatalogueUpdated?.();
+      setPublishPhase({ step: "done", label: "Terminé", value: 100 });
       toast.success(`${rows.length} promotions publiées`);
       await onValidated();
     } catch (e) {
@@ -1373,6 +1374,7 @@ function ScheduleStep({
       toast.error(e instanceof Error ? e.message : "Erreur publication");
     } finally {
       setPublishing(false);
+      setTimeout(() => setPublishPhase(null), 800);
     }
   };
 
