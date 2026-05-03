@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Loader2, Tag, MapPin, ChevronUp, Share2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Loader2, Tag, MapPin, ChevronUp } from "lucide-react";
 import { usePromotions, useCatalogues } from "@/hooks/usePromotions";
 import { promotionToProduct } from "@/lib/promotion";
+import { useFavorites } from "@/hooks/useFavorites";
+import iconShare from "@/assets/icon-share.svg";
+import iconLike from "@/assets/icon-like.svg";
 
 import { toast } from "@/hooks/use-toast";
 import type { Product } from "@/types/product";
@@ -26,15 +29,64 @@ interface ReelSlideProps {
 }
 
 const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, paused }: ReelSlideProps) => {
+  const navigate = useNavigate();
+  const { isFavorite, toggle } = useFavorites();
+  const [shareOpen, setShareOpen] = useState(false);
   const price = formatPrice(p.price);
   const oldPrice = formatPrice(p.oldPrice);
   const slug = (p as Product & { slug?: string }).slug;
   const link = slug ? `/promotions/${slug}` : `/promotions`;
+  const liked = isFavorite(p.id);
+
+  const goToOffer = () => navigate(link);
+  const stop = (e: React.MouseEvent | React.TouchEvent) => e.stopPropagation();
+
+  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}${link}` : link;
+  const shareText = p.discount > 0
+    ? `${p.name} — -${p.discount}% chez Jardival`
+    : `${p.name} chez Jardival`;
+
+  const handleNativeShare = async () => {
+    const shareData: ShareData = { title: p.name, text: shareText, url: shareUrl };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData) !== false) {
+        await navigator.share(shareData);
+        setShareOpen(false);
+        return;
+      }
+      setShareOpen((v) => !v);
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
+      setShareOpen((v) => !v);
+    }
+  };
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({ title: "Lien copié", description: "Vous pouvez le partager où vous voulez." });
+    } catch {
+      toast({ title: "Partage indisponible", description: shareUrl, variant: "destructive" });
+    }
+    setShareOpen(false);
+  };
+
+  const shareLinks = [
+    { label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}` },
+    { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}` },
+    { label: "X / Twitter", href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}` },
+    { label: "Messenger", href: `https://www.facebook.com/dialog/send?link=${encodeURIComponent(shareUrl)}&app_id=0&redirect_uri=${encodeURIComponent(shareUrl)}` },
+    { label: "Email", href: `mailto:?subject=${encodeURIComponent(p.name)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}` },
+  ];
 
   return (
     <article
       data-reel-index={idx}
-      className="reels-scroll relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col overflow-hidden bg-white"
+      onClick={goToOffer}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") goToOffer(); }}
+      className="reels-scroll relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col overflow-hidden bg-white cursor-pointer"
     >
       {/* Image pleine largeur, sans bord arrondi */}
       <div className="absolute inset-0 flex items-center justify-center pb-72">
@@ -75,6 +127,63 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
         {idx + 1} / {total}
       </div>
 
+      {/* Actions flottantes verticales (like / partage) — style reels */}
+      <div className="absolute right-3 z-20 flex flex-col gap-3" style={{ bottom: "19rem" }}>
+        <button
+          type="button"
+          onClick={(e) => { stop(e); const now = toggle(p.id); toast({ title: now ? "Ajouté aux favoris" : "Retiré des favoris" }); }}
+          aria-label={liked ? "Retirer des favoris" : "Ajouter aux favoris"}
+          aria-pressed={liked}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-card backdrop-blur transition-transform active:scale-90"
+        >
+          <img
+            src={iconLike}
+            alt=""
+            className="h-6 w-6"
+            style={{ filter: liked
+              ? "invert(28%) sepia(94%) saturate(7472%) hue-rotate(356deg) brightness(94%) contrast(118%)"
+              : "none" }}
+          />
+        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={(e) => { stop(e); handleNativeShare(); }}
+            aria-label={`Partager ${p.name}`}
+            aria-expanded={shareOpen}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-card backdrop-blur transition-transform active:scale-90"
+          >
+            <img src={iconShare} alt="" className="h-6 w-6" />
+          </button>
+          {shareOpen && (
+            <div
+              onClick={stop}
+              className="absolute right-0 top-14 z-30 w-44 overflow-hidden rounded-2xl border border-border bg-background shadow-elegant"
+            >
+              {shareLinks.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShareOpen(false)}
+                  className="block px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  {s.label}
+                </a>
+              ))}
+              <button
+                type="button"
+                onClick={copyLink}
+                className="block w-full px-4 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted"
+              >
+                Copier le lien
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="flex-1" />
 
       {/* Bloc d'infos en bas — fond blanc, texte sombre */}
@@ -104,57 +213,15 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
           )}
         </div>
 
-        {/* CTA principal — pleine largeur */}
+        {/* CTA principal — pleine largeur (en bas) */}
         <Link
           to={`/magasins?promo=${encodeURIComponent(slug ?? p.id)}&geo=1`}
+          onClick={stop}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3.5 text-sm font-bold text-accent-foreground shadow-card transition-transform active:scale-95"
         >
           <MapPin className="h-4 w-4" />
           Trouver ce produit en magasin →
         </Link>
-
-        {/* Actions secondaires */}
-        <div className="flex gap-2 pt-1">
-          <Link
-            to={link}
-            className="inline-flex flex-1 items-center justify-center rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold text-foreground transition-transform active:scale-95"
-          >
-            Voir l'offre
-          </Link>
-          <button
-            type="button"
-            onClick={async () => {
-              const shareUrl = `${window.location.origin}${link}`;
-              const shareData: ShareData = {
-                title: p.name,
-                text: p.discount > 0
-                  ? `${p.name} — -${p.discount}% chez Jardival`
-                  : `${p.name} chez Jardival`,
-                url: shareUrl,
-              };
-              try {
-                if (navigator.share && navigator.canShare?.(shareData) !== false) {
-                  await navigator.share(shareData);
-                  return;
-                }
-                await navigator.clipboard.writeText(shareUrl);
-                toast({ title: "Lien copié", description: "Vous pouvez le partager où vous voulez." });
-              } catch (err) {
-                if ((err as Error)?.name === "AbortError") return;
-                try {
-                  await navigator.clipboard.writeText(shareUrl);
-                  toast({ title: "Lien copié", description: "Vous pouvez le partager où vous voulez." });
-                } catch {
-                  toast({ title: "Partage indisponible", description: shareUrl, variant: "destructive" });
-                }
-              }
-            }}
-            aria-label={`Partager ${p.name}`}
-            className="inline-flex items-center justify-center rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold text-foreground transition-transform active:scale-95"
-          >
-            <Share2 className="h-4 w-4" />
-          </button>
-        </div>
       </div>
 
       {/* Indicateur swipe (1ère slide uniquement, en pause si interruption) */}
@@ -168,6 +235,7 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
     </article>
   );
 };
+
 
 /**
  * Vue "reels" plein écran, mobile uniquement.
