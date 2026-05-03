@@ -319,6 +319,21 @@ export const MobilePromoReels = () => {
     );
   }
 
+  if (promos.length === 0) {
+    return (
+      <div className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-6 text-center">
+        <div className="space-y-2">
+          <h2 className="font-display text-2xl font-semibold text-foreground">
+            Promotions bientôt disponibles
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Revenez très vite pour découvrir les nouvelles offres Jardival.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
