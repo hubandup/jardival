@@ -17,6 +17,7 @@ Sécurité : authentification par header Authorization: Bearer <RENDER_API_SHARE
 Ce secret est partagé entre le frontend Lovable et ce service. Il ne donne accès
 à RIEN d'autre que cet endpoint.
 """
+import asyncio
 import base64
 import logging
 import os
@@ -29,7 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from pdf_extractor import ImageRecord, extract_images
-from image_matcher import PromoCandidate, match_promos
+from image_matcher import MatchResult, PromoCandidate, match_promos
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -55,6 +56,13 @@ UPLOAD_ENDPOINT = os.environ.get(
 
 # Tailles max
 MAX_PDF_BYTES = 50 * 1024 * 1024  # 50 MB
+
+# Plafond de uploads simultanés vers l'edge function `upload-promo-image`.
+# Borne empirique : assez pour que les ~30 promos d'un catalogue typique
+# tiennent largement sous le RENDER_MAX_TIMEOUT_MS = 25s côté edge function
+# (ratio ~5-8x vs séquentiel), sans saturer Lovable Edge ni la connexion
+# sortante du free tier Render. Configurable par env si besoin.
+UPLOAD_CONCURRENCY = int(os.environ.get("UPLOAD_CONCURRENCY", "8"))
 
 # ---------------------------------------------------------------------------
 # Models
@@ -215,55 +223,35 @@ async def extract(
     records_by_id: dict[str, ImageRecord] = {r.image_id: r for r in records}
 
     # ----- Upload des images matchées via l'edge function Lovable -----
-    matched_count = 0
-    failed_uploads = 0
-    final_outputs: list[PromoOutput] = []
+    # Parallélisé : `asyncio.gather` + `Semaphore(UPLOAD_CONCURRENCY)` pour
+    # tenir sous le RENDER_MAX_TIMEOUT_MS = 25s côté edge function. La boucle
+    # séquentielle prenait ~37s sur un catalogue 30 promos → l'edge function
+    # abortait avant la réponse → tous les image_url tombaient à null.
+    semaphore = asyncio.Semaphore(UPLOAD_CONCURRENCY)
     async with httpx.AsyncClient(timeout=30.0) as client:
-        for promo in body.promos:
-            match = matches_by_index.get(promo.index)
-            if match is None or match.image_id is None:
-                final_outputs.append(PromoOutput(
-                    index=promo.index,
-                    reason=match.reason if match else "no_match",
-                ))
-                continue
-            record = records_by_id.get(match.image_id)
-            if record is None:
-                final_outputs.append(PromoOutput(
-                    index=promo.index,
-                    reason="image_record_missing",
-                ))
-                continue
-            try:
-                public_url = await upload_image_to_supabase(
-                    client=client,
-                    organization_id=body.organization_id,
-                    catalogue_id=body.catalogue_id,
-                    page_number=record.page_number,
-                    image_index=promo.index,
-                    jpeg_bytes=record.jpeg,
-                )
-                final_outputs.append(PromoOutput(
-                    index=promo.index,
-                    image_url=public_url,
-                    source="native",
-                    match_score=match.match_score,
-                    match_method=match.match_method,
-                    is_rasterized=(record.source == "raster"),
-                    image_bbox_norm=_normalize_bbox(record),
-                ))
-                matched_count += 1
-            except Exception as e:
-                log.warning("upload failed for promo %d: %s", promo.index, e)
-                final_outputs.append(PromoOutput(
-                    index=promo.index,
-                    match_score=match.match_score,
-                    match_method=match.match_method,
-                    is_rasterized=(record.source == "raster"),
-                    image_bbox_norm=_normalize_bbox(record),
-                    reason=f"upload_failed: {e}",
-                ))
-                failed_uploads += 1
+        coros = [
+            _process_promo(
+                promo=promo,
+                match=matches_by_index.get(promo.index),
+                records_by_id=records_by_id,
+                client=client,
+                semaphore=semaphore,
+                organization_id=body.organization_id,
+                catalogue_id=body.catalogue_id,
+            )
+            for promo in body.promos
+        ]
+        # gather préserve l'ordre des coroutines passées → l'ordre des promos
+        # d'entrée est conservé dans final_outputs.
+        final_outputs = await asyncio.gather(*coros)
+
+    # Compteurs dérivés des outputs (pas de mutation partagée pendant gather).
+    matched_count = sum(
+        1 for o in final_outputs if o.image_url is not None and o.source == "native"
+    )
+    failed_uploads = sum(
+        1 for o in final_outputs if o.reason and o.reason.startswith("upload_failed")
+    )
 
     duration_ms = int((time.time() - started_at) * 1000)
     no_native = sum(1 for o in final_outputs if o.image_url is None and not o.reason)
@@ -294,6 +282,73 @@ async def extract(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+async def _process_promo(
+    *,
+    promo: PromoInput,
+    match: Optional[MatchResult],
+    records_by_id: dict[str, ImageRecord],
+    client: httpx.AsyncClient,
+    semaphore: asyncio.Semaphore,
+    organization_id: str,
+    catalogue_id: str,
+) -> PromoOutput:
+    """
+    Construit le `PromoOutput` d'une promo, en uploadant son image native
+    associée s'il y a un match. Conçue pour être appelée en parallèle via
+    `asyncio.gather` ; le sémaphore plafonne le nombre d'uploads simultanés
+    contre l'edge function.
+
+    Branches :
+      - pas de match               → PromoOutput(reason=…)
+      - match mais record manquant → PromoOutput(reason="image_record_missing")
+      - upload OK                  → PromoOutput(image_url=…, source="native", …)
+      - upload KO                  → PromoOutput(reason="upload_failed: …")
+    """
+    if match is None or match.image_id is None:
+        return PromoOutput(
+            index=promo.index,
+            reason=match.reason if match else "no_match",
+        )
+
+    record = records_by_id.get(match.image_id)
+    if record is None:
+        return PromoOutput(index=promo.index, reason="image_record_missing")
+
+    bbox_norm = _normalize_bbox(record)
+    is_rasterized = record.source == "raster"
+
+    async with semaphore:
+        try:
+            public_url = await upload_image_to_supabase(
+                client=client,
+                organization_id=organization_id,
+                catalogue_id=catalogue_id,
+                page_number=record.page_number,
+                image_index=promo.index,
+                jpeg_bytes=record.jpeg,
+            )
+        except Exception as e:
+            log.warning("upload failed for promo %d: %s", promo.index, e)
+            return PromoOutput(
+                index=promo.index,
+                match_score=match.match_score,
+                match_method=match.match_method,
+                is_rasterized=is_rasterized,
+                image_bbox_norm=bbox_norm,
+                reason=f"upload_failed: {e}",
+            )
+
+    return PromoOutput(
+        index=promo.index,
+        image_url=public_url,
+        source="native",
+        match_score=match.match_score,
+        match_method=match.match_method,
+        is_rasterized=is_rasterized,
+        image_bbox_norm=bbox_norm,
+    )
+
+
 def _normalize_bbox(record: ImageRecord) -> Optional[tuple[float, float, float, float]]:
     """
     Convertit la bbox PDF (points, origine top-left) d'un `ImageRecord` en
