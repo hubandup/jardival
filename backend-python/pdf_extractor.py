@@ -257,10 +257,18 @@ def _poppler_available() -> bool:
 
 def _run_poppler_dump(pdf_bytes: bytes) -> dict[int, Path]:
     """
-    Lance `pdfimages -all -list` dans un tempdir et retourne un mapping
+    Lance `pdfimages -png -list` dans un tempdir et retourne un mapping
     {object_id: chemin_fichier}.
 
     Timeout global : 30 s. Si dépassé, on lève → fallback complet PyMuPDF.
+
+    On force `-png` plutôt que `-all` parce que `-all` préserve le format
+    natif des XObjects (JPEG CMYK, JBIG2, JPX color-managed…) et Pillow ne
+    sait pas désambiguïser DeviceCMYK PDF (inversé) de CMYK standard,
+    produisant des images « négatives ». Avec `-png`, Poppler applique
+    lui-même la conversion vers RGB en utilisant les profils ICC du PDF
+    et la convention DeviceCMYK correcte. Coût : fichiers ~2-4× plus
+    gros, mais ré-encodés en JPEG via `_to_jpeg` juste après.
     """
     tmpdir = Path(tempfile.mkdtemp(prefix="jardival-poppler-"))
     pdf_path = tmpdir / "input.pdf"
@@ -269,10 +277,11 @@ def _run_poppler_dump(pdf_bytes: bytes) -> dict[int, Path]:
 
     started = time.monotonic()
     try:
-        # `-all` : exporte JPEG en .jpg, JP2 en .jp2, JBIG2 en .jb2, etc.
+        # `-png` : Poppler convertit toutes les images en PNG RGB(A) à l'export
+        # → colorspace géré côté Poppler, pas de mauvaise interprétation aval.
         # `-list` sur stdout : métadonnées par image (page, object id, dim).
         proc = subprocess.run(
-            ["pdfimages", "-all", "-list", "-p", str(pdf_path), str(prefix)],
+            ["pdfimages", "-png", "-list", "-p", str(pdf_path), str(prefix)],
             capture_output=True,
             timeout=POPPLER_GLOBAL_TIMEOUT_SEC,
             check=False,
@@ -410,13 +419,47 @@ def _collect_geometry(doc: fitz.Document) -> list[dict]:
 
 
 def _pymupdf_extract(doc: fitz.Document, xref: int) -> bytes:
+    """
+    Extrait un XObject image de PyMuPDF via l'API `Pixmap`, qui respecte
+    les conventions PDF de colorspace (notamment DeviceCMYK inversé) en
+    utilisant les profils ICC embarqués. Fallback sur `extract_image()` +
+    Pillow pour les colorspaces exotiques (DeviceN avec spotcolors,
+    Separation) que `Pixmap` ne sait pas convertir, OU pour les xrefs
+    qui pointent en réalité sur un soft-mask sans colorspace.
+
+    L'ancien chemin `extract_image()` + Pillow est conservé en fallback
+    parce qu'il "marchait" pour ~95 % des images RGB / grayscale. Le bug
+    était limité au CMYK que Pillow inversait silencieusement.
+    """
     if xref <= 0:
         raise ValueError("inline image cannot be extracted by xref")
-    img_dict = doc.extract_image(xref)
-    raw = img_dict.get("image")
-    if not raw:
-        raise RuntimeError("extract_image returned no bytes")
-    return _to_jpeg(raw)
+
+    try:
+        pix = fitz.Pixmap(doc, xref)
+        if pix.colorspace is None:
+            # Soft mask ou stencil : Pixmap n'expose pas de colorspace
+            # exploitable. On laisse le fallback gérer.
+            raise RuntimeError("xref has no colorspace")
+        # `colorspace.n` = nombre de canaux couleur (1=gray, 3=RGB, 4=CMYK,
+        # >4=DeviceN). Toute image ≥ 4 canaux doit être convertie en RGB
+        # côté PyMuPDF (qui connaît la convention DeviceCMYK inversée du PDF).
+        if pix.colorspace.n >= 4:
+            pix = fitz.Pixmap(fitz.csRGB, pix)
+        if pix.alpha:
+            # Aplatit l'alpha sur RGB (catalogues = fond blanc, pas besoin
+            # de préserver la transparence).
+            pix = fitz.Pixmap(pix, 0)
+        return pix.tobytes("jpeg", jpg_quality=JPEG_QUALITY)
+    except Exception as exc:
+        log.warning(
+            "Pixmap path failed for xref=%d (%s), falling back to extract_image+Pillow",
+            xref, exc,
+        )
+        img_dict = doc.extract_image(xref)
+        raw = img_dict.get("image")
+        if not raw:
+            raise RuntimeError("extract_image returned no bytes") from exc
+        return _to_jpeg(raw)
 
 
 def _raster_crop(
