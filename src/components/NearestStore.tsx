@@ -15,11 +15,17 @@ interface Props {
 export const NearestStore = ({ onLocate }: Props) => {
   const { state, request } = useGeolocation();
   const { data: stores = [] } = useStores();
+  const { select } = useSelectedStore();
 
   const nearest = useMemo(() => {
     if (state.status !== "ready" || stores.length === 0) return null;
     return nearestStore(state.position, stores);
   }, [state, stores]);
+
+  // Auto-select the nearest store as soon as geolocation resolves
+  useEffect(() => {
+    if (nearest?.store) select(nearest.store);
+  }, [nearest, select]);
 
   // Idle: invitation
   if (state.status === "idle") {
