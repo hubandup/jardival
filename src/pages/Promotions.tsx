@@ -61,6 +61,7 @@ const Promotions = () => {
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
     return dbPromos.filter((p) => {
+      if (!p.image || p.image.trim() === "") return false;
       if (category !== ALL && (p.description ?? "").trim() !== category) return false;
       if (storeId !== ALL) {
         if (!p.store_ids || p.store_ids.length === 0) return false;
