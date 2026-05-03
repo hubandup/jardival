@@ -181,9 +181,11 @@ export const MobilePromoReels = () => {
 
   const promos = useMemo<Product[]>(() => {
     if (dbPromos && dbPromos.length > 0) {
-      return dbPromos.map(promotionToProduct);
+      return dbPromos
+        .filter((p) => !!p.image && p.image.trim() !== "")
+        .map(promotionToProduct);
     }
-    return CATALOGUE_PROMOS;
+    return CATALOGUE_PROMOS.filter((p) => !!p.image);
   }, [dbPromos]);
 
   const validityLabel = activeCatalogue?.ends_at
