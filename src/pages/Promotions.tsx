@@ -187,7 +187,9 @@ const Promotions = () => {
             </div>
           ) : promos.length === 0 ? (
             <p className="py-16 text-center text-muted-foreground">
-              Aucune promotion ne correspond à ces filtres.
+              {hasFilters
+                ? "Aucune promotion ne correspond à ces filtres."
+                : "Promotions bientôt disponibles."}
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4">
