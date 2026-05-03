@@ -128,7 +128,7 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
       </div>
 
       {/* Actions flottantes verticales (like / partage) — style reels */}
-      <div className="absolute right-3 z-20 flex flex-col gap-3" style={{ bottom: "19rem" }}>
+      <div className="absolute right-3 z-20 flex flex-col gap-3" style={{ bottom: "8.5rem" }}>
         <button
           type="button"
           onClick={(e) => { stop(e); const now = toggle(p.id); toast({ title: now ? "Ajouté aux favoris" : "Retiré des favoris" }); }}

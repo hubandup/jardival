@@ -8,7 +8,8 @@ import { MapPin } from "lucide-react";
  */
 export const FloatingFindStoreCta = () => {
   const { pathname } = useLocation();
-  if (pathname.startsWith("/magasins") || pathname.startsWith("/admin")) {
+  // Masqué sur la home (vue reels mobile), la page magasins et l'admin.
+  if (pathname === "/" || pathname.startsWith("/magasins") || pathname.startsWith("/admin")) {
     return null;
   }
 
