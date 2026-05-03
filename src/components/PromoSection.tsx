@@ -1,5 +1,4 @@
 import { ProductCard } from "./ProductCard";
-import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
 import { useMemo } from "react";
 import { Tag, Loader2, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -12,17 +11,8 @@ export const PromoSection = () => {
   const { data: dbPromos, isLoading } = usePromotions();
   const { data: catalogues } = useCatalogues();
 
-  // Si l'admin a publié des promos en DB, on les utilise.
-  // Sinon on retombe sur le catalogue PDF historique.
   const promos = useMemo(() => {
-    if (dbPromos && dbPromos.length > 0) {
-      return dbPromos.slice(0, 12).map(promotionToProduct);
-    }
-    const withDiscount = CATALOGUE_PROMOS.filter((p) => p.discount > 0).sort(
-      (a, b) => b.discount - a.discount
-    );
-    const fullPrice = CATALOGUE_PROMOS.filter((p) => p.discount === 0);
-    return [...withDiscount, ...fullPrice].slice(0, 12);
+    return (dbPromos ?? []).slice(0, 12).map(promotionToProduct);
   }, [dbPromos]);
 
   const activeCatalogue = catalogues?.[0];
@@ -46,14 +36,16 @@ export const PromoSection = () => {
               Les meilleures offres du prospectus papier, à retrouver dans votre magasin Jardival.
             </p>
           </div>
-          <a
-            href={activeCatalogue?.pdf_url ?? "/catalogue-jardival-jardinales.pdf"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-          >
-            Feuilleter le catalogue →
-          </a>
+          {activeCatalogue?.pdf_url && (
+            <a
+              href={activeCatalogue.pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              Feuilleter le catalogue →
+            </a>
+          )}
         </div>
 
         {isLoading ? (
