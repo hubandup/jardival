@@ -8,7 +8,6 @@ import type { HeroPalette } from "@/lib/coverPalette";
 import { PdfCoverImage } from "@/components/PdfCoverImage";
 import { getCachedPdfCover, renderPdfCover } from "@/lib/pdfCover";
 
-const FALLBACK_PDF_URL = "/catalogue-jardival-jardinales.pdf";
 const VIEWER_URL = "/catalogue";
 
 // Palette par défaut (jaune Jardival) si aucune image / extraction échoue.
@@ -33,7 +32,7 @@ export const CatalogueBanner = ({
   const { data: catalogues } = useCatalogues();
   const active = catalogues?.[0];
 
-  const pdfUrl = active?.pdf_url ?? FALLBACK_PDF_URL;
+  const pdfUrl = active?.pdf_url ?? null;
   // Stratégie : cover_image admin > rendu auto de la 1re page du PDF > image fallback statique.
   const hasExplicitCover = !!active?.cover_image;
   const hasPdf = !!active?.pdf_url;
@@ -41,7 +40,7 @@ export const CatalogueBanner = ({
   // a déjà été rendue (par PdfCoverImage ou un précédent montage), on l'a tout de suite,
   // ce qui évite un 1er rendu sur la couverture jaune statique.
   const [pdfCoverDataUrl, setPdfCoverDataUrl] = useState<string | null>(() =>
-    getCachedPdfCover(pdfUrl),
+    pdfUrl ? getCachedPdfCover(pdfUrl) : null,
   );
 
   // Forçage de l'extraction PDF dès qu'on connaît l'URL et qu'aucune cover_image n'est fournie.
@@ -68,7 +67,7 @@ export const CatalogueBanner = ({
   const title = active?.title ?? "Jardinales";
   const validity = active?.ends_at
     ? `Jusqu'au ${new Date(active.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
-    : "Jusqu'au 16 mai 2026";
+    : null;
 
   // Override admin (champ hero_colors sur le catalogue) > extraction auto > fallback.
   const overrides = (active as { hero_colors?: Partial<HeroPalette> | null } | undefined)
@@ -95,6 +94,8 @@ export const CatalogueBanner = ({
     "--hero-fg": palette.foreground,
     background: `linear-gradient(135deg, hsl(var(--hero-primary)), hsl(var(--hero-secondary)) 50%, hsl(var(--hero-accent)))`,
   } as React.CSSProperties;
+
+  if (!active) return null;
 
   return (
     <section
@@ -180,7 +181,8 @@ export const CatalogueBanner = ({
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-            {simplified ? (
+          {simplified ? (
+            pdfUrl && (
               <a
                 href={pdfUrl}
                 target={pdfTarget}
@@ -195,10 +197,12 @@ export const CatalogueBanner = ({
               >
                 Voir le catalogue
               </a>
+            )
             ) : (
               <>
-                <a
-                  href={pdfUrl}
+                {pdfUrl && (
+                  <a
+                    href={pdfUrl}
                   target="_blank"
                   rel="noreferrer"
                   onClick={async (e) => {
@@ -231,17 +235,21 @@ export const CatalogueBanner = ({
                   <Download className="h-4 w-4" />
                   Télécharger le catalogue
                 </a>
-                <Link
-                  to={VIEWER_URL}
-                  className="inline-flex items-center gap-2 rounded-full border px-6 py-3 text-sm font-semibold backdrop-blur transition-colors"
-                  style={{
-                    borderColor: "hsl(var(--hero-fg) / 0.3)",
-                    background: "hsl(var(--hero-fg) / 0.08)",
-                    color: "hsl(var(--hero-fg))",
-                  }}
-                >
-                  Feuilleter en ligne
-                </Link>
+                  </a>
+                )}
+                {pdfUrl && (
+                  <Link
+                    to={VIEWER_URL}
+                    className="inline-flex items-center gap-2 rounded-full border px-6 py-3 text-sm font-semibold backdrop-blur transition-colors"
+                    style={{
+                      borderColor: "hsl(var(--hero-fg) / 0.3)",
+                      background: "hsl(var(--hero-fg) / 0.08)",
+                      color: "hsl(var(--hero-fg))",
+                    }}
+                  >
+                    Feuilleter en ligne
+                  </Link>
+                )}
               </>
             )}
           </div>
