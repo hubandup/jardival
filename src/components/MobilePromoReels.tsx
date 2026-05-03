@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Loader2, Tag, MapPin, ChevronUp, Share2 } from "lucide-react";
 import { usePromotions, useCatalogues } from "@/hooks/usePromotions";
-import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
 import { promotionToProduct } from "@/lib/promotion";
 
 import { toast } from "@/hooks/use-toast";
@@ -180,12 +179,9 @@ export const MobilePromoReels = () => {
   const activeCatalogue = catalogues?.[0];
 
   const promos = useMemo<Product[]>(() => {
-    if (dbPromos && dbPromos.length > 0) {
-      return dbPromos
-        .filter((p) => !!p.image && p.image.trim() !== "")
-        .map(promotionToProduct);
-    }
-    return CATALOGUE_PROMOS.filter((p) => !!p.image);
+    return (dbPromos ?? [])
+      .filter((p) => !!p.image && p.image.trim() !== "")
+      .map(promotionToProduct);
   }, [dbPromos]);
 
   const validityLabel = activeCatalogue?.ends_at
