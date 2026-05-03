@@ -128,21 +128,24 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
       </div>
 
       {/* Actions flottantes verticales (like / partage) — style reels */}
-      <div className="absolute right-3 z-20 flex flex-col gap-3" style={{ bottom: "8.5rem" }}>
+      <div className="absolute right-3 z-20 flex flex-col gap-4" style={{ bottom: "5.5rem" }}>
         <button
           type="button"
           onClick={(e) => { stop(e); const now = toggle(p.id); toast({ title: now ? "Ajouté aux favoris" : "Retiré des favoris" }); }}
           aria-label={liked ? "Retirer des favoris" : "Ajouter aux favoris"}
           aria-pressed={liked}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-card backdrop-blur transition-transform active:scale-90"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 shadow-card backdrop-blur transition-transform active:scale-90"
         >
           <img
             src={iconLike}
             alt=""
-            className="h-6 w-6"
-            style={{ filter: liked
-              ? "invert(28%) sepia(94%) saturate(7472%) hue-rotate(356deg) brightness(94%) contrast(118%)"
-              : "none" }}
+            className="h-8 w-8"
+            style={{
+              filter: liked
+                ? "invert(28%) sepia(94%) saturate(7472%) hue-rotate(356deg) brightness(94%) contrast(118%)"
+                : "none",
+              strokeWidth: 2,
+            }}
           />
         </button>
         <div className="relative">
@@ -151,9 +154,9 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
             onClick={(e) => { stop(e); handleNativeShare(); }}
             aria-label={`Partager ${p.name}`}
             aria-expanded={shareOpen}
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-card backdrop-blur transition-transform active:scale-90"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 shadow-card backdrop-blur transition-transform active:scale-90"
           >
-            <img src={iconShare} alt="" className="h-6 w-6" />
+            <img src={iconShare} alt="" className="h-8 w-8" />
           </button>
           {shareOpen && (
             <div
