@@ -10,7 +10,7 @@ import { useGeolocation } from "@/hooks/useGeolocation";
 import { useSeo } from "@/hooks/useSeo";
 import { Loader2, Compass } from "lucide-react";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
-import { MapPin, Search, Phone, Clock } from "lucide-react";
+import { MapPin, Search, Phone, Clock, ArrowLeft } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -123,7 +123,14 @@ const Stores = () => {
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-hero snap-start min-h-[calc(100dvh-4rem)] md:min-h-0 flex flex-col justify-center md:block">
         <div className="container-px mx-auto max-w-7xl pt-8 pb-8 md:pt-24 md:pb-10">
-          <span className="hidden md:inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-semibold text-foreground/80 backdrop-blur transition-colors hover:border-accent/40 hover:text-accent"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Retour aux promos
+          </Link>
+          <span className="mt-3 hidden md:inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
             <MapPin className="h-3.5 w-3.5" /> Réseau Jardival & Point Vert
           </span>
           <h1 className="mt-4 max-w-3xl font-display text-4xl font-semibold leading-[1.05] text-foreground md:text-6xl">
