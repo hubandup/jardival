@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Loader2, Tag, MapPin, ChevronUp } from "lucide-react";
+import { Loader2, Tag, MapPin, ChevronUp, Navigation } from "lucide-react";
 import { usePromotions, useCatalogues } from "@/hooks/usePromotions";
 import { promotionToProduct } from "@/lib/promotion";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useSelectedStore } from "@/hooks/useSelectedStore";
+import { directionsUrlFor, type DirectionsProvider } from "@/data/stores";
 import iconShare from "@/assets/icon-share.svg";
 import iconLike from "@/assets/icon-like.svg";
 
