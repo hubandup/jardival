@@ -489,14 +489,28 @@ function UploadStep({
 }) {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || !files[0]) return;
     setUploading(true);
+    setUploadProgress(5);
+    // Simule une progression pendant l'upload (pas de vrai signal côté SDK Supabase Storage).
+    const startedAt = Date.now();
+    const sizeMb = files[0].size / (1024 * 1024);
+    const estimatedMs = Math.max(2000, sizeMb * 600); // ~600ms/MB
+    const interval = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const v = Math.min(92, Math.round((elapsed / estimatedMs) * 100));
+      setUploadProgress(v);
+    }, 150);
     try {
       await onUploaded(files[0]);
+      setUploadProgress(100);
     } finally {
+      window.clearInterval(interval);
       setUploading(false);
+      setTimeout(() => setUploadProgress(0), 500);
     }
   };
 
@@ -535,8 +549,12 @@ function UploadStep({
           className="hidden"
         />
         {uploading && (
-          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Envoi en cours…
+          <div className="mt-6 space-y-2 max-w-md mx-auto">
+            <Progress value={uploadProgress} className="h-2" />
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Envoi en cours… <span className="tabular-nums">{uploadProgress}%</span>
+            </div>
           </div>
         )}
       </div>
@@ -683,102 +701,125 @@ function ZonesStep({
     }
   };
 
+  const hasPromos = promos.length > 0;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2 p-3 border rounded-md bg-muted/30">
-        <div>
-          <p className="text-sm font-medium">Extraction des promotions</p>
-          <p className="text-xs text-muted-foreground">
+      {!hasPromos ? (
+        <div className="py-16 px-6 text-center border-2 border-dashed rounded-lg bg-primary/5">
+          <Sparkles className="h-14 w-14 mx-auto text-primary mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Extraction des promotions</h3>
+          <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-6">
             Un seul clic : Gemini lit le catalogue et chaque promo est associée à
             son image native (HD) ou à un crop fallback si l'image n'est pas isolable.
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={handleAiExtract} disabled={extracting} size="sm">
+          <Button onClick={handleAiExtract} disabled={extracting} size="lg">
             {extracting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-5 w-5" />
             )}
-            {promos.length ? "Relancer l'extraction" : "Extraire les promotions"}
+            Extraire les promotions
           </Button>
           {extractProgress && (
-            <div className="flex flex-col gap-1 min-w-[260px] flex-1">
+            <div className="mt-6 max-w-md mx-auto space-y-2">
               <Progress value={extractProgress.value} className="h-2" />
               <p className="text-xs text-muted-foreground">
-                {extractProgress.label} <span className="tabular-nums">{extractProgress.value}%</span>
+                {extractProgress.label}{" "}
+                <span className="tabular-nums">{extractProgress.value}%</span>
               </p>
             </div>
           )}
         </div>
-      </div>
-
-      {promos.length > 0 ? (
-        <CataloguePromoBboxPreview
-          pdfUrl={new URL(pdfUrl, window.location.origin).toString()}
-          boxes={promos
-            .map((p, idx): PreviewBox | null =>
-              // Les promos `native` n'apparaissent pas comme bboxes éditables :
-              // l'image est déjà extraite proprement, pas besoin de cadrer.
-              p.image_source !== "native" && p.bbox_2d && p.page_number
-                ? {
-                    pageNumber: p.page_number,
-                    bbox: p.bbox_2d,
-                    index: idx + 1,
-                    label: p.title,
-                    subLabel: [
-                      p.price != null ? `${p.price} €` : null,
-                      p.original_price != null ? `au lieu de ${p.original_price} €` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · "),
-                    selected: p.selected !== false,
-                    price: p.price,
-                    originalPrice: p.original_price,
-                    description: p.description,
-                    imageUrl: p.image_cutout_url ?? p.image_url,
-                  }
-                : null
-            )
-            .filter((b): b is PreviewBox => b !== null)}
-          onToggleBox={(i) =>
-            updatePromos((prev) =>
-              prev.map((p, idx) => (idx === i ? { ...p, selected: !p.selected } : p))
-            )
-          }
-          onDeleteBox={(i) => {
-            const removed = promos[i];
-            if (removed?.bbox_2d) logRejection(removed.bbox_2d, "deleted-from-bbox-preview");
-            updatePromos((prev) => prev.filter((_, idx) => idx !== i));
-          }}
-          onUpdateBbox={(i, bbox) =>
-            updatePromos((prev) => prev.map((p, idx) => (idx === i ? { ...p, bbox_2d: bbox } : p)))
-          }
-          onUpdateText={(i, patch) =>
-            updatePromos((prev) =>
-              prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p))
-            )
-          }
-          onAddBox={(pageNumber, bbox) =>
-            updatePromos((prev) => [
-              ...prev,
-              {
-                title: `Nouvelle zone (page ${pageNumber})`,
-                page_number: pageNumber,
-                bbox_2d: bbox,
-                image_source: "fallback-crop",
-                selected: true,
-              },
-            ])
-          }
-        />
       ) : (
-        <div className="py-12 text-center border rounded-md bg-muted/20">
-          <Sparkles className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-          <p className="text-sm text-muted-foreground">
-            Lancez l'extraction pour identifier les promotions et leurs images.
-          </p>
-        </div>
+        <>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm font-medium">
+              Aperçu visuel & édition · {promos.length} promotion(s) détectée(s)
+            </p>
+            <div className="flex items-center gap-3">
+              {extractProgress && (
+                <div className="flex flex-col gap-1 min-w-[220px]">
+                  <Progress value={extractProgress.value} className="h-2" />
+                  <p className="text-xs text-muted-foreground">
+                    {extractProgress.label}{" "}
+                    <span className="tabular-nums">{extractProgress.value}%</span>
+                  </p>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleAiExtract}
+                disabled={extracting}
+                className="text-xs text-primary hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+              >
+                {extracting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCcw className="h-3 w-3" />
+                )}
+                Refaire l'extraction des promotions
+              </button>
+            </div>
+          </div>
+
+          <CataloguePromoBboxPreview
+            pdfUrl={new URL(pdfUrl, window.location.origin).toString()}
+            boxes={promos
+              .map((p, idx): PreviewBox | null =>
+                p.image_source !== "native" && p.bbox_2d && p.page_number
+                  ? {
+                      pageNumber: p.page_number,
+                      bbox: p.bbox_2d,
+                      index: idx + 1,
+                      label: p.title,
+                      subLabel: [
+                        p.price != null ? `${p.price} €` : null,
+                        p.original_price != null ? `au lieu de ${p.original_price} €` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · "),
+                      selected: p.selected !== false,
+                      price: p.price,
+                      originalPrice: p.original_price,
+                      description: p.description,
+                      imageUrl: p.image_cutout_url ?? p.image_url,
+                    }
+                  : null
+              )
+              .filter((b): b is PreviewBox => b !== null)}
+            onToggleBox={(i) =>
+              updatePromos((prev) =>
+                prev.map((p, idx) => (idx === i ? { ...p, selected: !p.selected } : p))
+              )
+            }
+            onDeleteBox={(i) => {
+              const removed = promos[i];
+              if (removed?.bbox_2d) logRejection(removed.bbox_2d, "deleted-from-bbox-preview");
+              updatePromos((prev) => prev.filter((_, idx) => idx !== i));
+            }}
+            onUpdateBbox={(i, bbox) =>
+              updatePromos((prev) => prev.map((p, idx) => (idx === i ? { ...p, bbox_2d: bbox } : p)))
+            }
+            onUpdateText={(i, patch) =>
+              updatePromos((prev) =>
+                prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p))
+              )
+            }
+            onAddBox={(pageNumber, bbox) =>
+              updatePromos((prev) => [
+                ...prev,
+                {
+                  title: `Nouvelle zone (page ${pageNumber})`,
+                  page_number: pageNumber,
+                  bbox_2d: bbox,
+                  image_source: "fallback-crop",
+                  selected: true,
+                },
+              ])
+            }
+          />
+        </>
       )}
 
       <div className="flex justify-between">
@@ -1148,6 +1189,12 @@ function ScheduleStep({
   onCatalogueUpdated?: () => void;
 }) {
   const [publishing, setPublishing] = useState(false);
+  const [publishPhase, setPublishPhase] = useState<{
+    step: "insert" | "render" | "update" | "done";
+    label: string;
+    value: number;
+    elapsedMs?: number;
+  } | null>(null);
   const [title, setTitle] = useState(catalogue.title || "");
   const [coverImage, setCoverImage] = useState<string | null>(catalogue.cover_image ?? null);
   const [displayOrder, setDisplayOrder] = useState<number>(catalogue.display_order ?? 0);
@@ -1187,6 +1234,7 @@ function ScheduleStep({
       return;
     }
     setPublishing(true);
+    setPublishPhase({ step: "insert", label: "Création des promotions en base...", value: 10 });
     try {
       await supabase
         .from("promotions")
@@ -1215,6 +1263,29 @@ function ScheduleStep({
       // image / match_score / match_method / is_rasterized par UUID.
       const promoIds = (insertedRows ?? []).map((r: { id: string }) => r.id);
       if (promoIds.length === selected.length && catalogue.pdf_url) {
+        const renderStartedAt = Date.now();
+        setPublishPhase({
+          step: "render",
+          label: `Render en cours · matching de ${promoIds.length} image(s)...`,
+          value: 35,
+          elapsedMs: 0,
+        });
+        // Estimation : ~1.5s par promo, plafonné à 90% pendant l'attente.
+        const estimatedMs = Math.max(8000, promoIds.length * 1500);
+        const renderInterval = window.setInterval(() => {
+          const elapsed = Date.now() - renderStartedAt;
+          const v = Math.min(90, 35 + Math.round((elapsed / estimatedMs) * 55));
+          setPublishPhase((prev) =>
+            prev?.step === "render"
+              ? {
+                  ...prev,
+                  value: v,
+                  elapsedMs: elapsed,
+                  label: `Render en cours · matching de ${promoIds.length} image(s) (${Math.round(elapsed / 1000)}s)`,
+                }
+              : prev
+          );
+        }, 500);
         try {
           const { error: matchErr } = await supabase.functions.invoke(
             "extract-catalogue-promos",
@@ -1239,7 +1310,10 @@ function ScheduleStep({
           }
         } catch (e) {
           console.error("Erreur appel edge matching", e);
+        } finally {
+          window.clearInterval(renderInterval);
         }
+        setPublishPhase({ step: "update", label: "Mise à jour des promotions...", value: 95 });
       }
 
       // Apprentissage : enregistrer les caractéristiques des promos validées (avec bbox).
@@ -1292,6 +1366,7 @@ function ScheduleStep({
         .eq("id", catalogue.id);
 
       onCatalogueUpdated?.();
+      setPublishPhase({ step: "done", label: "Terminé", value: 100 });
       toast.success(`${rows.length} promotions publiées`);
       await onValidated();
     } catch (e) {
@@ -1299,6 +1374,7 @@ function ScheduleStep({
       toast.error(e instanceof Error ? e.message : "Erreur publication");
     } finally {
       setPublishing(false);
+      setTimeout(() => setPublishPhase(null), 800);
     }
   };
 
@@ -1390,6 +1466,25 @@ function ScheduleStep({
           nouvelles.
         </p>
       </div>
+
+      {publishPhase && (
+        <div className="rounded-md border p-3 bg-primary/5 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-medium text-foreground inline-flex items-center gap-2">
+              {publishPhase.step !== "done" && (
+                <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              )}
+              {publishPhase.step === "insert" && "1/3 · Insertion"}
+              {publishPhase.step === "render" && "2/3 · Render (matching images)"}
+              {publishPhase.step === "update" && "3/3 · Mise à jour"}
+              {publishPhase.step === "done" && "Publication terminée"}
+            </span>
+            <span className="tabular-nums text-muted-foreground">{publishPhase.value}%</span>
+          </div>
+          <Progress value={publishPhase.value} className="h-2" />
+          <p className="text-xs text-muted-foreground">{publishPhase.label}</p>
+        </div>
+      )}
 
       <div className="flex justify-between pt-2">
         <Button variant="outline" onClick={onPrev}>
