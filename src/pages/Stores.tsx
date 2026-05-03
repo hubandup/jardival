@@ -99,8 +99,8 @@ const Stores = () => {
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
-      {/* Breadcrumb */}
-      <div className="border-b border-border bg-card">
+      {/* Breadcrumb — hidden on mobile to keep "snap" hero clean */}
+      <div className="hidden border-b border-border bg-card md:block">
         <div className="container-px mx-auto max-w-7xl py-3">
           <Breadcrumb>
             <BreadcrumbList>
@@ -118,13 +118,15 @@ const Stores = () => {
         </div>
       </div>
 
+      {/* Mobile snap container : la première vue se cale à l'écran */}
+      <div className="md:contents snap-y snap-mandatory">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-hero">
-        <div className="container-px mx-auto max-w-7xl pt-16 pb-8 md:pt-24 md:pb-10">
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+      <section className="relative overflow-hidden bg-gradient-hero snap-start min-h-[calc(100dvh-4rem)] md:min-h-0 flex flex-col justify-center md:block">
+        <div className="container-px mx-auto max-w-7xl pt-8 pb-8 md:pt-24 md:pb-10">
+          <span className="hidden md:inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
             <MapPin className="h-3.5 w-3.5" /> Réseau Jardival & Point Vert
           </span>
-          <h1 className="mt-4 max-w-3xl font-display text-5xl font-semibold leading-[1.05] text-foreground md:text-6xl">
+          <h1 className="mt-4 max-w-3xl font-display text-4xl font-semibold leading-[1.05] text-foreground md:text-6xl">
             Trouvez votre magasin <span className="italic text-primary">Jardival</span>
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
@@ -174,7 +176,7 @@ const Stores = () => {
       </section>
 
       {/* Stores grid */}
-      <section className="pt-2 pb-10 md:pt-4 md:pb-12">
+      <section className="snap-start pt-2 pb-10 md:pt-4 md:pb-12">
         <div className="container-px mx-auto max-w-7xl">
           {/* Map */}
           <div className="mb-12">
@@ -217,6 +219,7 @@ const Stores = () => {
           )}
         </div>
       </section>
+      </div>
 
       <SiteFooter />
     </div>

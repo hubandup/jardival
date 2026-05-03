@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Loader2, Tag, MapPin, ChevronUp } from "lucide-react";
+import { Loader2, Tag, MapPin, ChevronUp, Navigation } from "lucide-react";
 import { usePromotions, useCatalogues } from "@/hooks/usePromotions";
 import { promotionToProduct } from "@/lib/promotion";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useSelectedStore } from "@/hooks/useSelectedStore";
+import { directionsUrlFor, type DirectionsProvider } from "@/data/stores";
 import iconShare from "@/assets/icon-share.svg";
 import iconLike from "@/assets/icon-like.svg";
 
@@ -31,7 +33,9 @@ interface ReelSlideProps {
 const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, paused }: ReelSlideProps) => {
   const navigate = useNavigate();
   const { isFavorite, toggle } = useFavorites();
+  const { store: selectedStore } = useSelectedStore();
   const [shareOpen, setShareOpen] = useState(false);
+  const [dirOpen, setDirOpen] = useState(false);
   const price = formatPrice(p.price);
   const oldPrice = formatPrice(p.oldPrice);
   const slug = (p as Product & { slug?: string }).slug;
@@ -217,14 +221,52 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
         </div>
 
         {/* CTA principal — pleine largeur (en bas) */}
-        <Link
-          to={`/magasins?promo=${encodeURIComponent(slug ?? p.id)}&geo=1`}
-          onClick={stop}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3.5 text-sm font-bold text-accent-foreground shadow-card transition-transform active:scale-95"
-        >
-          <MapPin className="h-4 w-4" />
-          Trouver ce produit en magasin →
-        </Link>
+        {selectedStore ? (
+          <div className="relative mt-3">
+            <button
+              type="button"
+              onClick={(e) => { stop(e); setDirOpen((v) => !v); }}
+              aria-expanded={dirOpen}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3.5 text-sm font-bold text-accent-foreground shadow-card transition-transform active:scale-95"
+            >
+              <Navigation className="h-4 w-4" />
+              Voir chez {selectedStore.name} →
+            </button>
+            {dirOpen && (
+              <div
+                onClick={stop}
+                className="absolute left-0 right-0 bottom-14 z-30 overflow-hidden rounded-2xl border border-border bg-background shadow-elegant"
+              >
+                {([
+                  { id: "google", name: "Google Maps" },
+                  { id: "apple", name: "Plans (Apple)" },
+                  { id: "waze", name: "Waze" },
+                  { id: "osm", name: "OpenStreetMap" },
+                ] as { id: DirectionsProvider; name: string }[]).map((prov) => (
+                  <a
+                    key={prov.id}
+                    href={directionsUrlFor(selectedStore, prov.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setDirOpen(false)}
+                    className="block px-4 py-3 text-sm font-medium text-foreground hover:bg-muted"
+                  >
+                    {prov.name}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link
+            to={`/magasins?promo=${encodeURIComponent(slug ?? p.id)}&geo=1`}
+            onClick={stop}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3.5 text-sm font-bold text-accent-foreground shadow-card transition-transform active:scale-95"
+          >
+            <MapPin className="h-4 w-4" />
+            Trouver ce produit en magasin →
+          </Link>
+        )}
       </div>
 
       {/* Indicateur swipe (1ère slide uniquement, en pause si interruption) */}
