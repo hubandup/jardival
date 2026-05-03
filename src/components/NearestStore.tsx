@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Navigation, Loader2, Compass } from "lucide-react";
 import { DEPARTMENTS } from "@/data/stores";
 import { useStores } from "@/hooks/useStores";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { useSelectedStore } from "@/hooks/useSelectedStore";
 import { nearestStore } from "@/lib/geo";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
 
