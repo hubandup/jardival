@@ -574,6 +574,7 @@ export type Database = {
           hero_featured: boolean
           id: string
           image: string | null
+          image_bbox_norm: Json | null
           is_rasterized: boolean | null
           match_method: string | null
           match_score: number | null
@@ -595,6 +596,7 @@ export type Database = {
           hero_featured?: boolean
           id?: string
           image?: string | null
+          image_bbox_norm?: Json | null
           is_rasterized?: boolean | null
           match_method?: string | null
           match_score?: number | null
@@ -616,6 +618,7 @@ export type Database = {
           hero_featured?: boolean
           id?: string
           image?: string | null
+          image_bbox_norm?: Json | null
           is_rasterized?: boolean | null
           match_method?: string | null
           match_score?: number | null
