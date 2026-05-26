@@ -35,13 +35,15 @@ const Stores = () => {
   const { state: geoState } = useGeolocation(autoGeo || !!promoKey);
   const userPos = geoState.status === "ready" ? geoState.position : null;
   const { data: promoCtx } = usePromotionByKey(promoKey);
-  const promoStoreIds = useMemo(
-    () =>
-      promoCtx?.row?.store_ids && promoCtx.row.store_ids.length > 0
-        ? new Set(promoCtx.row.store_ids)
-        : null,
-    [promoCtx],
-  );
+  const promoStoreIds = useMemo(() => {
+    const ids = promoCtx?.row?.store_ids;
+    if (!ids || ids.length === 0) return null;
+    // Si aucun id ne matche les magasins existants, on n'applique pas le filtre
+    // (sinon la liste devient vide alors qu'on veut quand même proposer le réseau).
+    const set = new Set(ids);
+    const anyMatch = stores.some((s) => set.has(s.id));
+    return anyMatch ? set : null;
+  }, [promoCtx, stores]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
