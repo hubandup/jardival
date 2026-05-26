@@ -208,17 +208,25 @@ const ProductDetail = () => {
             <p className="mt-2 text-sm text-muted-foreground">Référence : {product.ref}</p>
 
             <div className="mt-8 flex items-baseline gap-4">
-              <span className="font-display text-5xl font-semibold text-foreground">
-                {product.price.toFixed(2)}€
-              </span>
-              {product.oldPrice && (
+              {product.price === 0 ? (
+                <span className="font-display text-4xl font-semibold text-foreground">
+                  Offre en magasin
+                </span>
+              ) : (
                 <>
-                  <span className="text-xl text-muted-foreground line-through">
-                    {product.oldPrice.toFixed(2)}€
+                  <span className="font-display text-5xl font-semibold text-foreground">
+                    {product.price.toFixed(2)}€
                   </span>
-                  <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
-                    Économisez {(product.oldPrice - product.price).toFixed(2)}€
-                  </span>
+                  {product.oldPrice && (
+                    <>
+                      <span className="text-xl text-muted-foreground line-through">
+                        {product.oldPrice.toFixed(2)}€
+                      </span>
+                      <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+                        Économisez {(product.oldPrice - product.price).toFixed(2)}€
+                      </span>
+                    </>
+                  )}
                 </>
               )}
             </div>
