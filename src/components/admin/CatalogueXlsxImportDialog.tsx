@@ -11,7 +11,7 @@ import { Loader2, Upload, AlertTriangle, FileSpreadsheet, ChevronLeft, ChevronRi
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentOrgId } from "@/lib/auth";
-import { parseXlsxFile, type ParsedPromo, type ParseResult } from "@/hooks/useXlsxParser";
+import { parseXlsxFile, filenameStem, type ParsedPromo, type ParseResult } from "@/hooks/useXlsxParser";
 
 interface StoreOption {
   id: string;
