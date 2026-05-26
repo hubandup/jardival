@@ -54,8 +54,8 @@ const Index = () => {
       {/* Tablette / desktop : expérience complète */}
       <div className="hidden md:block">
         <main>
-          <Hero products={products} />
           <CatalogueBanner />
+          <Hero products={products} />
           <PromoSection />
           <DriveToStoreBanner />
         </main>
