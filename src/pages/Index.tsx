@@ -55,6 +55,7 @@ const Index = () => {
       <div className="hidden md:block">
         <main>
           <Hero products={products} />
+          <CatalogueBanner />
           <PromoSection />
           <DriveToStoreBanner />
         </main>
