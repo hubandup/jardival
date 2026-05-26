@@ -130,14 +130,29 @@ export default function CatalogueXlsxImportDialog({
     setParsing(true);
     setUploading(true);
     try {
-      const result = await parseXlsxFile(file);
+      // Pré-charge la médiathèque pour résoudre les filenames du XLSX
+      // vers leurs vraies URLs publiques (le bucket préfixe avec un timestamp).
+      const { data: assets } = await supabase
+        .from("media_assets")
+        .select("path, public_url")
+        .eq("bucket", "media")
+        .limit(5000);
+      const stemMap = new Map<string, string>();
+      (assets || []).forEach((a: any) => {
+        if (!a?.path || !a?.public_url) return;
+        const stem = filenameStem(a.path);
+        if (stem && !stemMap.has(stem)) stemMap.set(stem, a.public_url as string);
+      });
+      const resolver = (filename: string) => stemMap.get(filenameStem(filename)) ?? null;
+
+      const result = await parseXlsxFile(file, resolver);
       setParse(result);
       setPromos(result.promos);
       if (!meta.title && result.suggestedTitle) {
         setMeta((m) => ({ ...m, title: result.suggestedTitle! }));
       }
 
-      // Upload to storage
+      // Upload du XLSX source
       const path = `xlsx-${Date.now()}.xlsx`;
       const { error } = await supabase.storage.from("catalogues").upload(path, file);
       if (error) {
@@ -146,7 +161,12 @@ export default function CatalogueXlsxImportDialog({
         const { data } = supabase.storage.from("catalogues").getPublicUrl(path);
         setXlsxUrl(data.publicUrl);
       }
-      toast.success(`${result.totalRows} lignes parsées`);
+      const missingTotal = result.promos.reduce((n, p) => n + p.missingFilenames.length, 0);
+      toast.success(
+        `${result.totalRows} lignes — ${result.publishedCount} avec image, ${result.draftCount} en brouillon${
+          missingTotal ? ` (${missingTotal} fichier(s) absent(s) de la médiathèque)` : ""
+        }`
+      );
       setStep(3);
     } catch (e: any) {
       toast.error("Parsing échoué : " + (e?.message || "erreur"));
