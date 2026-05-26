@@ -36,11 +36,13 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
   const { store: selectedStore } = useSelectedStore();
   const [shareOpen, setShareOpen] = useState(false);
   const [dirOpen, setDirOpen] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
   const price = formatPrice(p.price);
   const oldPrice = formatPrice(p.oldPrice);
   const slug = (p as Product & { slug?: string }).slug;
   const link = slug ? `/promotions/${slug}` : `/promotions`;
   const liked = isFavorite(p.id);
+  const images = (p.images && p.images.length > 0 ? p.images : [p.image]).filter(Boolean);
 
   const goToOffer = () => navigate(link);
   const stop = (e: React.MouseEvent | React.TouchEvent) => e.stopPropagation();
