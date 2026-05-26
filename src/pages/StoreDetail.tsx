@@ -180,17 +180,17 @@ const StoreDetail = () => {
   const today = new Date().getDay(); // 0 = dim, 1 = lun…
   const todayIndex = today === 0 ? 6 : today - 1;
   const todayHours = store.hours?.[todayIndex];
-  const storePromos = allPromos
-    .filter((p) => !p.store_ids || p.store_ids.length === 0 || p.store_ids.includes(store.id))
-    .slice(0, 4);
-  const promos = storePromos.map(promotionToProduct);
-  const endsAtDates = storePromos
+  const matchingPromos = allPromos.filter(
+    (p) => !p.store_ids || p.store_ids.length === 0 || p.store_ids.includes(store.id),
+  );
+  const promos = matchingPromos.slice(0, 4).map(promotionToProduct);
+  const endsAtDates = matchingPromos
     .map((p) => p.ends_at)
     .filter((d): d is string => !!d)
     .sort();
   const latestEndsAt = endsAtDates[endsAtDates.length - 1];
   const formattedEndsAt = latestEndsAt
-    ? new Date(latestEndsAt).toLocaleDateString("fr-FR", {
+    ? new Date(`${latestEndsAt}T12:00:00`).toLocaleDateString("fr-FR", {
         day: "numeric",
         month: "long",
         year: "numeric",
