@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { isActiveNow, type PromotionRow } from "./usePromotions";
+import { repairImageUrl } from "@/lib/imageUrl";
 
 export type HeroMode = "manual" | "random";
 
@@ -81,6 +82,12 @@ export function useHeroPromos() {
         .filter((r): r is string => !!r);
       let imageByRef = new Map<string, string | null>();
       let slugByRef = new Map<string, string | null>();
+      const { data: mediaAssets } = await supabase
+        .from("media_assets")
+        .select("public_url, path")
+        .eq("bucket", "media")
+        .like("mime_type", "image/%")
+        .limit(500);
       if (allRefs.length > 0) {
         const { data: products } = await supabase
           .from("products")
@@ -101,9 +108,14 @@ export function useHeroPromos() {
       }
 
       const resolveImage = (p: PromotionRow): string | null => {
-        if (p.image) return p.image;
+        const urls = Array.isArray(p.image_urls)
+          ? (p.image_urls as unknown[]).filter((u): u is string => typeof u === "string" && u.length > 0)
+          : [];
+        const source = urls[0] ?? p.image;
+        if (source) return repairImageUrl(source, mediaAssets ?? []);
         const ref = extractRef(p.description);
-        return ref ? imageByRef.get(ref) ?? null : null;
+        const productImage = ref ? imageByRef.get(ref) ?? null : null;
+        return productImage ? repairImageUrl(productImage, mediaAssets ?? []) : null;
       };
 
       const resolveHref = (p: PromotionRow): string => {
