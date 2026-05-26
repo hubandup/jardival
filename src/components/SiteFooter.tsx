@@ -35,7 +35,7 @@ export const SiteFooter = () => {
         </div>
       </div>
       <div className="container-px mx-auto mt-12 max-w-7xl border-t border-border pt-6 text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Jardival — Site vitrine de démonstration. Prix et promotions à titre indicatif.
+        © {new Date().getFullYear()} Jardival. Prix et promotions à titre indicatif : voir conditions générales de vente.
       </div>
     </footer>
   );
