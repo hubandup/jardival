@@ -9,6 +9,10 @@ export interface PromotionRow {
   price: number | null;
   original_price: number | null;
   image: string | null;
+  image_urls?: string[] | null;
+  status?: "published" | "draft" | null;
+  reference?: string | null;
+  extra_fields?: Record<string, any> | null;
   starts_at: string | null;
   ends_at: string | null;
   store_ids: string[] | null;
@@ -25,6 +29,7 @@ export interface PromotionRow {
 
 export function isActiveNow(p: PromotionRow): boolean {
   if (!p.active) return false;
+  if (p.status && p.status !== "published") return false;
   const today = new Date().toISOString().slice(0, 10);
   if (p.starts_at && today < p.starts_at) return false;
   if (p.ends_at && today > p.ends_at) return false;

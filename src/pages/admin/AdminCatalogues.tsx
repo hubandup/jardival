@@ -9,9 +9,10 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon, Sparkles, Palette, Wand2 } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ExternalLink, Image as ImageIcon, Sparkles, Palette, Wand2, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import CatalogueWorkflowDialog, { type WorkflowStep } from "@/components/admin/CatalogueWorkflowDialog";
+import CatalogueXlsxImportDialog from "@/components/admin/CatalogueXlsxImportDialog";
 import { getCurrentOrgId } from "@/lib/auth";
 import {
   AlertDialog,
