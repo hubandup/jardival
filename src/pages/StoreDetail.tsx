@@ -183,7 +183,7 @@ const StoreDetail = () => {
   const matchingPromos = allPromos.filter(
     (p) => !p.store_ids || p.store_ids.length === 0 || p.store_ids.includes(store.id),
   );
-  const promos = matchingPromos.slice(0, 4).map(promotionToProduct);
+  const promos = matchingPromos.map(promotionToProduct);
   const endsAtDates = matchingPromos
     .map((p) => p.catalogues?.ends_at)
     .filter((d): d is string => !!d)
