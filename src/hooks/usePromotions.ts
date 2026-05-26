@@ -12,6 +12,7 @@ export interface PromotionRow {
   image_urls?: string[] | null;
   status?: "published" | "draft" | null;
   reference?: string | null;
+  page_number?: number | null;
   extra_fields?: Record<string, any> | null;
   starts_at: string | null;
   ends_at: string | null;
