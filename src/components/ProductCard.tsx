@@ -4,31 +4,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMediaAlt } from "@/hooks/useMedia";
+import { sanitizeImageUrl } from "@/lib/imageUrl";
 
 interface Props {
   product: Product;
   featured?: boolean;
 }
-
-const sanitizeImageUrl = (src: string) => {
-  if (!src || src.startsWith("/") || src.startsWith("data:")) return src;
-  try {
-    const url = new URL(src);
-    url.pathname = url.pathname
-      .split("/")
-      .map((segment) => {
-        try {
-          return encodeURIComponent(decodeURIComponent(segment));
-        } catch {
-          return encodeURIComponent(segment);
-        }
-      })
-      .join("/");
-    return url.toString();
-  } catch {
-    return src.replace(/ /g, "%20");
-  }
-};
 
 export const ProductCard = ({ product, featured = false }: Props) => {
   const [errored, setErrored] = useState<Record<number, boolean>>({});

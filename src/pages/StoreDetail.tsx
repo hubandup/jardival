@@ -32,6 +32,7 @@ import { useStore, useStores } from "@/hooks/useStores";
 import { usePromotions } from "@/hooks/usePromotions";
 import { useProducts } from "@/hooks/useProducts";
 import { promotionToProduct } from "@/lib/promotion";
+import { imageKey, repairImageUrl } from "@/lib/imageUrl";
 import { useSeo } from "@/hooks/useSeo";
 import { useMediaAlt, useMediaAssets } from "@/hooks/useMedia";
 import storeHero from "@/assets/store-placeholder.jpg";
@@ -206,26 +207,16 @@ const StoreDetail = () => {
     }
     return undefined;
   };
-  const imageKey = (src: string) => {
-    const rawName = (() => {
-      try {
-        return decodeURIComponent(new URL(src).pathname.split("/").pop() ?? src);
-      } catch {
-        return src.split("/").pop() ?? src;
-      }
-    })();
-    return normalize(rawName.replace(/\.[^.]+$/, "").replace(/^\d{10,}-/, ""));
-  };
   const mediaImageCandidates = mediaAssets.map((asset) => ({
     url: asset.public_url,
     key: imageKey(asset.path || asset.public_url),
   }));
-  const repairImageUrl = (src: string) => {
+  const repairStoreImageUrl = (src: string) => {
     const key = imageKey(src);
     const match = mediaImageCandidates.find(
       (asset) => asset.key === key || asset.key.endsWith(key) || key.endsWith(asset.key),
     );
-    return match?.url ?? src;
+    return repairImageUrl(match?.url ?? src, mediaAssets);
   };
   const promos = matchingPromos.map((p) => {
     const base = promotionToProduct(p);
@@ -233,7 +224,7 @@ const StoreDetail = () => {
     if (match && match.images.length > 0) {
       return { ...base, image: match.image || base.image, images: match.images };
     }
-    const repairedImages = base.images.map(repairImageUrl);
+    const repairedImages = base.images.map(repairStoreImageUrl);
     return { ...base, image: repairedImages[0] ?? base.image, images: repairedImages };
   });
   const endsAtDates = matchingPromos

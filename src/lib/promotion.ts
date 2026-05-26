@@ -1,6 +1,7 @@
 import { Product } from "@/types/product";
 import { PromotionRow } from "@/hooks/usePromotions";
 import { CATALOGUE_PROMOS } from "@/data/cataloguePromos";
+import { repairImageUrl, type ImageAssetCandidate } from "@/lib/imageUrl";
 
 // Lookup par nom normalisé pour retrouver l'image locale du catalogue PDF
 // quand la promo en DB n'a pas encore d'image uploadée.
@@ -26,7 +27,11 @@ export function findCatalogueFallback(title: string): Product | undefined {
   return undefined;
 }
 
-export function promotionToProduct(p: PromotionRow): Product {
+export function promotionToProduct(
+  p: PromotionRow,
+  mediaAssetsOrIndex: ImageAssetCandidate[] | number = [],
+): Product {
+  const mediaAssets = Array.isArray(mediaAssetsOrIndex) ? mediaAssetsOrIndex : [];
   const price = p.price ?? 0;
   const oldPrice = p.original_price ?? undefined;
   const discount =
@@ -39,9 +44,10 @@ export function promotionToProduct(p: PromotionRow): Product {
     ? (p.image_urls as unknown[]).filter((u): u is string => typeof u === "string" && u.length > 0)
     : [];
   const fallback = urls.length === 0 && !p.image ? findCatalogueFallback(p.title) : undefined;
-  const images = urls.length > 0
+  const rawImages = urls.length > 0
     ? urls
     : [p.image ?? fallback?.image ?? "/placeholder.svg"];
+  const images = rawImages.map((src) => repairImageUrl(src, mediaAssets));
   const image = images[0];
 
   return {
