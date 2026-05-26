@@ -224,11 +224,6 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
 
       {/* Bloc d'infos en bas — fond blanc, texte sombre */}
       <div className="relative z-10 space-y-3 bg-white p-5 pb-6 text-foreground">
-        {p.category && (
-          <span className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            {p.category}
-          </span>
-        )}
         <h2 className="font-display text-2xl font-semibold leading-tight text-foreground">
           {p.name}
         </h2>
