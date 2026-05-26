@@ -30,6 +30,7 @@ import {
 } from "@/data/stores";
 import { useStore, useStores } from "@/hooks/useStores";
 import { usePromotions } from "@/hooks/usePromotions";
+import { useProducts } from "@/hooks/useProducts";
 import { promotionToProduct } from "@/lib/promotion";
 import { useSeo } from "@/hooks/useSeo";
 import { useMediaAlt } from "@/hooks/useMedia";
