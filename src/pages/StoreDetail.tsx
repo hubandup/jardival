@@ -365,10 +365,12 @@ const StoreDetail = () => {
                     <ProductCard key={p.id} product={p} />
                   ))}
                 </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Offres valables jusqu'au 16 mai 2026 dans votre magasin{" "}
-                  {store.name}.
-                </p>
+                {formattedEndsAt && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Offres valables jusqu'au {formattedEndsAt} dans votre magasin{" "}
+                    {store.name}.
+                  </p>
+                )}
               </div>
             )}
           </div>
