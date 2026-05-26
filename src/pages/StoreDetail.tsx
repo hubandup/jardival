@@ -180,10 +180,22 @@ const StoreDetail = () => {
   const today = new Date().getDay(); // 0 = dim, 1 = lun…
   const todayIndex = today === 0 ? 6 : today - 1;
   const todayHours = store.hours?.[todayIndex];
-  const promos = allPromos
+  const storePromos = allPromos
     .filter((p) => !p.store_ids || p.store_ids.length === 0 || p.store_ids.includes(store.id))
-    .slice(0, 4)
-    .map(promotionToProduct);
+    .slice(0, 4);
+  const promos = storePromos.map(promotionToProduct);
+  const endsAtDates = storePromos
+    .map((p) => p.ends_at)
+    .filter((d): d is string => !!d)
+    .sort();
+  const latestEndsAt = endsAtDates[endsAtDates.length - 1];
+  const formattedEndsAt = latestEndsAt
+    ? new Date(latestEndsAt).toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
   const nearby = allStores
     .filter((s) => s.id !== store.id)
     .map((s) => ({ ...s, distance: distanceKm(store.coords, s.coords) }))
@@ -353,10 +365,12 @@ const StoreDetail = () => {
                     <ProductCard key={p.id} product={p} />
                   ))}
                 </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Offres valables jusqu'au 16 mai 2026 dans votre magasin{" "}
-                  {store.name}.
-                </p>
+                {formattedEndsAt && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Offres valables jusqu'au {formattedEndsAt} dans votre magasin{" "}
+                    {store.name}.
+                  </p>
+                )}
               </div>
             )}
           </div>
