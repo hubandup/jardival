@@ -66,7 +66,7 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "cv11";
   }
-  h1, h2, h3, h4 { font-family: 'Fraunces', Georgia, serif; letter-spacing: -0.02em; }
+  h1, h2, h3, h4 { font-family: 'Barlow', ui-sans-serif, system-ui; letter-spacing: -0.02em; }
 }
 
 @layer components {
