@@ -40,8 +40,22 @@ function snake(s: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
-function processMedia(row: any[]): { urls: string[]; status: "published" | "draft" } {
+/**
+ * Normalise un filename en "stem" (sans extension, sans préfixe timestamp éventuel,
+ * sans casse) pour le matching contre la médiathèque.
+ */
+export function filenameStem(name: string): string {
+  const base = name.split("/").pop() || name;
+  const noExt = base.replace(/\.[^.]+$/, "");
+  return noExt.replace(/^\d{8,}-/, "").toLowerCase();
+}
+
+function processMedia(
+  row: any[],
+  resolver?: (filename: string) => string | null
+): { urls: string[]; status: "published" | "draft"; missing: string[] } {
   const urls: string[] = [];
+  const missing: string[] = [];
   for (const col of MEDIA_COLS) {
     const raw = row[colToIdx(col)];
     const filename = (raw == null ? "" : String(raw)).trim();
@@ -49,9 +63,11 @@ function processMedia(row: any[]): { urls: string[]; status: "published" | "draf
     const ext = filename.split(".").pop()?.toLowerCase() || "";
     if (FORBIDDEN_EXT.includes(ext)) continue;
     if (!ALLOWED_EXT.includes(ext)) continue;
-    urls.push(MEDIA_BASE_URL + filename);
+    const resolved = resolver ? resolver(filename) : MEDIA_BASE_URL + filename;
+    if (resolved) urls.push(resolved);
+    else missing.push(filename);
   }
-  return { urls, status: urls.length === 0 ? "draft" : "published" };
+  return { urls, status: urls.length === 0 ? "draft" : "published", missing };
 }
 
 function toNumber(v: any): number | null {
@@ -83,6 +99,7 @@ export interface ParsedPromo {
   extra_fields: Record<string, any>;
   // UI flags
   warnings: string[];
+  missingFilenames: string[];
 }
 
 export interface ParseResult {
@@ -94,13 +111,15 @@ export interface ParseResult {
   suggestedTitle: string | null;
 }
 
-export async function parseXlsxFile(file: File): Promise<ParseResult> {
+export async function parseXlsxFile(
+  file: File,
+  resolver?: (filename: string) => string | null
+): Promise<ParseResult> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const aoa = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, defval: null, raw: true });
 
-  // B2 suggested title
   const suggestedTitle =
     aoa[1] && aoa[1][1] != null && String(aoa[1][1]).trim() !== ""
       ? String(aoa[1][1]).trim()
@@ -117,7 +136,7 @@ export async function parseXlsxFile(file: File): Promise<ParseResult> {
     const titleVal = row[titleIdx];
     if (titleVal == null || String(titleVal).trim() === "") break;
 
-    const media = processMedia(row);
+    const media = processMedia(row, resolver);
 
     const extra: Record<string, any> = {};
     for (const col of EXTRA_COLS) {
@@ -129,7 +148,8 @@ export async function parseXlsxFile(file: File): Promise<ParseResult> {
     }
 
     const warnings: string[] = [];
-    if (media.status === "draft") warnings.push("Aucune image valide (jpg/png/webp)");
+    if (media.status === "draft") warnings.push("Aucune image trouvée dans la médiathèque");
+    else if (media.missing.length) warnings.push(`${media.missing.length} image(s) introuvable(s)`);
 
     promos.push({
       rowIndex: r + 1,
@@ -152,6 +172,7 @@ export async function parseXlsxFile(file: File): Promise<ParseResult> {
       status: media.status,
       extra_fields: extra,
       warnings,
+      missingFilenames: media.missing,
     });
   }
 
