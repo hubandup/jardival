@@ -379,6 +379,12 @@ export default function AdminCatalogues() {
           onCompleted={() => qc.invalidateQueries({ queryKey: ["admin-catalogues"] })}
         />
       )}
+
+      <CatalogueXlsxImportDialog
+        open={xlsxOpen}
+        onOpenChange={setXlsxOpen}
+        onCompleted={() => qc.invalidateQueries({ queryKey: ["admin-catalogues"] })}
+      />
     </div>
   );
 }
