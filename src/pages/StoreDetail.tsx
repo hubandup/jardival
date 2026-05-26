@@ -42,6 +42,7 @@ const StoreDetail = () => {
   const { data: store, isLoading } = useStore(id);
   const { data: allStores = [] } = useStores();
   const { data: allPromos = [] } = usePromotions();
+  const { data: allProducts = [] } = useProducts();
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
 
