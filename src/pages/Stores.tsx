@@ -7,6 +7,8 @@ import { NearestStore } from "@/components/NearestStore";
 import { DEPARTMENTS, Store, distanceKm } from "@/data/stores";
 import { useStores } from "@/hooks/useStores";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { usePromotionByKey } from "@/hooks/usePromotionByKey";
+import { StorePromoContextBanner } from "@/components/StorePromoContextBanner";
 import { useSeo } from "@/hooks/useSeo";
 import { Loader2, Compass } from "lucide-react";
 import { DirectionsMenu } from "@/components/DirectionsMenu";
@@ -23,17 +25,28 @@ import {
 const Stores = () => {
   const [searchParams] = useSearchParams();
   const autoGeo = searchParams.get("geo") === "1";
+  const promoKey = searchParams.get("promo");
   const [query, setQuery] = useState("");
   const [dept, setDept] = useState<string>("Tous");
   const [activeId, setActiveId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLElement | null>>({});
   const { data: stores = [], isLoading } = useStores();
-  const { state: geoState } = useGeolocation(autoGeo);
+  // Auto-geo dès qu'on a un contexte promo, même sans le flag explicite ?geo=1
+  const { state: geoState } = useGeolocation(autoGeo || !!promoKey);
   const userPos = geoState.status === "ready" ? geoState.position : null;
+  const { data: promoCtx } = usePromotionByKey(promoKey);
+  const promoStoreIds = useMemo(
+    () =>
+      promoCtx?.row?.store_ids && promoCtx.row.store_ids.length > 0
+        ? new Set(promoCtx.row.store_ids)
+        : null,
+    [promoCtx],
+  );
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
+
 
   useSeo({
     title: "Magasins Jardival en Bourgogne-Franche-Comté — Trouvez votre jardinerie",
