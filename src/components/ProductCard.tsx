@@ -11,9 +11,18 @@ interface Props {
 }
 
 export const ProductCard = ({ product, featured = false }: Props) => {
-  const [loaded, setLoaded] = useState(false);
-  const [errored, setErrored] = useState(false);
+  const [errored, setErrored] = useState<Record<number, boolean>>({});
+  const [loaded, setLoaded] = useState<Record<number, boolean>>({});
+  const [current, setCurrent] = useState(0);
   const alt = useMediaAlt(product.image, product.name);
+
+  const images =
+    product.images && product.images.length > 0
+      ? product.images
+      : product.image
+        ? [product.image]
+        : [];
+  const allErrored = images.length > 0 && images.every((_, i) => errored[i]);
 
   return (
     <Link
@@ -21,25 +30,53 @@ export const ProductCard = ({ product, featured = false }: Props) => {
       className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card"
     >
       <div className="relative aspect-square overflow-hidden bg-muted">
-        {!errored ? (
+        {!allErrored && images.length > 0 ? (
           <>
-            {!loaded && (
-              <Skeleton className="absolute inset-0 rounded-none" aria-hidden />
+            {images.map((src, i) => (
+              <div
+                key={src + i}
+                className={`absolute inset-0 transition-opacity duration-500 ${i === current ? "opacity-100" : "opacity-0"}`}
+                aria-hidden={i !== current}
+              >
+                {!loaded[i] && !errored[i] && (
+                  <Skeleton className="absolute inset-0 rounded-none" aria-hidden />
+                )}
+                <img
+                  src={src}
+                  alt={alt}
+                  loading="lazy"
+                  onLoad={() => setLoaded((s) => ({ ...s, [i]: true }))}
+                  onError={() => setErrored((s) => ({ ...s, [i]: true }))}
+                  className={`h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-105 ${loaded[i] ? "opacity-100" : "opacity-0"}`}
+                />
+              </div>
+            ))}
+
+            {images.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
+                {images.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setCurrent(i);
+                    }}
+                    aria-label={`Image ${i + 1}`}
+                    className={`h-1.5 rounded-full transition-all ${i === current ? "w-5 bg-foreground" : "w-1.5 bg-foreground/30"}`}
+                  />
+                ))}
+              </div>
             )}
-            <img
-              src={product.image}
-              alt={alt}
-              loading="lazy"
-              onLoad={() => setLoaded(true)}
-              onError={() => setErrored(true)}
-              className={`h-full w-full object-contain p-4 transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
-            />
           </>
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">Image indisponible</div>
+          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+            Image indisponible
+          </div>
         )}
 
-        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
+        <div className="absolute left-3 top-3 z-10 flex flex-col gap-1.5">
           {product.discount > 0 && (
             <Badge className="bg-gradient-promo border-0 text-accent-foreground shadow-soft font-semibold">
               -{product.discount}%
@@ -53,7 +90,7 @@ export const ProductCard = ({ product, featured = false }: Props) => {
         </div>
 
         {featured && (
-          <div className="absolute right-3 top-3">
+          <div className="absolute right-3 top-3 z-10">
             <Badge className="bg-foreground text-background border-0">Best</Badge>
           </div>
         )}
