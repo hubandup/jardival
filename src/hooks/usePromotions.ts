@@ -28,9 +28,16 @@ export interface PromotionRow {
   } | null;
 }
 
+export function hasImage(p: PromotionRow): boolean {
+  if (p.image && p.image.trim() !== "") return true;
+  if (p.image_urls && p.image_urls.some((u) => u && u.trim() !== "")) return true;
+  return false;
+}
+
 export function isActiveNow(p: PromotionRow): boolean {
   if (!p.active) return false;
   if (p.status && p.status !== "published") return false;
+  if (!hasImage(p)) return false;
   const today = new Date().toISOString().slice(0, 10);
   if (p.starts_at && today < p.starts_at) return false;
   if (p.ends_at && today > p.ends_at) return false;
