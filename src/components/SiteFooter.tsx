@@ -13,12 +13,20 @@ export const SiteFooter = () => {
           </p>
         </div>
         <div>
-          <h4 className="mb-4 text-sm font-semibold text-foreground">Catégories</h4>
+          <h4 className="mb-4 text-sm font-semibold text-foreground">Jardival</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>Arrosage & irrigation</li>
-            <li>Mobilier de jardin</li>
-            <li>Outillage</li>
-            <li>Décoration extérieure</li>
+            <li>Favoris</li>
+            <li>
+              <Link to="/promotions" className="transition-colors hover:text-primary">
+                Promotions
+              </Link>
+            </li>
+            <li>Catalogue</li>
+            <li>
+              <Link to="/magasins" className="transition-colors hover:text-primary">
+                Magasins
+              </Link>
+            </li>
           </ul>
         </div>
         <div>
