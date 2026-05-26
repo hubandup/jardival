@@ -60,12 +60,12 @@ export const ProductCard = ({ product, featured = false }: Props) => {
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-          {product.category}
-        </p>
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground min-h-[2.5rem]">
           {product.name}
         </h3>
+        <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground">
+          {product.category}
+        </p>
         <p className="text-[11px] text-muted-foreground">Réf. {product.ref}</p>
 
         <div className="mt-auto flex items-baseline gap-2 pt-2">
