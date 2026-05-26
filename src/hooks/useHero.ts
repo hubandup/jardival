@@ -87,7 +87,7 @@ export function useHeroPromos() {
         .select("public_url, path")
         .eq("bucket", "media")
         .like("mime_type", "image/%")
-        .limit(500);
+        .limit(1000);
       if (allRefs.length > 0) {
         const { data: products } = await supabase
           .from("products")
