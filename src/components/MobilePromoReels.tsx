@@ -36,11 +36,13 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
   const { store: selectedStore } = useSelectedStore();
   const [shareOpen, setShareOpen] = useState(false);
   const [dirOpen, setDirOpen] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
   const price = formatPrice(p.price);
   const oldPrice = formatPrice(p.oldPrice);
   const slug = (p as Product & { slug?: string }).slug;
   const link = slug ? `/promotions/${slug}` : `/promotions`;
   const liked = isFavorite(p.id);
+  const images = (p.images && p.images.length > 0 ? p.images : [p.image]).filter(Boolean);
 
   const goToOffer = () => navigate(link);
   const stop = (e: React.MouseEvent | React.TouchEvent) => e.stopPropagation();
@@ -92,24 +94,51 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
       onKeyDown={(e) => { if (e.key === "Enter") goToOffer(); }}
       className="reels-scroll relative flex h-[calc(100dvh-4rem)] w-full snap-start snap-always flex-col overflow-hidden bg-white cursor-pointer"
     >
-      {/* Image pleine largeur, sans bord arrondi */}
-      <div className="absolute inset-0 flex items-center justify-center pb-72">
-        {p.image && priority !== "off" ? (
-          <img
-            src={p.image}
-            alt={p.name}
-            className="h-full w-full object-contain"
-            loading={priority === "high" ? "eager" : "lazy"}
-            // @ts-expect-error fetchpriority est valide HTML mais pas encore typé partout
-            fetchpriority={priority === "high" ? "high" : "low"}
-            decoding="async"
-          />
-        ) : p.image ? (
-          <div className="h-full w-full" aria-hidden />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-primary/10 to-accent/10" />
-        )}
+      {/* Carrousel horizontal images (swipe latéral) */}
+      <div
+        className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory pb-72"
+        style={{ scrollbarWidth: "none" }}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const i = Math.round(el.scrollLeft / el.clientWidth);
+          if (i !== imgIdx) setImgIdx(i);
+        }}
+        onClick={stop}
+      >
+        {images.map((src, i) => (
+          <div
+            key={`${src}-${i}`}
+            className="relative flex h-full w-full shrink-0 snap-center items-center justify-center"
+          >
+            {src && priority !== "off" ? (
+              <img
+                src={src}
+                alt={`${p.name}${images.length > 1 ? ` (${i + 1}/${images.length})` : ""}`}
+                className="h-full w-full object-contain"
+                loading={priority === "high" && i === 0 ? "eager" : "lazy"}
+                // @ts-expect-error fetchpriority est valide HTML mais pas encore typé partout
+                fetchpriority={priority === "high" && i === 0 ? "high" : "low"}
+                decoding="async"
+              />
+            ) : src ? (
+              <div className="h-full w-full" aria-hidden />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-br from-primary/10 to-accent/10" />
+            )}
+          </div>
+        ))}
       </div>
+      {/* Dots compteur images si plusieurs */}
+      {images.length > 1 && (
+        <div className="pointer-events-none absolute left-1/2 z-10 flex -translate-x-1/2 gap-1.5" style={{ top: "3.5rem" }}>
+          {images.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 rounded-full transition-all ${i === imgIdx ? "w-5 bg-foreground/80" : "w-1.5 bg-foreground/30"}`}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Badges en haut */}
       <div className="relative z-10 flex items-start justify-between gap-2 p-4">
@@ -203,6 +232,13 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
         <h2 className="font-display text-2xl font-semibold leading-tight text-foreground">
           {p.name}
         </h2>
+        {(p.pageNumber || p.reference) && (
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            {p.pageNumber ? `Page ${p.pageNumber}` : ""}
+            {p.pageNumber && p.reference ? " · " : ""}
+            {p.reference ? `Réf. ${p.reference}` : ""}
+          </p>
+        )}
         {(p as Product & { description?: string }).description && (
           <p className="line-clamp-2 text-sm text-muted-foreground">
             {(p as Product & { description?: string }).description}
