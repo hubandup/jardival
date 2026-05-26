@@ -232,6 +232,13 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
         <h2 className="font-display text-2xl font-semibold leading-tight text-foreground">
           {p.name}
         </h2>
+        {(p.pageNumber || p.reference) && (
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            {p.pageNumber ? `Page ${p.pageNumber}` : ""}
+            {p.pageNumber && p.reference ? " · " : ""}
+            {p.reference ? `Réf. ${p.reference}` : ""}
+          </p>
+        )}
         {(p as Product & { description?: string }).description && (
           <p className="line-clamp-2 text-sm text-muted-foreground">
             {(p as Product & { description?: string }).description}
