@@ -214,7 +214,7 @@ const ProductDetail = () => {
                 </span>
               ) : (
                 <>
-                  <span className="font-display text-5xl font-semibold text-foreground">
+                  <span className="font-display text-5xl font-semibold text-accent">
                     {product.price.toFixed(2)}€
                   </span>
                   {product.oldPrice && (

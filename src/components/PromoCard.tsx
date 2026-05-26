@@ -107,7 +107,7 @@ export const PromoCard = ({ promo }: { promo: PromoCardData }) => {
         {(price || oldPrice) && (
           <div className="flex items-end gap-2">
             {price && (
-              <span className="font-display text-2xl font-bold">{price}</span>
+              <span className="font-display text-2xl font-bold text-accent">{price}</span>
             )}
             {oldPrice && (
               <span className="pb-1 text-xs text-white/70 line-through">

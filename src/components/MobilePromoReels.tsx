@@ -242,7 +242,7 @@ const ReelSlide = ({ promo: p, index: idx, total, validityLabel, priority, pause
 
         <div className="flex items-end gap-3 pt-1">
           {price && (
-            <span className="font-display text-3xl font-bold text-foreground">{price}</span>
+            <span className="font-display text-3xl font-bold text-accent">{price}</span>
           )}
           {oldPrice && (
             <span className="pb-1 text-sm text-muted-foreground line-through">
