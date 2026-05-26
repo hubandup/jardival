@@ -1,5 +1,6 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { Hero } from "@/components/Hero";
+import { CatalogueBanner } from "@/components/CatalogueBanner";
 import { PromoSection } from "@/components/PromoSection";
 import { DriveToStoreBanner } from "@/components/DriveToStoreBanner";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -54,6 +55,7 @@ const Index = () => {
       <div className="hidden md:block">
         <main>
           <Hero products={products} />
+          <CatalogueBanner />
           <PromoSection />
           <DriveToStoreBanner />
         </main>
