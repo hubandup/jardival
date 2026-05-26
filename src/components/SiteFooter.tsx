@@ -30,15 +30,14 @@ export const SiteFooter = () => {
           </ul>
         </div>
         <div>
-          <h4 className="mb-4 text-sm font-semibold text-foreground">Nous trouver</h4>
+          <h4 className="mb-4 text-sm font-semibold text-foreground">Jardival</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
               <Link to="/magasins" className="transition-colors hover:text-primary">
                 {STORES.length} magasins en région
               </Link>
             </li>
-            <li>Service client</li>
-            <li>Catalogue PDF</li>
+            <li>Télécharger le catalogue (PDF)</li>
           </ul>
         </div>
       </div>
