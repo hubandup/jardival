@@ -481,7 +481,7 @@ export const MobilePromoReels = () => {
           C'est tout pour aujourd'hui&nbsp;!
         </h2>
         <p className="max-w-xs text-primary-foreground/80">
-          Retrouve l'intégralité du catalogue ou trouve ton magasin Jardival.
+          Retrouve toutes les promotions ou trouve ton magasin Jardival.
         </p>
         <div className="flex w-full max-w-xs flex-col gap-3">
           <Link
@@ -491,18 +491,13 @@ export const MobilePromoReels = () => {
             Toutes les promotions
           </Link>
           <Link
-            to="/catalogue"
-            className="rounded-full border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur"
-          >
-            Feuilleter le catalogue
-          </Link>
-          <Link
             to="/magasins"
             className="rounded-full border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur"
           >
             Trouver un magasin
           </Link>
         </div>
+
       </div>
     </div>
   );

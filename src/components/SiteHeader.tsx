@@ -17,19 +17,14 @@ export const SiteHeader = () => {
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
           {onHome ? (
-            <>
-              <a href="#promos" className="text-foreground/70 transition-colors hover:text-accent">Promos</a>
-              <a href="#catalogue" className="text-foreground/70 transition-colors hover:text-primary">Catalogue</a>
-            </>
+            <a href="#promos" className="text-foreground/70 transition-colors hover:text-accent">Promos</a>
           ) : (
-            <>
-              <Link to="/#promos" className="text-foreground/70 transition-colors hover:text-accent">Promos</Link>
-              <Link to="/#catalogue" className="text-foreground/70 transition-colors hover:text-primary">Catalogue</Link>
-            </>
+            <Link to="/#promos" className="text-foreground/70 transition-colors hover:text-accent">Promos</Link>
           )}
           <Link to="/promotions" className="text-foreground/70 transition-colors hover:text-accent">Toutes les promos</Link>
           <Link to="/magasins" className="text-foreground/70 transition-colors hover:text-primary">Magasins</Link>
         </nav>
+
         {store && (
           <Link
             to="/magasins"
