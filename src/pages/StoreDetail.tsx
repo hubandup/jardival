@@ -33,7 +33,7 @@ import { usePromotions } from "@/hooks/usePromotions";
 import { useProducts } from "@/hooks/useProducts";
 import { promotionToProduct } from "@/lib/promotion";
 import { useSeo } from "@/hooks/useSeo";
-import { useMediaAlt } from "@/hooks/useMedia";
+import { useMediaAlt, useMediaAssets } from "@/hooks/useMedia";
 import storeHero from "@/assets/store-placeholder.jpg";
 
 const StoreDetail = () => {
@@ -43,6 +43,7 @@ const StoreDetail = () => {
   const { data: allStores = [] } = useStores();
   const { data: allPromos = [] } = usePromotions();
   const { data: allProducts = [] } = useProducts();
+  const { data: mediaAssets = [] } = useMediaAssets({ bucket: "media", type: "image" });
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
 
@@ -205,13 +206,35 @@ const StoreDetail = () => {
     }
     return undefined;
   };
+  const imageKey = (src: string) => {
+    const rawName = (() => {
+      try {
+        return decodeURIComponent(new URL(src).pathname.split("/").pop() ?? src);
+      } catch {
+        return src.split("/").pop() ?? src;
+      }
+    })();
+    return normalize(rawName.replace(/\.[^.]+$/, "").replace(/^\d{10,}-/, ""));
+  };
+  const mediaImageCandidates = mediaAssets.map((asset) => ({
+    url: asset.public_url,
+    key: imageKey(asset.path || asset.public_url),
+  }));
+  const repairImageUrl = (src: string) => {
+    const key = imageKey(src);
+    const match = mediaImageCandidates.find(
+      (asset) => asset.key === key || asset.key.endsWith(key) || key.endsWith(asset.key),
+    );
+    return match?.url ?? src;
+  };
   const promos = matchingPromos.map((p) => {
     const base = promotionToProduct(p);
     const match = findProductMatch(p);
     if (match && match.images.length > 0) {
       return { ...base, image: match.image || base.image, images: match.images };
     }
-    return base;
+    const repairedImages = base.images.map(repairImageUrl);
+    return { ...base, image: repairedImages[0] ?? base.image, images: repairedImages };
   });
   const endsAtDates = matchingPromos
     .map((p) => p.catalogues?.ends_at)
