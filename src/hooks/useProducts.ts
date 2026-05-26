@@ -107,8 +107,15 @@ export function useProduct(slugOrId: string | undefined) {
           ? Math.round(((oldPrice - price) / oldPrice) * 100)
           : 0;
       const { findCatalogueFallback } = await import("@/lib/promotion");
-      const fallback = !promo.image ? findCatalogueFallback(promo.title) : undefined;
-      const image = promo.image ?? fallback?.image ?? "";
+      const urls: string[] = Array.isArray(promo.image_urls)
+        ? (promo.image_urls as unknown[]).filter(
+            (u): u is string => typeof u === "string" && u.length > 0,
+          )
+        : [];
+      const hasAnyImage = !!promo.image || urls.length > 0;
+      const fallback = !hasAnyImage ? findCatalogueFallback(promo.title) : undefined;
+      const image = promo.image ?? urls[0] ?? fallback?.image ?? "";
+      const images = urls.length > 0 ? urls : image ? [image] : [];
       const row: ProductRow = {
         id: promo.id,
         slug: promo.slug ?? null,
@@ -117,7 +124,8 @@ export function useProduct(slugOrId: string | undefined) {
         category: promo.description ?? "Promotion",
         description: promo.description,
         image,
-        images: image ? [image] : null,
+        images,
+
         price,
         old_price: oldPrice ?? null,
         discount,
