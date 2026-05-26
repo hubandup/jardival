@@ -34,19 +34,30 @@ export function promotionToProduct(p: PromotionRow): Product {
       ? Math.round(((oldPrice - price) / oldPrice) * 100)
       : 0;
 
-  const fallback = !p.image ? findCatalogueFallback(p.title) : undefined;
-  const image = p.image ?? fallback?.image ?? "/placeholder.svg";
+  // Préférer image_urls (import XLSX) → image legacy → fallback catalogue PDF
+  const urls = Array.isArray(p.image_urls)
+    ? (p.image_urls as unknown[]).filter((u): u is string => typeof u === "string" && u.length > 0)
+    : [];
+  const fallback = urls.length === 0 && !p.image ? findCatalogueFallback(p.title) : undefined;
+  const images = urls.length > 0
+    ? urls
+    : [p.image ?? fallback?.image ?? "/placeholder.svg"];
+  const image = images[0];
 
   return {
     id: p.id,
     slug: p.slug ?? undefined,
-    ref: p.id.slice(0, 8),
+    ref: p.reference ?? p.id.slice(0, 8),
     name: p.title,
     category: p.description ?? fallback?.category ?? "Promotion",
+    description: p.description ?? undefined,
     image,
-    images: [image],
+    images,
     price,
     oldPrice,
     discount,
+    pageNumber: p.page_number ?? undefined,
+    reference: p.reference ?? undefined,
+    storeIds: p.store_ids ?? undefined,
   };
 }
