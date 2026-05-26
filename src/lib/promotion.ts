@@ -27,7 +27,11 @@ export function findCatalogueFallback(title: string): Product | undefined {
   return undefined;
 }
 
-export function promotionToProduct(p: PromotionRow, mediaAssets: ImageAssetCandidate[] = []): Product {
+export function promotionToProduct(
+  p: PromotionRow,
+  mediaAssetsOrIndex: ImageAssetCandidate[] | number = [],
+): Product {
+  const mediaAssets = Array.isArray(mediaAssetsOrIndex) ? mediaAssetsOrIndex : [];
   const price = p.price ?? 0;
   const oldPrice = p.original_price ?? undefined;
   const discount =
