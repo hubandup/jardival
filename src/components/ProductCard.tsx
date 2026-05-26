@@ -111,7 +111,7 @@ export const ProductCard = ({ product, featured = false }: Props) => {
         <div className="mt-auto flex items-baseline gap-2 pt-2">
           {product.price > 0 ? (
             <>
-              <span className="font-display text-xl font-semibold text-foreground">
+              <span className="font-display text-xl font-semibold text-accent">
                 {product.price.toFixed(2)}€
               </span>
               {product.oldPrice && product.oldPrice > product.price && (

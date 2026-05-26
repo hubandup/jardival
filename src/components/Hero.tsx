@@ -85,7 +85,7 @@ export const Hero = ({ products }: Props) => {
                     {(p.price || p.original_price) && (
                       <p className="mt-1 flex items-baseline gap-1.5">
                         {p.price && (
-                          <span className="text-sm font-bold text-primary-foreground">
+                          <span className="text-sm font-bold text-accent">
                             {p.price.toFixed(2).replace(".", ",")} €
                           </span>
                         )}

@@ -71,7 +71,7 @@ export const StorePromoContextBanner = ({
             </h2>
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               {price && (
-                <span className="font-display text-lg font-bold text-foreground md:text-xl">
+                <span className="font-display text-lg font-bold text-accent md:text-xl">
                   {price}
                 </span>
               )}
