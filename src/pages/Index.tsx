@@ -48,6 +48,7 @@ const Index = () => {
 
       {/* Mobile : reels promos plein écran */}
       <main className="md:hidden">
+        <CatalogueBanner simplified />
         <MobilePromoReels />
       </main>
 
