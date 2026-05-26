@@ -73,6 +73,11 @@
   .container-px { @apply px-5 md:px-10 lg:px-16; }
 }
 
+@layer utilities {
+  .tracking-wider { letter-spacing: 0 !important; }
+  .uppercase { text-transform: none !important; }
+}
+
 /* Keep Leaflet maps below Radix overlays (dropdowns, popovers, dialogs) */
 .leaflet-pane,
 .leaflet-top,
