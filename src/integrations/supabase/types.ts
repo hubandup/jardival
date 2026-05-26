@@ -163,11 +163,13 @@ export type Database = {
           ends_at: string | null
           hero_colors: Json | null
           id: string
+          import_method: string | null
           organization_id: string
           pdf_url: string | null
           starts_at: string | null
           title: string
           updated_at: string
+          xlsx_url: string | null
         }
         Insert: {
           active?: boolean
@@ -177,11 +179,13 @@ export type Database = {
           ends_at?: string | null
           hero_colors?: Json | null
           id?: string
+          import_method?: string | null
           organization_id: string
           pdf_url?: string | null
           starts_at?: string | null
           title: string
           updated_at?: string
+          xlsx_url?: string | null
         }
         Update: {
           active?: boolean
@@ -191,11 +195,13 @@ export type Database = {
           ends_at?: string | null
           hero_colors?: Json | null
           id?: string
+          import_method?: string | null
           organization_id?: string
           pdf_url?: string | null
           starts_at?: string | null
           title?: string
           updated_at?: string
+          xlsx_url?: string | null
         }
         Relationships: [
           {
@@ -571,17 +577,23 @@ export type Database = {
           description: string | null
           display_order: number
           ends_at: string | null
+          external_id: string | null
+          extra_fields: Json | null
           hero_featured: boolean
           id: string
           image: string | null
           image_bbox_norm: Json | null
+          image_urls: Json | null
           is_rasterized: boolean | null
           match_method: string | null
           match_score: number | null
           original_price: number | null
+          page_number: number | null
           price: number | null
+          reference: string | null
           slug: string | null
           starts_at: string | null
+          status: string
           store_ids: string[] | null
           title: string
           updated_at: string
@@ -593,17 +605,23 @@ export type Database = {
           description?: string | null
           display_order?: number
           ends_at?: string | null
+          external_id?: string | null
+          extra_fields?: Json | null
           hero_featured?: boolean
           id?: string
           image?: string | null
           image_bbox_norm?: Json | null
+          image_urls?: Json | null
           is_rasterized?: boolean | null
           match_method?: string | null
           match_score?: number | null
           original_price?: number | null
+          page_number?: number | null
           price?: number | null
+          reference?: string | null
           slug?: string | null
           starts_at?: string | null
+          status?: string
           store_ids?: string[] | null
           title: string
           updated_at?: string
@@ -615,17 +633,23 @@ export type Database = {
           description?: string | null
           display_order?: number
           ends_at?: string | null
+          external_id?: string | null
+          extra_fields?: Json | null
           hero_featured?: boolean
           id?: string
           image?: string | null
           image_bbox_norm?: Json | null
+          image_urls?: Json | null
           is_rasterized?: boolean | null
           match_method?: string | null
           match_score?: number | null
           original_price?: number | null
+          page_number?: number | null
           price?: number | null
+          reference?: string | null
           slug?: string | null
           starts_at?: string | null
+          status?: string
           store_ids?: string[] | null
           title?: string
           updated_at?: string
