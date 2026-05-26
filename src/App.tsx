@@ -44,12 +44,12 @@ const App = () => (
         <AuthProvider>
           <PageTracker />
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/produit/:id" element={<ProductDetail />} />
+            <Route path="/" element={<PromoPeriodGuard><Index /></PromoPeriodGuard>} />
+            <Route path="/produit/:id" element={<PromoPeriodGuard><ProductDetail /></PromoPeriodGuard>} />
             <Route path="/magasins" element={<Stores />} />
             <Route path="/magasins/:id" element={<StoreDetail />} />
-            <Route path="/catalogue" element={<Catalogue />} />
-            <Route path="/promotions" element={<Promotions />} />
+            <Route path="/catalogue" element={<PromoPeriodGuard><Catalogue /></PromoPeriodGuard>} />
+            <Route path="/promotions" element={<PromoPeriodGuard><Promotions /></PromoPeriodGuard>} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
             <Route path="/admin/reset-password" element={<AdminResetPassword />} />
