@@ -7,7 +7,7 @@ export const SiteFooter = () => {
     <footer id="about" className="border-t border-border bg-background py-16">
       <div className="container-px mx-auto grid max-w-7xl gap-10 md:grid-cols-3">
         <div className="space-y-4">
-          <img src={logo} alt="Jardival" className="h-10 w-auto" />
+          <img src={logo} alt="Jardival" className="h-20 w-auto" />
           <p className="max-w-xs text-sm text-muted-foreground">
             Jardival, l'enseigne jardin du réseau Point Vert. Plus de 1000 produits pour aménager, entretenir et embellir votre extérieur.
           </p>
