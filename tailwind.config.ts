@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["Fraunces", "Georgia", "serif"],
+        display: ["Barlow", "ui-sans-serif", "system-ui"],
         sans: ["Inter", "ui-sans-serif", "system-ui"],
       },
       backgroundImage: {
