@@ -90,6 +90,7 @@ const Stores = () => {
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     const deptFiltered = stores.filter((s) => {
+      if (promoStoreIds && !promoStoreIds.has(s.id)) return false;
       if (dept !== "Tous" && s.department !== dept) return false;
       if (!q) return true;
       return (
@@ -106,11 +107,26 @@ const Stores = () => {
         .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
     }
     return deptFiltered.map((s) => ({ ...s, distance: undefined as number | undefined }));
-  }, [stores, query, dept, userPos]);
+  }, [stores, query, dept, userPos, promoStoreIds]);
+
+  const promoMatchingCount = useMemo(() => {
+    if (!promoStoreIds) return 0;
+    return stores.filter((s) => promoStoreIds.has(s.id)).length;
+  }, [stores, promoStoreIds]);
 
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
+
+      {promoCtx?.product && (
+        <StorePromoContextBanner
+          promo={promoCtx.product}
+          matchingCount={promoMatchingCount}
+          totalCount={stores.length}
+          clearHref="/magasins"
+        />
+      )}
+
 
       {/* Breadcrumb — hidden on mobile to keep "snap" hero clean */}
       <div className="hidden border-b border-border bg-card md:block">
