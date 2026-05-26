@@ -10,6 +10,26 @@ interface Props {
   featured?: boolean;
 }
 
+const sanitizeImageUrl = (src: string) => {
+  if (!src || src.startsWith("/") || src.startsWith("data:")) return src;
+  try {
+    const url = new URL(src);
+    url.pathname = url.pathname
+      .split("/")
+      .map((segment) => {
+        try {
+          return encodeURIComponent(decodeURIComponent(segment));
+        } catch {
+          return encodeURIComponent(segment);
+        }
+      })
+      .join("/");
+    return url.toString();
+  } catch {
+    return src.replace(/ /g, "%20");
+  }
+};
+
 export const ProductCard = ({ product, featured = false }: Props) => {
   const [errored, setErrored] = useState<Record<number, boolean>>({});
   const [loaded, setLoaded] = useState<Record<number, boolean>>({});
@@ -18,11 +38,13 @@ export const ProductCard = ({ product, featured = false }: Props) => {
 
   const images =
     product.images && product.images.length > 0
-      ? product.images
+      ? product.images.map(sanitizeImageUrl)
       : product.image
-        ? [product.image]
+        ? [sanitizeImageUrl(product.image)]
         : [];
   const allErrored = images.length > 0 && images.every((_, i) => errored[i]);
+  const visibleIndex = images.findIndex((_, i) => !errored[i]);
+  const currentIndex = !errored[current] ? current : visibleIndex >= 0 ? visibleIndex : current;
 
   return (
     <Link
@@ -35,8 +57,8 @@ export const ProductCard = ({ product, featured = false }: Props) => {
             {images.map((src, i) => (
               <div
                 key={src + i}
-                className={`absolute inset-0 transition-opacity duration-500 ${i === current ? "opacity-100" : "opacity-0"}`}
-                aria-hidden={i !== current}
+                className={`absolute inset-0 transition-opacity duration-500 ${i === currentIndex ? "opacity-100" : "opacity-0"}`}
+                aria-hidden={i !== currentIndex}
               >
                 {!loaded[i] && !errored[i] && (
                   <Skeleton className="absolute inset-0 rounded-none" aria-hidden />
@@ -64,7 +86,7 @@ export const ProductCard = ({ product, featured = false }: Props) => {
                       setCurrent(i);
                     }}
                     aria-label={`Image ${i + 1}`}
-                    className={`h-1.5 rounded-full transition-all ${i === current ? "w-5 bg-foreground" : "w-1.5 bg-foreground/30"}`}
+                    className={`h-1.5 rounded-full transition-all ${i === currentIndex ? "w-5 bg-foreground" : "w-1.5 bg-foreground/30"}`}
                   />
                 ))}
               </div>
