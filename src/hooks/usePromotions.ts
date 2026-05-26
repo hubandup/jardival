@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { repairImageUrl } from "@/lib/imageUrl";
 
 export interface PromotionRow {
   id: string;
@@ -62,7 +63,25 @@ export function usePromotions() {
         .select("*, catalogues!inner(id, active, starts_at, ends_at)")
         .order("display_order");
       if (error) throw error;
-      return (data as PromotionRow[]).filter((p) => isActiveNow(p) && hasActiveCatalogue(p));
+      const { data: mediaAssets } = await supabase
+        .from("media_assets")
+        .select("public_url, path")
+        .eq("bucket", "media")
+        .like("mime_type", "image/%")
+        .limit(1000);
+
+      return (data as PromotionRow[])
+        .map((p) => {
+          const imageUrls = Array.isArray(p.image_urls)
+            ? (p.image_urls as unknown[]).filter((u): u is string => typeof u === "string" && u.trim() !== "")
+            : [];
+          const repairedUrls = imageUrls.map((url) => repairImageUrl(url, mediaAssets ?? []));
+          const repairedImage = p.image
+            ? repairImageUrl(p.image, mediaAssets ?? [])
+            : repairedUrls[0] ?? null;
+          return { ...p, image: repairedImage, image_urls: repairedUrls };
+        })
+        .filter((p) => isActiveNow(p) && hasActiveCatalogue(p));
     },
     staleTime: 60 * 1000,
   });
