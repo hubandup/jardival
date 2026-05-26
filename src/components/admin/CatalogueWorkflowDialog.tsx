@@ -1255,18 +1255,22 @@ function ScheduleStep({
         .update({ active: false })
         .eq("catalogue_id", catalogue.id);
 
-      const rows = selected.map((p, idx) => ({
-        title: p.title,
-        description: p.description ?? p.category ?? null,
-        price: p.price ?? 0,
-        original_price: p.original_price ?? null,
-        image: p.image_cutout_url ?? p.image_url ?? null,
-        starts_at: startsAt,
-        ends_at: endsAt,
-        active: true,
-        display_order: idx,
-        catalogue_id: catalogue.id,
-      }));
+      const rows = selected.map((p, idx) => {
+        const img = p.image_cutout_url ?? p.image_url ?? null;
+        return {
+          title: p.title,
+          description: p.description ?? p.category ?? null,
+          price: p.price ?? 0,
+          original_price: p.original_price ?? null,
+          image: img,
+          starts_at: startsAt,
+          ends_at: endsAt,
+          active: true,
+          status: img ? ("published" as const) : ("draft" as const),
+          display_order: idx,
+          catalogue_id: catalogue.id,
+        };
+      });
       const { data: insertedRows, error } = await supabase
         .from("promotions")
         .insert(rows)
