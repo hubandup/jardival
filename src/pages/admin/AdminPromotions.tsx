@@ -163,7 +163,7 @@ export default function AdminPromotions() {
       starts_at: editing.starts_at || null,
       ends_at: editing.ends_at || null,
       display_order: editing.display_order ?? 0,
-      active: editing.active ?? true,
+      active: editing.image ? (editing.active ?? true) : false,
       hero_featured: editing.hero_featured ?? false,
     };
     const { error } = editing.isNew
