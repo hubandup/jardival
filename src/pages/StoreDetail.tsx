@@ -413,7 +413,7 @@ const StoreDetail = () => {
                   </Link>
                 </div>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                  {promos.map((p) => (
+                  {promos.slice(0, 4).map((p) => (
                     <ProductCard key={p.id} product={p} />
                   ))}
                 </div>
