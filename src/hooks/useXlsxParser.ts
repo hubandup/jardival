@@ -40,8 +40,22 @@ function snake(s: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
-function processMedia(row: any[]): { urls: string[]; status: "published" | "draft" } {
+/**
+ * Normalise un filename en "stem" (sans extension, sans préfixe timestamp éventuel,
+ * sans casse) pour le matching contre la médiathèque.
+ */
+export function filenameStem(name: string): string {
+  const base = name.split("/").pop() || name;
+  const noExt = base.replace(/\.[^.]+$/, "");
+  return noExt.replace(/^\d{8,}-/, "").toLowerCase();
+}
+
+function processMedia(
+  row: any[],
+  resolver?: (filename: string) => string | null
+): { urls: string[]; status: "published" | "draft"; missing: string[] } {
   const urls: string[] = [];
+  const missing: string[] = [];
   for (const col of MEDIA_COLS) {
     const raw = row[colToIdx(col)];
     const filename = (raw == null ? "" : String(raw)).trim();
@@ -49,9 +63,11 @@ function processMedia(row: any[]): { urls: string[]; status: "published" | "draf
     const ext = filename.split(".").pop()?.toLowerCase() || "";
     if (FORBIDDEN_EXT.includes(ext)) continue;
     if (!ALLOWED_EXT.includes(ext)) continue;
-    urls.push(MEDIA_BASE_URL + filename);
+    const resolved = resolver ? resolver(filename) : MEDIA_BASE_URL + filename;
+    if (resolved) urls.push(resolved);
+    else missing.push(filename);
   }
-  return { urls, status: urls.length === 0 ? "draft" : "published" };
+  return { urls, status: urls.length === 0 ? "draft" : "published", missing };
 }
 
 function toNumber(v: any): number | null {
