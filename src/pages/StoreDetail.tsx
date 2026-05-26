@@ -30,6 +30,7 @@ import {
 } from "@/data/stores";
 import { useStore, useStores } from "@/hooks/useStores";
 import { usePromotions } from "@/hooks/usePromotions";
+import { useProducts } from "@/hooks/useProducts";
 import { promotionToProduct } from "@/lib/promotion";
 import { useSeo } from "@/hooks/useSeo";
 import { useMediaAlt } from "@/hooks/useMedia";
@@ -41,6 +42,7 @@ const StoreDetail = () => {
   const { data: store, isLoading } = useStore(id);
   const { data: allStores = [] } = useStores();
   const { data: allPromos = [] } = usePromotions();
+  const { data: allProducts = [] } = useProducts();
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
 
@@ -183,7 +185,30 @@ const StoreDetail = () => {
   const matchingPromos = allPromos.filter(
     (p) => !p.store_ids || p.store_ids.length === 0 || p.store_ids.includes(store.id),
   );
-  const promos = matchingPromos.map(promotionToProduct);
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  const productByName = new Map(allProducts.map((p) => [normalize(p.name), p]));
+  const findProductMatch = (title: string) => {
+    const key = normalize(title);
+    if (productByName.has(key)) return productByName.get(key);
+    for (const [k, v] of productByName) {
+      if (k.startsWith(key) || key.startsWith(k)) return v;
+    }
+    return undefined;
+  };
+  const promos = matchingPromos.map((p) => {
+    const base = promotionToProduct(p);
+    const match = findProductMatch(p.title);
+    if (match && match.images.length > 0) {
+      return { ...base, image: match.image || base.image, images: match.images };
+    }
+    return base;
+  });
   const endsAtDates = matchingPromos
     .map((p) => p.catalogues?.ends_at)
     .filter((d): d is string => !!d)
