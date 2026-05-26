@@ -59,6 +59,7 @@ export default function AdminCatalogues() {
   
   const [resumeMenu, setResumeMenu] = useState<{ catalogue: CatalogueRow; hasDraft: boolean } | null>(null);
   const [workflowFor, setWorkflowFor] = useState<{ catalogue: CatalogueRow; step?: WorkflowStep } | null>(null);
+  const [xlsxOpen, setXlsxOpen] = useState(false);
 
   const openCatalogue = async (c: CatalogueRow) => {
     // Vérifie s'il existe un brouillon pour proposer Reprendre/Recommencer
@@ -158,35 +159,40 @@ export default function AdminCatalogues() {
           <h1 className="text-3xl font-bold">Catalogues</h1>
           <p className="text-muted-foreground mt-1">Catalogues PDF téléchargeables</p>
         </div>
-        <Button
-          onClick={async () => {
-            const orgId = await getCurrentOrgId();
-            if (!orgId) {
-              console.error("[create catalogue] missing organization_id for current user");
-              toast.error("Aucune organisation associée à votre compte. Contactez l'administrateur.");
-              return;
-            }
-            const { data, error } = await (supabase as any)
-              .from("catalogues")
-              .insert({ title: "Nouveau catalogue", active: false, display_order: 0, organization_id: orgId })
-              .select("*")
-              .single();
-            if (error || !data) {
-              console.error("[create catalogue] Supabase error", {
-                message: error?.message,
-                code: error?.code,
-                details: error?.details,
-                hint: error?.hint,
-              });
-              toast.error("Impossible de créer le catalogue");
-              return;
-            }
-            qc.invalidateQueries({ queryKey: ["admin-catalogues"] });
-            setWorkflowFor({ catalogue: data as CatalogueRow, step: "upload" });
-          }}
-        >
-          <Plus className="h-4 w-4" /> Ajouter
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setXlsxOpen(true)}>
+            <FileSpreadsheet className="h-4 w-4" /> Importer Excel
+          </Button>
+          <Button
+            onClick={async () => {
+              const orgId = await getCurrentOrgId();
+              if (!orgId) {
+                console.error("[create catalogue] missing organization_id for current user");
+                toast.error("Aucune organisation associée à votre compte. Contactez l'administrateur.");
+                return;
+              }
+              const { data, error } = await (supabase as any)
+                .from("catalogues")
+                .insert({ title: "Nouveau catalogue", active: false, display_order: 0, organization_id: orgId })
+                .select("*")
+                .single();
+              if (error || !data) {
+                console.error("[create catalogue] Supabase error", {
+                  message: error?.message,
+                  code: error?.code,
+                  details: error?.details,
+                  hint: error?.hint,
+                });
+                toast.error("Impossible de créer le catalogue");
+                return;
+              }
+              qc.invalidateQueries({ queryKey: ["admin-catalogues"] });
+              setWorkflowFor({ catalogue: data as CatalogueRow, step: "upload" });
+            }}
+          >
+            <Plus className="h-4 w-4" /> Ajouter
+          </Button>
+        </div>
       </div>
 
       <Card>
