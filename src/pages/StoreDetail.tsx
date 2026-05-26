@@ -192,9 +192,13 @@ const StoreDetail = () => {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
+  const productByRef = new Map(
+    allProducts.filter((p) => p.ref).map((p) => [p.ref!, p]),
+  );
   const productByName = new Map(allProducts.map((p) => [normalize(p.name), p]));
-  const findProductMatch = (title: string) => {
-    const key = normalize(title);
+  const findProductMatch = (p: { title: string; reference?: string | null }) => {
+    if (p.reference && productByRef.has(p.reference)) return productByRef.get(p.reference);
+    const key = normalize(p.title);
     if (productByName.has(key)) return productByName.get(key);
     for (const [k, v] of productByName) {
       if (k.startsWith(key) || key.startsWith(k)) return v;
@@ -203,7 +207,7 @@ const StoreDetail = () => {
   };
   const promos = matchingPromos.map((p) => {
     const base = promotionToProduct(p);
-    const match = findProductMatch(p.title);
+    const match = findProductMatch(p);
     if (match && match.images.length > 0) {
       return { ...base, image: match.image || base.image, images: match.images };
     }
