@@ -13,7 +13,7 @@ export const SiteHeader = () => {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl">
       <div className="container-px mx-auto flex h-16 max-w-7xl items-center justify-between gap-6">
         <Link to="/" className="flex items-center gap-3">
-          <img src={logo} alt="Jardival" className="h-[4.5rem] w-auto" />
+          <img src={logo} alt="Jardival" className="h-10 w-auto" />
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
           {onHome ? (
