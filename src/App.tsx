@@ -10,6 +10,7 @@ import StoreDetail from "./pages/StoreDetail.tsx";
 import Catalogue from "./pages/Catalogue.tsx";
 import Promotions from "./pages/Promotions.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { PromoPeriodGuard } from "./components/PromoPeriodGuard";
 import AdminLogin from "./pages/admin/AdminLogin.tsx";
 import AdminForgotPassword from "./pages/admin/AdminForgotPassword.tsx";
 import AdminResetPassword from "./pages/admin/AdminResetPassword.tsx";
