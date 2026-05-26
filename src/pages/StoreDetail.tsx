@@ -185,7 +185,7 @@ const StoreDetail = () => {
   );
   const promos = matchingPromos.slice(0, 4).map(promotionToProduct);
   const endsAtDates = matchingPromos
-    .map((p) => p.ends_at)
+    .map((p) => p.catalogues?.ends_at)
     .filter((d): d is string => !!d)
     .sort();
   const latestEndsAt = endsAtDates[endsAtDates.length - 1];
