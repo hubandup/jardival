@@ -692,6 +692,95 @@ export default function AdminPromotions() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Modifier {selected.size} promotion(s)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Seuls les champs renseignés ci-dessous seront modifiés. Les autres restent inchangés.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Début</Label>
+                <Input
+                  type="date"
+                  value={bulk.starts_at}
+                  onChange={(e) => setBulk({ ...bulk, starts_at: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Fin</Label>
+                <Input
+                  type="date"
+                  value={bulk.ends_at}
+                  onChange={(e) => setBulk({ ...bulk, ends_at: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Statut</Label>
+                <Select value={bulk.active} onValueChange={(v) => setBulk({ ...bulk, active: v as typeof bulk.active })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep">Inchangé</SelectItem>
+                    <SelectItem value="true">Actif</SelectItem>
+                    <SelectItem value="false">Inactif</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Hero</Label>
+                <Select value={bulk.hero_featured} onValueChange={(v) => setBulk({ ...bulk, hero_featured: v as typeof bulk.hero_featured })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep">Inchangé</SelectItem>
+                    <SelectItem value="true">Mis en avant</SelectItem>
+                    <SelectItem value="false">Retiré du Hero</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Prix</Label>
+              <div className="flex gap-2">
+                <Select value={bulk.priceMode} onValueChange={(v) => setBulk({ ...bulk, priceMode: v as typeof bulk.priceMode })}>
+                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep">Inchangé</SelectItem>
+                    <SelectItem value="set">Fixer à (€)</SelectItem>
+                    <SelectItem value="percent">Ajuster (%)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={bulk.priceMode === "percent" ? "-10 pour -10%" : "9.90"}
+                  disabled={bulk.priceMode === "keep"}
+                  value={bulk.priceValue}
+                  onChange={(e) => setBulk({ ...bulk, priceValue: e.target.value })}
+                />
+              </div>
+              {bulk.priceMode === "percent" && (
+                <p className="text-xs text-muted-foreground">
+                  Appliqué uniquement aux promotions ayant déjà un prix.
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)}>Annuler</Button>
+            <Button onClick={applyBulk} disabled={bulkSaving}>
+              {bulkSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Appliquer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
