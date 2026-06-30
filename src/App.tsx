@@ -21,9 +21,8 @@ import AdminPromotions from "./pages/admin/AdminPromotions.tsx";
 import AdminCatalogues from "./pages/admin/AdminCatalogues.tsx";
 import AdminProducts from "./pages/admin/AdminProducts.tsx";
 import AdminProfile from "./pages/admin/AdminProfile.tsx";
-import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminMedia from "./pages/admin/AdminMedia.tsx";
-import AdminSeoLlm from "./pages/admin/AdminSeoLlm.tsx";
+import AdminSettings from "./pages/admin/AdminSettings.tsx";
 import { AuthProvider } from "./hooks/useAuth";
 import { usePageTracking } from "./hooks/usePageTracking";
 
