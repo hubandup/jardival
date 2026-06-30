@@ -52,9 +52,7 @@ export default function AdminLayout() {
           <p className="text-xs text-muted-foreground truncate mt-1">{user.email}</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {navItems
-            .filter((item) => !item.superAdminOnly || isSuperAdmin)
-            .map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
