@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon, LayoutGrid, List, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon, LayoutGrid, List, ChevronDown, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 import { exportPromotionsToXlsx, parsePromotionsFromFile, autoAssociateImages, stripParsedExtras } from "@/lib/promotionsXlsx";
@@ -54,6 +54,7 @@ export default function AdminPromotions() {
   const [migrating, setMigrating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(false);
+  const [search, setSearch] = useState("");
   const [view, setView] = useState<"table" | "grid">(() => {
     if (typeof window === "undefined") return "table";
     return (localStorage.getItem("admin-promos-view") as "table" | "grid") || "table";
@@ -199,6 +200,15 @@ export default function AdminPromotions() {
     setUploading(false);
   };
 
+  const q = search.trim().toLowerCase();
+  const filteredPromos = q
+    ? (promos ?? []).filter((p) =>
+        [p.title, p.description, p.price != null ? String(p.price) : "", p.original_price != null ? String(p.original_price) : ""]
+          .filter(Boolean)
+          .some((v) => (v as string).toLowerCase().includes(q))
+      )
+    : promos;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -312,6 +322,26 @@ export default function AdminPromotions() {
         </Select>
       </Card>
 
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher par titre, description ou prix…"
+          className="pl-9 pr-9"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Effacer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {isLoading ? (
         <Card><div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div></Card>
       ) : view === "table" ? (
@@ -330,7 +360,7 @@ export default function AdminPromotions() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {promos?.map((p) => {
+              {filteredPromos?.map((p) => {
                 const img = p.image ?? findCatalogueFallback(p.title)?.image ?? null;
                 return (
                 <TableRow
@@ -380,7 +410,7 @@ export default function AdminPromotions() {
                 </TableRow>
                 );
               })}
-              {promos?.length === 0 && (
+              {filteredPromos?.length === 0 && (
                 <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
               )}
             </TableBody>
@@ -388,11 +418,11 @@ export default function AdminPromotions() {
         </Card>
       ) : (
         <>
-          {promos?.length === 0 ? (
+          {filteredPromos?.length === 0 ? (
             <Card><div className="p-8 text-center text-muted-foreground">Aucune promotion</div></Card>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {promos?.map((p) => {
+              {filteredPromos?.map((p) => {
                 const img = p.image ?? findCatalogueFallback(p.title)?.image ?? null;
                 const discount =
                   p.original_price && p.price && p.original_price > p.price
