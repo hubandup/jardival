@@ -54,6 +54,7 @@ export default function AdminPromotions() {
   const [migrating, setMigrating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(false);
+  const [search, setSearch] = useState("");
   const [view, setView] = useState<"table" | "grid">(() => {
     if (typeof window === "undefined") return "table";
     return (localStorage.getItem("admin-promos-view") as "table" | "grid") || "table";
