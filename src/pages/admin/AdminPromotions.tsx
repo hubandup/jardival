@@ -520,7 +520,7 @@ export default function AdminPromotions() {
                 );
               })}
               {filteredPromos?.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
