@@ -221,6 +221,74 @@ export default function AdminPromotions() {
       )
     : promos;
 
+  const toggleSelect = (id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = (checked: boolean) => {
+    if (!checked) return setSelected(new Set());
+    setSelected(new Set((filteredPromos ?? []).map((p) => p.id)));
+  };
+  const allVisibleSelected =
+    (filteredPromos?.length ?? 0) > 0 &&
+    (filteredPromos ?? []).every((p) => selected.has(p.id));
+
+  const applyBulk = async () => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    setBulkSaving(true);
+    try {
+      // Build a base patch for fields that apply uniformly
+      const patch: Record<string, unknown> = {};
+      if (bulk.starts_at) patch.starts_at = bulk.starts_at;
+      if (bulk.ends_at) patch.ends_at = bulk.ends_at;
+      if (bulk.active !== "keep") patch.active = bulk.active === "true";
+      if (bulk.hero_featured !== "keep") patch.hero_featured = bulk.hero_featured === "true";
+
+      if (bulk.priceMode === "set") {
+        const v = parseFloat(bulk.priceValue.replace(",", "."));
+        if (isNaN(v)) throw new Error("Prix invalide");
+        patch.price = v;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        const { error } = await supabase.from("promotions").update(patch).in("id", ids);
+        if (error) throw error;
+      }
+
+      // Per-row percentage adjustment
+      if (bulk.priceMode === "percent") {
+        const pct = parseFloat(bulk.priceValue.replace(",", "."));
+        if (isNaN(pct)) throw new Error("Pourcentage invalide");
+        const rows = (promos ?? []).filter((p) => selected.has(p.id) && p.price != null);
+        await Promise.all(
+          rows.map((r) =>
+            supabase
+              .from("promotions")
+              .update({ price: Math.round((r.price as number) * (1 + pct / 100) * 100) / 100 })
+              .eq("id", r.id)
+          )
+        );
+      }
+
+      toast.success(`${ids.length} promotion(s) mises à jour`);
+      setBulkOpen(false);
+      setSelected(new Set());
+      setBulk({ starts_at: "", ends_at: "", active: "keep", hero_featured: "keep", priceMode: "keep", priceValue: "" });
+      qc.invalidateQueries({ queryKey: ["admin-promotions"] });
+      qc.invalidateQueries({ queryKey: ["promotions"] });
+      qc.invalidateQueries({ queryKey: ["hero_promos"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
