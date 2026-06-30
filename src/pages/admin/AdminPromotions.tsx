@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon, LayoutGrid, List, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ImageDown, Download, Upload, Star, Image as ImageIcon, LayoutGrid, List, ChevronDown, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { migratePromoImagesToBucket } from "@/lib/migratePromoImages";
 import { exportPromotionsToXlsx, parsePromotionsFromFile, autoAssociateImages, stripParsedExtras } from "@/lib/promotionsXlsx";
