@@ -313,6 +313,26 @@ export default function AdminPromotions() {
         </Select>
       </Card>
 
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher par titre, description ou prix…"
+          className="pl-9 pr-9"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Effacer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {isLoading ? (
         <Card><div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div></Card>
       ) : view === "table" ? (
