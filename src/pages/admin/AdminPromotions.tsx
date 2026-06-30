@@ -468,7 +468,15 @@ export default function AdminPromotions() {
                   key={p.id}
                   onClick={() => setEditing(p)}
                   className="cursor-pointer hover:bg-muted/50"
+                  data-state={selected.has(p.id) ? "selected" : undefined}
                 >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selected.has(p.id)}
+                      onCheckedChange={(v) => toggleSelect(p.id, Boolean(v))}
+                      aria-label="Sélectionner"
+                    />
+                  </TableCell>
                   <TableCell>
                     {img ? (
                       <img src={img} alt="" className="h-10 w-10 object-cover rounded" />
