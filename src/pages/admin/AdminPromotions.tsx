@@ -360,7 +360,7 @@ export default function AdminPromotions() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {promos?.map((p) => {
+              {filteredPromos?.map((p) => {
                 const img = p.image ?? findCatalogueFallback(p.title)?.image ?? null;
                 return (
                 <TableRow
@@ -410,7 +410,7 @@ export default function AdminPromotions() {
                 </TableRow>
                 );
               })}
-              {promos?.length === 0 && (
+              {filteredPromos?.length === 0 && (
                 <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
               )}
             </TableBody>
@@ -418,11 +418,11 @@ export default function AdminPromotions() {
         </Card>
       ) : (
         <>
-          {promos?.length === 0 ? (
+          {filteredPromos?.length === 0 ? (
             <Card><div className="p-8 text-center text-muted-foreground">Aucune promotion</div></Card>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {promos?.map((p) => {
+              {filteredPromos?.map((p) => {
                 const img = p.image ?? findCatalogueFallback(p.title)?.image ?? null;
                 const discount =
                   p.original_price && p.price && p.original_price > p.price
