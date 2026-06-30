@@ -21,9 +21,8 @@ import AdminPromotions from "./pages/admin/AdminPromotions.tsx";
 import AdminCatalogues from "./pages/admin/AdminCatalogues.tsx";
 import AdminProducts from "./pages/admin/AdminProducts.tsx";
 import AdminProfile from "./pages/admin/AdminProfile.tsx";
-import AdminUsers from "./pages/admin/AdminUsers.tsx";
 import AdminMedia from "./pages/admin/AdminMedia.tsx";
-import AdminSeoLlm from "./pages/admin/AdminSeoLlm.tsx";
+import AdminSettings from "./pages/admin/AdminSettings.tsx";
 import { AuthProvider } from "./hooks/useAuth";
 import { usePageTracking } from "./hooks/usePageTracking";
 
@@ -60,9 +59,8 @@ const App = () => (
               <Route path="catalogues" element={<AdminCatalogues />} />
               <Route path="produits" element={<AdminProducts />} />
               <Route path="medias" element={<AdminMedia />} />
-              <Route path="seo-llm" element={<AdminSeoLlm />} />
+              <Route path="parametres" element={<AdminSettings />} />
               <Route path="profil" element={<AdminProfile />} />
-              <Route path="utilisateurs" element={<AdminUsers />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
