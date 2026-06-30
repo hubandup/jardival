@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -55,6 +56,17 @@ export default function AdminPromotions() {
   const [importing, setImporting] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(false);
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulk, setBulk] = useState<{
+    starts_at: string;
+    ends_at: string;
+    active: "keep" | "true" | "false";
+    hero_featured: "keep" | "true" | "false";
+    priceMode: "keep" | "set" | "percent";
+    priceValue: string;
+  }>({ starts_at: "", ends_at: "", active: "keep", hero_featured: "keep", priceMode: "keep", priceValue: "" });
   const [view, setView] = useState<"table" | "grid">(() => {
     if (typeof window === "undefined") return "table";
     return (localStorage.getItem("admin-promos-view") as "table" | "grid") || "table";
@@ -209,6 +221,74 @@ export default function AdminPromotions() {
       )
     : promos;
 
+  const toggleSelect = (id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = (checked: boolean) => {
+    if (!checked) return setSelected(new Set());
+    setSelected(new Set((filteredPromos ?? []).map((p) => p.id)));
+  };
+  const allVisibleSelected =
+    (filteredPromos?.length ?? 0) > 0 &&
+    (filteredPromos ?? []).every((p) => selected.has(p.id));
+
+  const applyBulk = async () => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    setBulkSaving(true);
+    try {
+      // Build a base patch for fields that apply uniformly
+      const patch: Record<string, unknown> = {};
+      if (bulk.starts_at) patch.starts_at = bulk.starts_at;
+      if (bulk.ends_at) patch.ends_at = bulk.ends_at;
+      if (bulk.active !== "keep") patch.active = bulk.active === "true";
+      if (bulk.hero_featured !== "keep") patch.hero_featured = bulk.hero_featured === "true";
+
+      if (bulk.priceMode === "set") {
+        const v = parseFloat(bulk.priceValue.replace(",", "."));
+        if (isNaN(v)) throw new Error("Prix invalide");
+        patch.price = v;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        const { error } = await supabase.from("promotions").update(patch as never).in("id", ids);
+        if (error) throw error;
+      }
+
+      // Per-row percentage adjustment
+      if (bulk.priceMode === "percent") {
+        const pct = parseFloat(bulk.priceValue.replace(",", "."));
+        if (isNaN(pct)) throw new Error("Pourcentage invalide");
+        const rows = (promos ?? []).filter((p) => selected.has(p.id) && p.price != null);
+        await Promise.all(
+          rows.map((r) =>
+            supabase
+              .from("promotions")
+              .update({ price: Math.round((r.price as number) * (1 + pct / 100) * 100) / 100 })
+              .eq("id", r.id)
+          )
+        );
+      }
+
+      toast.success(`${ids.length} promotion(s) mises à jour`);
+      setBulkOpen(false);
+      setSelected(new Set());
+      setBulk({ starts_at: "", ends_at: "", active: "keep", hero_featured: "keep", priceMode: "keep", priceValue: "" });
+      qc.invalidateQueries({ queryKey: ["admin-promotions"] });
+      qc.invalidateQueries({ queryKey: ["promotions"] });
+      qc.invalidateQueries({ queryKey: ["hero_promos"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -342,6 +422,20 @@ export default function AdminPromotions() {
         )}
       </div>
 
+      {selected.size > 0 && (
+        <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-md border bg-primary/5 px-4 py-2">
+          <div className="text-sm">
+            <strong>{selected.size}</strong> promotion(s) sélectionnée(s)
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Désélectionner</Button>
+            <Button size="sm" onClick={() => setBulkOpen(true)}>
+              <Pencil className="h-4 w-4" /> Modifier en masse
+            </Button>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <Card><div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div></Card>
       ) : view === "table" ? (
@@ -349,6 +443,13 @@ export default function AdminPromotions() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allVisibleSelected}
+                    onCheckedChange={(v) => toggleSelectAll(Boolean(v))}
+                    aria-label="Tout sélectionner"
+                  />
+                </TableHead>
                 <TableHead className="w-16">Image</TableHead>
                 <TableHead>Ordre</TableHead>
                 <TableHead>Titre</TableHead>
@@ -367,7 +468,15 @@ export default function AdminPromotions() {
                   key={p.id}
                   onClick={() => setEditing(p)}
                   className="cursor-pointer hover:bg-muted/50"
+                  data-state={selected.has(p.id) ? "selected" : undefined}
                 >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selected.has(p.id)}
+                      onCheckedChange={(v) => toggleSelect(p.id, Boolean(v))}
+                      aria-label="Sélectionner"
+                    />
+                  </TableCell>
                   <TableCell>
                     {img ? (
                       <img src={img} alt="" className="h-10 w-10 object-cover rounded" />
@@ -411,7 +520,7 @@ export default function AdminPromotions() {
                 );
               })}
               {filteredPromos?.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Aucune promotion</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -583,6 +692,95 @@ export default function AdminPromotions() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Modifier {selected.size} promotion(s)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Seuls les champs renseignés ci-dessous seront modifiés. Les autres restent inchangés.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Début</Label>
+                <Input
+                  type="date"
+                  value={bulk.starts_at}
+                  onChange={(e) => setBulk({ ...bulk, starts_at: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Fin</Label>
+                <Input
+                  type="date"
+                  value={bulk.ends_at}
+                  onChange={(e) => setBulk({ ...bulk, ends_at: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Statut</Label>
+                <Select value={bulk.active} onValueChange={(v) => setBulk({ ...bulk, active: v as typeof bulk.active })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep">Inchangé</SelectItem>
+                    <SelectItem value="true">Actif</SelectItem>
+                    <SelectItem value="false">Inactif</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Hero</Label>
+                <Select value={bulk.hero_featured} onValueChange={(v) => setBulk({ ...bulk, hero_featured: v as typeof bulk.hero_featured })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep">Inchangé</SelectItem>
+                    <SelectItem value="true">Mis en avant</SelectItem>
+                    <SelectItem value="false">Retiré du Hero</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Prix</Label>
+              <div className="flex gap-2">
+                <Select value={bulk.priceMode} onValueChange={(v) => setBulk({ ...bulk, priceMode: v as typeof bulk.priceMode })}>
+                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep">Inchangé</SelectItem>
+                    <SelectItem value="set">Fixer à (€)</SelectItem>
+                    <SelectItem value="percent">Ajuster (%)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={bulk.priceMode === "percent" ? "-10 pour -10%" : "9.90"}
+                  disabled={bulk.priceMode === "keep"}
+                  value={bulk.priceValue}
+                  onChange={(e) => setBulk({ ...bulk, priceValue: e.target.value })}
+                />
+              </div>
+              {bulk.priceMode === "percent" && (
+                <p className="text-xs text-muted-foreground">
+                  Appliqué uniquement aux promotions ayant déjà un prix.
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)}>Annuler</Button>
+            <Button onClick={applyBulk} disabled={bulkSaving}>
+              {bulkSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Appliquer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
