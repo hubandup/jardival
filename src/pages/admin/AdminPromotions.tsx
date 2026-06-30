@@ -422,6 +422,20 @@ export default function AdminPromotions() {
         )}
       </div>
 
+      {selected.size > 0 && (
+        <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-md border bg-primary/5 px-4 py-2">
+          <div className="text-sm">
+            <strong>{selected.size}</strong> promotion(s) sélectionnée(s)
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Désélectionner</Button>
+            <Button size="sm" onClick={() => setBulkOpen(true)}>
+              <Pencil className="h-4 w-4" /> Modifier en masse
+            </Button>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <Card><div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div></Card>
       ) : view === "table" ? (
@@ -429,6 +443,13 @@ export default function AdminPromotions() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allVisibleSelected}
+                    onCheckedChange={(v) => toggleSelectAll(Boolean(v))}
+                    aria-label="Tout sélectionner"
+                  />
+                </TableHead>
                 <TableHead className="w-16">Image</TableHead>
                 <TableHead>Ordre</TableHead>
                 <TableHead>Titre</TableHead>
