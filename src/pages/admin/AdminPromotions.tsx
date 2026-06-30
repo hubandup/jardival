@@ -200,6 +200,15 @@ export default function AdminPromotions() {
     setUploading(false);
   };
 
+  const q = search.trim().toLowerCase();
+  const filteredPromos = q
+    ? (promos ?? []).filter((p) =>
+        [p.title, p.description, p.price != null ? String(p.price) : "", p.original_price != null ? String(p.original_price) : ""]
+          .filter(Boolean)
+          .some((v) => (v as string).toLowerCase().includes(q))
+      )
+    : promos;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
