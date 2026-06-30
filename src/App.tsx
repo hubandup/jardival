@@ -57,6 +57,7 @@ const App = () => (
               <Route path="magasins" element={<AdminStores />} />
               <Route path="promotions" element={<AdminPromotions />} />
               <Route path="catalogues" element={<AdminCatalogues />} />
+              <Route path="produits" element={<AdminProducts />} />
               <Route path="medias" element={<AdminMedia />} />
               <Route path="parametres" element={<AdminSettings />} />
               <Route path="profil" element={<AdminProfile />} />
