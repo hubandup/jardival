@@ -57,11 +57,9 @@ const App = () => (
               <Route path="magasins" element={<AdminStores />} />
               <Route path="promotions" element={<AdminPromotions />} />
               <Route path="catalogues" element={<AdminCatalogues />} />
-              <Route path="produits" element={<AdminProducts />} />
               <Route path="medias" element={<AdminMedia />} />
-              <Route path="seo-llm" element={<AdminSeoLlm />} />
+              <Route path="parametres" element={<AdminSettings />} />
               <Route path="profil" element={<AdminProfile />} />
-              <Route path="utilisateurs" element={<AdminUsers />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
