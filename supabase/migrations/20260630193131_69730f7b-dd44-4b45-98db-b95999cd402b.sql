@@ -1,0 +1,1 @@
+UPDATE public.promotions SET starts_at = '2026-05-25' WHERE catalogue_id = '1e84b168-e71a-486d-9f5e-286e2bc49254' AND starts_at > CURRENT_DATE;
