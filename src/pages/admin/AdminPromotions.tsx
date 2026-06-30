@@ -255,7 +255,7 @@ export default function AdminPromotions() {
       }
 
       if (Object.keys(patch).length > 0) {
-        const { error } = await supabase.from("promotions").update(patch).in("id", ids);
+        const { error } = await supabase.from("promotions").update(patch as never).in("id", ids);
         if (error) throw error;
       }
 
