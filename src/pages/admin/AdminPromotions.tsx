@@ -56,6 +56,17 @@ export default function AdminPromotions() {
   const [importing, setImporting] = useState(false);
   const [mediaPicker, setMediaPicker] = useState(false);
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulk, setBulk] = useState<{
+    starts_at: string;
+    ends_at: string;
+    active: "keep" | "true" | "false";
+    hero_featured: "keep" | "true" | "false";
+    priceMode: "keep" | "set" | "percent";
+    priceValue: string;
+  }>({ starts_at: "", ends_at: "", active: "keep", hero_featured: "keep", priceMode: "keep", priceValue: "" });
   const [view, setView] = useState<"table" | "grid">(() => {
     if (typeof window === "undefined") return "table";
     return (localStorage.getItem("admin-promos-view") as "table" | "grid") || "table";
