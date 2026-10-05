@@ -1,0 +1,1 @@
+UPDATE public.catalogues SET pdf_url='https://nwqhzsjajjluvwrbaemw.supabase.co/storage/v1/object/public/catalogues/automne-2026-v2.pdf' WHERE title='Automne';
