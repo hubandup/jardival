@@ -65,7 +65,7 @@ FlipPage.displayName = "FlipPage";
 
 const CataloguePage = () => {
   const isMobile = useIsMobile();
-  const { data: catalogues } = useCatalogues();
+  const { data: catalogues, isLoading: cataloguesLoading } = useCatalogues();
   const activeCatalogue = catalogues?.[0];
   const pdfUrl = activeCatalogue?.pdf_url ?? FALLBACK_PDF_URL;
   const title = activeCatalogue?.title ?? "Jardinales";
@@ -156,15 +156,22 @@ const CataloguePage = () => {
           </div>
 
           <h1 className="mt-6 font-display text-3xl font-semibold leading-tight text-foreground md:text-4xl">
-            Catalogue <span className="italic">Jardinales</span>
+            Catalogue <span className="italic">{title}</span>
           </h1>
           <p className="mt-2 text-foreground/70">
-            Feuilletez les 8 pages de promotions — cliquez ou glissez le coin d'une page pour la tourner.
+            Feuilletez les {numPages > 0 ? `${numPages} ` : ""}pages de promotions — cliquez ou glissez le coin d'une page pour la tourner.
           </p>
 
           {/* Catalogue viewer */}
           <div className="mt-8 rounded-xl bg-gradient-to-br from-muted to-muted/40 p-2 shadow-card md:p-8">
+            {cataloguesLoading ? (
+              <div className="flex items-center justify-center gap-3 p-16 text-foreground/70">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Chargement du catalogue…
+              </div>
+            ) : (
             <Document
+              key={pdfUrl}
               file={pdfUrl}
               onLoadSuccess={onLoad}
               loading={
@@ -236,6 +243,7 @@ const CataloguePage = () => {
                 )
               )}
             </Document>
+            )}
           </div>
 
           {/* Toolbar — desktop seulement (mobile gère son propre compteur) */}
