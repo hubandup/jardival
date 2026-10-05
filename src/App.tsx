@@ -1,3 +1,4 @@
+import { Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -43,12 +44,12 @@ const App = () => (
         <AuthProvider>
           <PageTracker />
           <Routes>
-            <Route path="/" element={<PromoPeriodGuard><Index /></PromoPeriodGuard>} />
-            <Route path="/produit/:id" element={<PromoPeriodGuard><ProductDetail /></PromoPeriodGuard>} />
+            <Route path="/" element={<PromoPeriodGuard><Catalogue /></PromoPeriodGuard>} />
+            <Route path="/produit/:id" element={<Navigate to="/" replace />} />
             <Route path="/magasins" element={<Stores />} />
             <Route path="/magasins/:id" element={<StoreDetail />} />
-            <Route path="/catalogue" element={<PromoPeriodGuard><Catalogue /></PromoPeriodGuard>} />
-            <Route path="/promotions" element={<PromoPeriodGuard><Promotions /></PromoPeriodGuard>} />
+            <Route path="/catalogue" element={<Navigate to="/" replace />} />
+            <Route path="/promotions" element={<Navigate to="/" replace />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
             <Route path="/admin/reset-password" element={<AdminResetPassword />} />

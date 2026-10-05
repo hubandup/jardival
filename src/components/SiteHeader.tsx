@@ -16,13 +16,7 @@ export const SiteHeader = () => {
           <img src={logo} alt="Jardival" className="h-10 w-auto" />
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
-          {onHome ? (
-            <a href="#promos" className="text-foreground/70 transition-colors hover:text-accent">Promos</a>
-          ) : (
-            <Link to="/#promos" className="text-foreground/70 transition-colors hover:text-accent">Promos</Link>
-          )}
-          
-          <Link to="/catalogue" className="text-foreground/70 transition-colors hover:text-accent">Catalogue</Link>
+          <Link to="/" className="text-foreground/70 transition-colors hover:text-accent">Catalogue</Link>
           <Link to="/magasins" className="text-foreground/70 transition-colors hover:text-primary">Magasins</Link>
         </nav>
 
