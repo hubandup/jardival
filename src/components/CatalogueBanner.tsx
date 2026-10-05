@@ -183,10 +183,8 @@ export const CatalogueBanner = ({
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
             {simplified ? (
               pdfUrl && (
-              <a
-                href={pdfUrl}
-                target={pdfTarget}
-                rel={pdfTarget === "_blank" ? "noreferrer" : undefined}
+              <Link
+                to={VIEWER_URL}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-card transition-all hover:scale-[1.02] hover:shadow-glow"
                 style={{
                   background: "hsl(var(--hero-fg))",
@@ -195,8 +193,8 @@ export const CatalogueBanner = ({
                     : "hsl(0 0% 98%)",
                 }}
               >
-                Voir le catalogue
-              </a>
+                Feuilleter le catalogue
+              </Link>
               )
             ) : (
               <>
