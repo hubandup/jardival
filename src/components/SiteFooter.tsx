@@ -16,17 +16,7 @@ export const SiteFooter = () => {
           <h4 className="mb-4 text-sm font-semibold text-foreground">Catégories</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
-              <Link to="/favoris" className="transition-colors hover:text-primary">
-                Favoris
-              </Link>
-            </li>
-            <li>
-              <Link to="/promotions" className="transition-colors hover:text-primary">
-                Promotions
-              </Link>
-            </li>
-            <li>
-              <Link to="/catalogue" className="transition-colors hover:text-primary">
+              <Link to="/" className="transition-colors hover:text-primary">
                 Catalogue
               </Link>
             </li>

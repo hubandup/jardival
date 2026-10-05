@@ -120,32 +120,10 @@ const CataloguePage = () => {
       <SiteHeader />
 
       <main className="flex-1">
-        <div className="border-b border-border bg-card">
-          <div className="container-px mx-auto max-w-7xl py-3">
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link to="/">Accueil</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Catalogue</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </div>
 
         <div className="container-px mx-auto max-w-7xl py-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-foreground/70 hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" /> Retour à l'accueil
-            </Link>
+            <span />
             <a
               href={pdfUrl}
               download
