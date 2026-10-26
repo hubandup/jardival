@@ -21,40 +21,19 @@ export default function AdminDashboard() {
     queryKey: ["admin-counts"],
     queryFn: async () => {
       const today = new Date().toISOString().slice(0, 10);
-      const [stores, products, promos, promosActive, catalogues, cataloguesActive, expiring] =
-        await Promise.all([
-          supabase.from("stores").select("id", { count: "exact", head: true }),
-          supabase.from("products").select("id", { count: "exact", head: true }).eq("active", true),
-          supabase.from("promotions").select("id", { count: "exact", head: true }),
-          supabase
-            .from("promotions")
-            .select("id", { count: "exact", head: true })
-            .eq("active", true)
-            .or(`ends_at.is.null,ends_at.gte.${today}`),
-          supabase.from("catalogues").select("id", { count: "exact", head: true }),
-          supabase
-            .from("catalogues")
-            .select("id", { count: "exact", head: true })
-            .eq("active", true)
-            .or(`ends_at.is.null,ends_at.gte.${today}`),
-          supabase
-            .from("promotions")
-            .select("id, title, ends_at")
-            .eq("active", true)
-            .not("ends_at", "is", null)
-            .gte("ends_at", today)
-            .lte("ends_at", new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10))
-            .order("ends_at", { ascending: true })
-            .limit(5),
-        ]);
+      const [stores, catalogues, cataloguesActive] = await Promise.all([
+        supabase.from("stores").select("id", { count: "exact", head: true }),
+        supabase.from("catalogues").select("id", { count: "exact", head: true }),
+        supabase
+          .from("catalogues")
+          .select("id", { count: "exact", head: true })
+          .eq("active", true)
+          .or(`ends_at.is.null,ends_at.gte.${today}`),
+      ]);
       return {
         stores: stores.count ?? 0,
-        products: products.count ?? 0,
-        promotions: promos.count ?? 0,
-        promotionsActive: promosActive.count ?? 0,
         catalogues: catalogues.count ?? 0,
         cataloguesActive: cataloguesActive.count ?? 0,
-        expiring: expiring.data ?? [],
       };
     },
   });
@@ -105,15 +84,6 @@ export default function AdminDashboard() {
     },
   });
 
-  const { data: topProducts } = useQuery({
-    queryKey: ["pageviews-top-products", days],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("pageviews_top_products", { _days: days, _limit: 10 });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   const totalViews = Number(stats?.total_views ?? 0);
   const uniqueRate =
     stats && Number(stats.total_views) > 0
@@ -127,14 +97,6 @@ export default function AdminDashboard() {
 
   const cards = [
     { to: "/admin/magasins", label: "Magasins", icon: Store, count: counts?.stores },
-    { to: "/admin/produits", label: "Produits actifs", icon: Package, count: counts?.products },
-    {
-      to: "/admin/promotions",
-      label: "Promotions actives",
-      icon: Tag,
-      count: counts?.promotionsActive,
-      sub: counts ? `sur ${counts.promotions} au total` : undefined,
-    },
     {
       to: "/admin/catalogues",
       label: "Catalogues en cours",
@@ -151,7 +113,7 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground mt-1">Vue d'ensemble de votre site Jardival</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
         {cards.map((c) => (
           <Link key={c.to} to={c.to}>
             <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
@@ -172,29 +134,6 @@ export default function AdminDashboard() {
           </Link>
         ))}
       </div>
-
-      {counts?.expiring && counts.expiring.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              Promotions expirant dans 7 jours
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {counts.expiring.map((p: any) => (
-                <li key={p.id} className="flex justify-between items-center text-sm border-b last:border-0 py-2">
-                  <span className="font-medium">{p.title}</span>
-                  <span className="text-muted-foreground">
-                    expire le {format(parseISO(p.ends_at), "d MMMM", { locale: fr })}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader className="flex flex-row items-start justify-between">
@@ -333,7 +272,7 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -360,31 +299,6 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Package className="h-4 w-4" /> Top produits vus
-            </CardTitle>
-            <CardDescription>Sur les {days} derniers jours</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {(topProducts ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">Aucune consultation</p>
-            ) : (
-              <ul className="space-y-1">
-                {(topProducts ?? []).map((p: any) => (
-                  <li
-                    key={p.product_id}
-                    className="flex justify-between items-center text-sm py-2 border-b last:border-0"
-                  >
-                    <span className="truncate">{p.product_name ?? p.product_id}</span>
-                    <span className="font-semibold">{Number(p.views)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -18,9 +18,7 @@ import AdminResetPassword from "./pages/admin/AdminResetPassword.tsx";
 import AdminLayout from "./pages/admin/AdminLayout.tsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminStores from "./pages/admin/AdminStores.tsx";
-import AdminPromotions from "./pages/admin/AdminPromotions.tsx";
 import AdminCatalogues from "./pages/admin/AdminCatalogues.tsx";
-import AdminProducts from "./pages/admin/AdminProducts.tsx";
 import AdminProfile from "./pages/admin/AdminProfile.tsx";
 import AdminMedia from "./pages/admin/AdminMedia.tsx";
 import AdminSettings from "./pages/admin/AdminSettings.tsx";
@@ -56,9 +54,7 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="magasins" element={<AdminStores />} />
-              <Route path="promotions" element={<AdminPromotions />} />
               <Route path="catalogues" element={<AdminCatalogues />} />
-              <Route path="produits" element={<AdminProducts />} />
               <Route path="medias" element={<AdminMedia />} />
               <Route path="parametres" element={<AdminSettings />} />
               <Route path="profil" element={<AdminProfile />} />
