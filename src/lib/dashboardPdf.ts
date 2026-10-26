@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
-import logoUrl from "@/assets/logo-hubup.png";
+import signatureAsset from "@/assets/dashboard-signature.jpg.asset.json";
 
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
@@ -16,7 +16,7 @@ export async function exportDashboardPdf(root: HTMLElement, periodLabel: string)
   const W = 210, H = 297, M = 14, FOOTER = 18;
   const contentW = W - M * 2;
   const green: [number, number, number] = [25, 118, 58];
-  const logo = await loadImage(logoUrl);
+  const logo = await loadImage(signatureAsset.url);
   const dateStr = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
   // Header band on first page
@@ -53,7 +53,7 @@ export async function exportDashboardPdf(root: HTMLElement, periodLabel: string)
 
   // Footer on every page
   const pages = pdf.getNumberOfPages();
-  const logoH = 7;
+  const logoH = 7 * 0.7;
   const logoW = (logo.width * logoH) / logo.height;
   for (let i = 1; i <= pages; i++) {
     pdf.setPage(i);
@@ -66,7 +66,7 @@ export async function exportDashboardPdf(root: HTMLElement, periodLabel: string)
     pdf.setFont("helvetica", "normal");
     pdf.setTextColor(120, 120, 120);
     pdf.text(`${i} / ${pages}`, W / 2, H - 9, { align: "center" });
-    pdf.addImage(logo, "PNG", W - M - logoW, H - 9 - logoH + 1.5, logoW, logoH);
+    pdf.addImage(logo, "JPEG", W - M - logoW, H - 9 - logoH + 1.5, logoW, logoH);
   }
 
   pdf.save(`tableau-de-bord-jardival-${new Date().toISOString().slice(0, 10)}.pdf`);
