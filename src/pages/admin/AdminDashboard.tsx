@@ -171,7 +171,7 @@ export default function AdminDashboard() {
               {totalViews} visite{totalViews > 1 ? "s" : ""} sur {days} jours
             </CardDescription>
           </div>
-          <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as 7 | 30)}>
+          <Tabs data-pdf-ignore="" value={String(days)} onValueChange={(v) => setDays(Number(v) as 7 | 30)}>
             <TabsList>
               <TabsTrigger value="7">7 jours</TabsTrigger>
               <TabsTrigger value="30">30 jours</TabsTrigger>
