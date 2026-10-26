@@ -10,12 +10,18 @@ import {
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { FileDown, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { exportDashboardPdf } from "@/lib/dashboardPdf";
 
 export default function AdminDashboard() {
   const [days, setDays] = useState<7 | 30>(7);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
 
   const { data: counts } = useQuery({
     queryKey: ["admin-counts"],
@@ -106,11 +112,30 @@ export default function AdminDashboard() {
     },
   ];
 
+  const handleExport = async () => {
+    if (!rootRef.current) return;
+    setExporting(true);
+    try {
+      await exportDashboardPdf(rootRef.current, `${days} derniers jours`);
+    } catch (e) {
+      console.error(e);
+      toast.error("L'export PDF a échoué");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Tableau de bord</h1>
-        <p className="text-muted-foreground mt-1">Vue d'ensemble de votre site Jardival</p>
+    <div className="space-y-6" ref={rootRef}>
+      <div className="flex items-start justify-between gap-4" data-pdf-skip="1">
+        <div>
+          <h1 className="text-3xl font-bold">Tableau de bord</h1>
+          <p className="text-muted-foreground mt-1">Vue d'ensemble de votre site Jardival</p>
+        </div>
+        <Button onClick={handleExport} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+          Exporter en PDF
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
@@ -146,7 +171,7 @@ export default function AdminDashboard() {
               {totalViews} visite{totalViews > 1 ? "s" : ""} sur {days} jours
             </CardDescription>
           </div>
-          <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as 7 | 30)}>
+          <Tabs data-pdf-ignore="" value={String(days)} onValueChange={(v) => setDays(Number(v) as 7 | 30)}>
             <TabsList>
               <TabsTrigger value="7">7 jours</TabsTrigger>
               <TabsTrigger value="30">30 jours</TabsTrigger>
