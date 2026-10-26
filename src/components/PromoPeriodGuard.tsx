@@ -13,8 +13,8 @@ export function PromoPeriodGuard({ children }: { children: React.ReactNode }) {
         .from("catalogues")
         .select("id")
         .eq("active", true)
-        .lte("starts_at", today)
-        .gte("ends_at", today)
+        .or(`starts_at.is.null,starts_at.lte.${today}`)
+        .or(`ends_at.is.null,ends_at.gte.${today}`)
         .limit(1);
       if (cancelled) return;
       if (error) {
