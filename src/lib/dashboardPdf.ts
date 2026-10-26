@@ -66,7 +66,7 @@ export async function exportDashboardPdf(root: HTMLElement, periodLabel: string)
     pdf.setFont("helvetica", "normal");
     pdf.setTextColor(120, 120, 120);
     pdf.text(`${i} / ${pages}`, W / 2, H - 9, { align: "center" });
-    pdf.addImage(logo, "PNG", W - M - logoW, H - 9 - logoH + 1.5, logoW, logoH);
+    pdf.addImage(logo, "JPEG", W - M - logoW, H - 9 - logoH + 1.5, logoW, logoH);
   }
 
   pdf.save(`tableau-de-bord-jardival-${new Date().toISOString().slice(0, 10)}.pdf`);
